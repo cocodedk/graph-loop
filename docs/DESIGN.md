@@ -1,0 +1,142 @@
+# The drive loop — design
+
+How to build this loop, anywhere. What each part is, why it exists, and the order that
+makes it safe to leave alone. `DIARY.md` beside this file is the story of how it was
+learned; this file is the design.
+
+The runtime is not in this repository yet. It arrives in one piece, from a source that has
+stopped changing. This document is written so that you could build the loop yourself
+without it.
+
+## The idea in one paragraph
+
+A backlog of atomic tasks is worked to done by two models that never trust each other: a
+reviewer refuses any task whose gate could pass without the work, a builder does one task
+in a private worktree, the gate — a command whose exit code is the verdict — decides, the
+reviewer reads the finished diff, and only then is the work committed to a campaign
+branch. Everything the loop says, hears and measures is written to an append-only log, and
+a watchdog reads that log to catch the loop going through the motions. A person is needed
+only where a task says so, and the loop says out loud when it needs one.
+
+## The parts, in dependency order
+
+| part | one job |
+|---|---|
+| backlog | which task may start: dependencies met, files disjoint, humans respected |
+| providers | call a model and read the answer honestly; a limit or a denial is never an attempt |
+| gates | run a gate; the exit code decides; prove it red before anyone builds |
+| workspace | the campaign's memory: rotating events, timed steps, artifacts, claims, alerts, the stop flag |
+| worktree | one detached checkout per task; the scope check; the lock for tasks that touch shared state |
+| distress | the builder's last line: JSON with fixed flags, or UNCLEAR and a person is told |
+| loop | one task start to finish: held? → lock → red-first → contract review → build → scope → gate → diff review → keep |
+| keep | accepted work becomes a commit on the campaign branch; the next task starts from that tip |
+| watchdog | spinning, stuck, futile — read from the log, measured in time, never money |
+| replan | a refused contract is rewritten from the reviewer's findings, twice at most, never wider |
+| report | where the clock went, by step and by task; the bottleneck named |
+| doctor | the mistakes already made, checked for after every task |
+| view | the dashboard: warnings first, then the facts, all read from the log |
+| driver | init → approve → run; status, report, doctor; stop and stop now |
+| supervisor | restart a dead driver, back off on a crash loop, hourly report snapshots |
+| window | clear, print the view, sleep |
+
+## The task contract
+
+```yaml
+- id: fetch-timeout
+  goal: one sentence, one idea
+  why: what it costs us that this is not done
+  status: todo          # the picker offers only todo
+  needs: [config-defaults]           # ids that must be done first — only real dependencies
+  files: [ ... ]        # everything the gate can fail on, and nothing that judges it
+  gate: (cd path/to/tests && timeout 600 python3 -m unittest ...)
+  done_when: what the gate proves, and nothing more
+  note: traps, the source of truth, what to do instead of guessing
+  # optional:
+  gate_files_are_the_work: true   # writing the test IS the deliverable — tell the reviewer
+  gate_has_side_effects: true     # the gate performs a live run: no red-first, take the lock
+  blocked_by_human: true          # never started; shown as held
+```
+
+Gate rules: every path relative to the worktree; every stage in its own subshell
+`(cd … && …)`; `set -o pipefail`; the verdict is the exit code; it must fail today for the
+reason the task exists.
+
+## The order of one task, and why each step is where it is
+
+1. **held?** — a human hold is checked before anything costs money.
+2. **lock** — a task that performs a live run takes it; only one at a time.
+3. **gate ownership** — a builder that may edit the test judging it is refused before a
+   review is paid for, unless the task declares the test is the work.
+4. **prove red** — a gate that has never failed proves nothing; skipped only when the gate
+   itself performs the work.
+5. **contract review** — the reviewer reads the task, not the code; most defects die here
+   at the price of one review.
+6. **build** — one builder, one task, one worktree; the builder ends with one JSON line of
+   fixed flags.
+7. **flags** — BLOCKED and PARTIAL are believed: the worktree is kept, an alert is raised,
+   a person is told. UNCLEAR alerts but the gate still judges.
+8. **scope** — anything written outside the task's files refuses the work; the leavings of
+   running a gate are not edits.
+9. **gate** — the exit code decides. One failure leaves the task open; the second identical
+   failure marks it for re-slicing.
+10. **diff review** — a fresh reviewer reads the change with the goal in hand.
+11. **keep** — commit on the campaign branch; the next worktree is cut from that tip, never
+    from a HEAD that predates its dependency.
+12. **doctor** — after every task, the loop checks itself for the mistakes it has already
+    made, and writes what it finds where the dashboard shows it first.
+
+Every ending writes a status the picker will not re-offer; every step is timed; every
+prompt, answer, diff and gate output is a numbered file under the campaign's log.
+
+## What it refuses to do
+
+- Escalate effort. A failed gate means the task is wrong, not the model too small.
+- Count a usage limit, a denial, a killed reviewer or malformed output as failure.
+- Stop the campaign for one bad task — it quarantines and carries on. It stops itself only
+  for hours of work with nothing accepted.
+- Touch the main branch, force-push, or start anything a human holds.
+- Trust its own memory: everything is re-read from files, so any part can be killed and
+  restarted at any time.
+
+## Atomising the work is the real job
+
+It is a method, not a feeling:
+
+1. Write the end state as gates first — commands that fail today and whose exit code will
+   say the work is done. No task exists before its gate does.
+2. One idea per task. If describing it needs the word "and", it is two.
+3. The file list is everything the gate can fail on — counts, fixtures, pinned digests,
+   sibling copies — and never the test that judges it, unless writing that test is the
+   declared deliverable.
+4. Dependencies are only what is real: a task waits for another only if it reads that
+   task's output. Measure the backlog by what is startable now; a long chain behind one
+   brick is a stalled weekend.
+5. Mark what performs live actions, what writes its own proof, and what a person must see
+   first.
+6. Let the reviewer refuse your contracts cheaply before any building — one campaign's
+   nine zero-cost refusals were the backlog being debugged, not the models failing.
+7. Expect to re-slice: anything a builder cannot finish in about half an hour is too big,
+   and two identical gate failures mean the task is wrong, not the model.
+
+## What the numbers said
+
+A pilot on a throwaway file: three contract refusals at $0, then one task end to end in
+105 seconds for $0.19. The first real campaign: nine tasks refused at $0 — the backlog was
+the defect, not the models. After the gates were rewritten to prove behaviour, the first
+accepted commit was a specification that disagreed with the fixture it was generated from;
+the builder found the specification wrong, added exactly the missing rows, and left the
+fixture untouched.
+
+Reviews are 70–99% of the clock. That is the price of refusing early, and the lever for
+speed is better task contracts, not faster builders.
+
+## Two things this design got wrong, kept here on purpose
+
+**It claimed the logic was generic.** It was not. Four places in the source named the work
+it was built for, one of them by copying a private directory into every worktree it
+created. A claim of genericness is a measurement, not a statement.
+
+**It described what the loop does and not how it is run.** The runner is the supervisor,
+not the driver, and a campaign lasts days. Any front end for this loop has to start the
+supervisor and return, then read its state from the log — never hold a session open
+waiting for a campaign to end.
