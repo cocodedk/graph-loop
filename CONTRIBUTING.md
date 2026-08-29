@@ -28,6 +28,13 @@ ruff check .
 bash scripts/scrub-check.sh
 ```
 
+The check ships structural patterns only. While material is still being lifted out of the
+work this loop came from, pass that migration's private denylist by path as well:
+
+```
+bash scripts/scrub-check.sh /path/to/denylist
+```
+
 ## Nothing local travels
 
 This repository is public and the loop it carries was built inside a private

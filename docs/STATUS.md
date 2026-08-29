@@ -85,6 +85,13 @@ Found by review, not yet fixed. They are why the move is not a copy:
   deleted, which a working-tree scan passes and a history scan does not. Every one of those
   was found by trying to break it, none by reading it.
 
+## The notes that are not here
+
+Some of this migration's detail names the work the loop came from — which repository, which
+branch, which commit, and the literals the guard checks for. That is kept in a private
+companion repository and is deliberately absent here. Everything in it that can be said
+without naming anything is already above.
+
 ## Pick up here
 
 1. Confirm CI has run green once, then apply `scripts/setup-repo.sh` for branch protection.
