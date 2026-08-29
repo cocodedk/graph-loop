@@ -25,12 +25,13 @@ meantime. So the code moves once, from a source that has stopped moving.
 - GitHub infrastructure: owner-locked pre-push hook, conventional-commit gate, CI, release
   from the plugin manifest, dependabot, templates, security policy, contributing guide.
 - `scripts/scrub-check.sh`, and the discipline behind it — see below.
-- `scripts/setup-repo.sh` — written, **not applied**. Applying required status checks while
-  `verify` has never run green would wedge the pull request that lands the code.
+- Published, with CI green and branch protection active on `main`: `verify` must pass,
+  a pull request is required, no force-push and no deletion. The repository owner can
+  bypass, which is what makes a direct push to `main` possible — use it sparingly, because
+  the protection is only as real as the habit.
 
 ## What is not done
 
-- Branch protection, pending a first green CI run.
 - No GitHub Pages site, no `llms.txt`.
 - The runtime, the tests, and the commands — deferred by the decision above.
 
@@ -94,9 +95,8 @@ without naming anything is already above.
 
 ## Pick up here
 
-1. Confirm CI has run green once, then apply `scripts/setup-repo.sh` for branch protection.
-2. Answer the operational question above — detached `run`, or a narrower plugin.
-3. Write the backlog schema up as `examples/`, which can be done before the code arrives.
-4. When the source has stopped moving: the runtime, in one move. Sanitise in a staging
+1. Answer the operational question above — detached `run`, or a narrower plugin.
+2. Write the backlog schema up as `examples/`, which can be done before the code arrives.
+3. When the source has stopped moving: the runtime, in one move. Sanitise in a staging
    directory that is not a git repository, and let the scrub check pass **before** anything
    enters the index — a clean final checkout does not clean a history.
