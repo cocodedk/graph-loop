@@ -43,6 +43,7 @@ its own — the method does not need the driver.
 
 - **[docs/DESIGN.md](docs/DESIGN.md)** — the parts, the task contract, the order of one
   task and why each step is where it is. Enough to build the loop yourself.
+- **[docs/STATUS.md](docs/STATUS.md)** — where this repository is, what is deliberately missing, and where to pick it up.
 - **[docs/DIARY.md](docs/DIARY.md)** — what each rule cost. Every incident is real; none of
   them points at anything real. The numbers are untouched, because they are what makes a
   rule believable.
