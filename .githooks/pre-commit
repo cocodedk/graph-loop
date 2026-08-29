@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+# The loop's own suite is the smoke test. Before the code is extracted there is
+# nothing to run, and saying so is more honest than a hook that always passes.
+if [ -d tests ] && [ -d plugins/drive/runtime ]; then
+  PYTHONPATH=plugins/drive/runtime python3 -m unittest discover -s tests -t . -q
+else
+  echo "pre-commit: no runtime and tests yet — nothing to verify."
+fi
