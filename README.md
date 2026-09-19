@@ -1,13 +1,13 @@
-# drive-loop
+# graph-loop
 
 A method for breaking a large body of work into tasks an agent loop can run unattended, and
 the design of a loop that runs them.
 
-**What this repository contains today:** the method, as a Claude Code skill; the design of
-the loop; and the diary of building and running it. **The runtime is not here yet.** It
-lands in one piece, from a source that has stopped changing — see *Status* below.
+**What this repository contains:** the loop itself — `drive/`, the driver, and `slicer/`,
+the plan phase that writes the cards — plus the method as a Claude Code skill, the design,
+and the diary of building and running it.
 
-**What running the loop will require, when it lands:** a machine with `python3`, `git`,
+**What running it requires:** a machine with `python3`, `git`,
 `bash` and `ps`, and command-line access to **two different model providers** — one that
 builds and one that reviews. That is not incidental. The whole design rests on the reviewer
 having blind spots the builder does not, so a single-provider setup is a different tool.
@@ -18,6 +18,11 @@ Two models that never trust each other. A reviewer refuses any task whose gate c
 without the work being done. A builder does one task in a private worktree. A gate — a
 command whose exit code is the verdict — decides. A fresh reviewer reads the finished diff.
 Only then is the work committed.
+
+The backlog is a vault of Obsidian notes inside the repository being built. One note is one
+card: what a person reads is byte for byte what the loop reads, `Needs` and `Uses` are
+`[[wikilinks]]`, so the graph view is the dependency graph, and the loop writes only the
+front matter. Planning and building are separate commands that never overlap.
 
 Everything said, heard and measured is appended to a log, and a watchdog reads that log to
 catch the loop going through the motions. A person is needed only where a task says so, and
@@ -31,8 +36,8 @@ better task contracts, not faster builders.
 ## Install the skill
 
 ```
-/plugin marketplace add cocodedk/drive-loop
-/plugin install drive@drive-loop
+/plugin marketplace add cocodedk/graph-loop
+/plugin install drive@graph-loop
 ```
 
 The skill fires when you are slicing work into tasks for an unattended run, judging whether
@@ -51,19 +56,24 @@ its own — the method does not need the driver.
 If you only read one thing, read the diary. The rules are short and sound arbitrary until
 you see what buying them cost.
 
-## Status
+## Run it
 
-The loop exists and has produced accepted commits, inside private work. It is being lifted
-out in two stages, on purpose:
+```
+export DRIVE_REPO=/path/to/the/repository/being/built
+export DRIVE_CAMPAIGN=$DRIVE_REPO/scratchpad/campaign
 
-1. **Now:** the design, the diary and the skill. They carry the transferable value and they
-   do not drift when someone fixes a bug in the code.
-2. **Later:** the runtime, in one move, once the work it currently serves has finished.
+python3 drive/drive-goal.py init --goal "..." --backlog "$DRIVE_REPO/vault" \
+                                 --branch campaign/one --source spec/brief.md
+python3 drive/drive-goal.py approve       # you have read the goal and the sources
+python3 drive/drive-goal.py plan          # write every card, reviewed; build nothing
+python3 drive/drive-goal.py run           # build the cards; write none
+```
 
-Splitting it this way avoids a fork whose *exercised* copy is private and whose *clean*
-copy is the one nobody runs. One open design question is being settled in the meantime: a
-campaign runs for days, so the front end has to start the supervisor and return, then read
-its state from the log — never hold a session open waiting.
+A campaign runs for days, so the thing that actually runs it is `drive/supervisor.sh`, not
+the driver: start it and return, then read state from the campaign's log. Never hold a
+session open waiting for a campaign to end.
+
+See **[docs/STATUS.md](docs/STATUS.md)** for what is proven and what is not.
 
 ## Author
 

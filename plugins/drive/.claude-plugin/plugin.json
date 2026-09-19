@@ -6,8 +6,8 @@
     "name": "Babak Bandpey",
     "email": "bb@cocode.dk"
   },
-  "homepage": "https://github.com/cocodedk/drive-loop",
-  "repository": "https://github.com/cocodedk/drive-loop",
+  "homepage": "https://github.com/cocodedk/graph-loop",
+  "repository": "https://github.com/cocodedk/graph-loop",
   "license": "MIT",
   "keywords": ["agent-loop", "backlog", "task-contracts", "unattended", "review"]
 }

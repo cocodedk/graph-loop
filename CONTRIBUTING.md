@@ -1,4 +1,4 @@
-# Contributing to drive-loop
+# Contributing to graph-loop
 
 ## Local setup
 
@@ -23,7 +23,8 @@ git config push.autoSetupRemote true
 ## Build and test
 
 ```
-PYTHONPATH=plugins/drive/runtime python3 -m unittest discover -s tests -t .
+(cd slicer/tests && python3 -m unittest discover -q)
+(cd drive/tests && python3 -m unittest discover -q)
 ruff check .
 bash scripts/scrub-check.sh
 ```

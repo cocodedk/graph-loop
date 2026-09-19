@@ -1,102 +1,87 @@
 # Status, and where to pick this up
 
-Last updated 29 August 2026.
+Last updated 19 September 2026.
 
-This repository is being filled in two stages on purpose. If you are returning to it — from
-another machine, or after a gap — read this first.
+The runtime is here. This file says what is proven, what is not, and what is still owed.
 
-## The decision that shapes everything
+## What is here
 
-- **Now:** the design, the diary and the skill. They carry the transferable value, and they
-  do not change when someone fixes a bug in the code.
-- **Later, in one move:** the runtime — roughly 4,150 lines of Python, two shell scripts and
-  thirteen test files — once the work it currently serves has finished.
+- `drive/` — the driver, the supervisor, the watcher and its stand-in, the dashboard.
+- `slicer/` — the plan phase: a branch writer, a speccer and the slicer that writes every
+  card, each with its own independent reviewer.
+- `docs/` — the design, this file, and the diary of what each rule cost.
+- `plugins/drive/` — the method as a Claude Code skill; useful without the driver.
+- `scripts/scrub-check.sh` — nothing local travels, checked over contents, filenames and
+  the whole history.
 
-The reason is drift. The existing copy is patched on almost every run; one campaign alone
-found six defects in the loop itself. Copying the code now would create a fork whose
-*exercised* side is the one still in use and whose *clean* side is the one nobody runs, and
-every fix would have to be carried across by hand into code that had been renamed in the
-meantime. So the code moves once, from a source that has stopped moving.
+Both suites run here: the slicer's 211 tests are green, and 1530 of the driver's 1536 pass.
+The six that do not need a machine this one is not — a non-root user, a sandbox that can
+take a variable out of a gate's environment, and a real session launcher. `ruff check .`
+is clean.
 
-## What is done
+## What the move changed
 
-- The skill, the design and the diary, generalised and scrubbed.
-- Plugin and marketplace manifests, so the skill installs.
-- GitHub infrastructure: owner-locked pre-push hook, conventional-commit gate, CI, release
-  from the plugin manifest, dependabot, templates, security policy, contributing guide.
-- `scripts/scrub-check.sh`, and the discipline behind it — see below.
-- Published, with CI green and branch protection active on `main`: `verify` must pass,
-  a pull request is required, no force-push and no deletion. The repository owner can
-  bypass, which is what makes a direct push to `main` possible — use it sparingly, because
-  the protection is only as real as the habit.
+The loop used to live inside the repository it built, and four places quietly relied on
+that. Each is configuration now, and nothing else names a particular project:
 
-## What is not done
+| variable | what it names | default |
+|---|---|---|
+| `DRIVE_REPO` | the repository being built | the directory you run from |
+| `DRIVE_CAMPAIGN` | where the campaign remembers | `$DRIVE_REPO/scratchpad/drive-campaigns/current` |
+| `DRIVE_BACKLOG` | the vault of cards | `$DRIVE_REPO/vault` |
+| `DRIVE_HELPER` | that repository's own command tool, for a live card | none, and a live card gets no helper grant |
+| `DRIVE_PROVISION_COPY` | gitignored folders a checkout needs, copied in | none |
+| `DRIVE_PROVISION_LINK` | folders a checkout needs, symlinked | none |
+| `DRIVE_ACCOUNTS` | `name=configdir` pairs the belt walks | one account on the default configuration |
+| `WATCHER_CONFIG_DIR` | the account the watcher session runs on | the default account |
 
-- No GitHub Pages site, no `llms.txt`.
-- The runtime, the tests, and the commands — deferred by the decision above.
+Eleven checks stayed behind, because their input was another repository's own records: two
+that graded that backlog card by card, one that counted 383 endings in its campaign log,
+seven that repaired a snapshot of its backlog, and one that read a single card out of its
+history. The rules they guarded travel; the data could not. `triage_repairs` keeps its
+synthetic tests in `test_triage_repair_requeue`, `test_triage_repair_rounds` and
+`test_activation_never_recomputes_a_repair`.
 
-## The open design question — read this before writing any command
+## What is not proven
 
-A campaign runs for days. The thing that actually runs it is the supervisor, not the
-driver: the driver is a process, processes die, and the supervisor restarts it and gives up
-after repeated immediate failures.
+**No campaign has finished unattended.** Seven runs on the code that came here: the
+seventh built all three of its buildable cards and parked none, and could not end — fixed
+since, but not measured since. Until a campaign finishes on its own, the difference
+between this and a tool in a shell loop is the person typing the loop.
 
-That has a consequence the original design never wrote down. **A front end cannot hold a
-session open waiting for a campaign to end.** Any `run` command must start the supervisor
-and return; the watching commands must read state from the campaign's log, not from a
-process the session owns. The existing dashboard decides whether the supervisor is alive by
-looking for its filename in the process list, which is a dependency on that filename that
-nothing declares.
+Automatic gate repair is off. TRIAGE still works out how to repair a mute gate and writes
+that repair as a preview needing an approval; nothing writes that approval now, so a
+standing preview stays unapplied and says so once on the board. No card is stranded by it.
 
-Until that is settled, the honest description of this plugin is: a skill, plus the commands
-that read a campaign rather than start one. Whether the loop belongs in a plugin at all, or
-in a command-line tool with a thin plugin carrying the skill, is genuinely open.
+## What is still owed
 
-## Known problems in the code that is coming
+- The loop's status vocabulary is its own (`todo`, `sliced`, `rejected`, `needs_slice`, …)
+  rather than the four agreed words, `sliced → implemented → verified → merged`.
+- A card should park on its **first** failure. It cannot yet: one counter is incremented
+  both when the work fails and when the machine fails, so setting the cap to one would
+  throw away paid work on a usage limit. That needs two counters.
+- `lib/triage_preview.py` is dead while gate repair is off.
+- `drive/BLUEPRINT.md` has table cells a thousand characters long. It is the reference for
+  every part and nobody can read it in that shape.
 
-Found by review, not yet fixed. They are why the move is not a copy:
+## The rules this repository bought
 
-- The worktree builder copies four directories belonging to one project into every worktree
-  it creates. That is behaviour, not prose — carried across unchanged it would silently
-  special-case work nobody else has.
-- One project's house rules sit inside the builder's prompt: a file-size limit, a ban on
-  touching containers, an assumption that nobody is around at the weekend.
-- The tool allowlist names a linter that exists on one set of machines.
-- The doctor looks for the supervisor at a path spelled the way one repository spells it,
-  in a branch that is a no-op and should be deleted rather than moved.
-- The repository root is computed at import time, so making it fail loudly when unset needs
-  care or `--help` and every test import will crash.
-- The backlog schema is documented only in the header of a file that is not being
-  extracted. It needs shipping as an example, or nobody can write a backlog.
-- The builder's tool allowlist already grants arbitrary execution, so it is not a security
-  boundary. The worktree, the scope check and the gate are. The security policy should say
-  so rather than implying otherwise.
-
-## The rules this repository already bought
-
-- **A document is not authority about the code it describes.** The design shipped claiming
-  the logic was generic; four places in the source said otherwise. A claim of genericness
-  is a measurement, and the measurement is a grep of the source, spelled the way the source
+- **A document is not authority about the code.** The design shipped claiming the logic was
+  generic; four places in the source said otherwise. A claim of genericness is a
+  measurement, and the measurement is a grep of the source, spelled the way the source
   spells it.
 - **Take the file list from the repository, not from a document.** A hand-written inventory
   drifts; `git ls-files` does not.
 - **A new check is not trusted until the case it exists to catch has failed in front of
-  you.** The guard here contained every literal it forbade and excluded itself to pass. Then
-  it failed on its own pattern file. Then it caught a leak that had been committed and
-  deleted, which a working-tree scan passes and a history scan does not. Every one of those
-  was found by trying to break it, none by reading it.
+  you.** The guard here contained every literal it forbade and excluded itself to pass.
+  Then it failed on its own pattern file. Then it caught a leak that had been committed and
+  deleted, which a working-tree scan passes and a history scan does not.
+- **Scrub before anything enters the index.** A clean final checkout does not clean a
+  history, and the guard reads the history too.
 
 ## The notes that are not here
 
-Some of this migration's detail names the work the loop came from — which repository, which
-branch, which commit, and the literals the guard checks for. That is kept in a private
-companion repository and is deliberately absent here. Everything in it that can be said
-without naming anything is already above.
-
-## Pick up here
-
-1. Answer the operational question above — detached `run`, or a narrower plugin.
-2. Write the backlog schema up as `examples/`, which can be done before the code arrives.
-3. When the source has stopped moving: the runtime, in one move. Sanitise in a staging
-   directory that is not a git repository, and let the scrub check pass **before** anything
-   enters the index — a clean final checkout does not clean a history.
+Some of this migration's detail names the work the loop came from — which repository,
+which branch, which commit, and the literals the guard checks for. That is kept privately
+and is deliberately absent here. Everything in it that can be said without naming anything
+is already above.

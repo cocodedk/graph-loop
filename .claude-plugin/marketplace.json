@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
-  "name": "drive-loop",
-  "description": "Local marketplace shipping the drive plugin alongside its source.",
+  "name": "graph-loop",
+  "description": "Local marketplace shipping the drive plugin alongside the loop's source.",
   "owner": {
     "name": "Babak Bandpey",
     "email": "bb@cocode.dk"

@@ -1,12 +1,11 @@
-# The drive loop — design
+# The graph loop — design
 
 How to build this loop, anywhere. What each part is, why it exists, and the order that
 makes it safe to leave alone. `DIARY.md` beside this file is the story of how it was
 learned; this file is the design.
 
-The runtime is not in this repository yet. It arrives in one piece, from a source that has
-stopped changing. This document is written so that you could build the loop yourself
-without it.
+The runtime is here: `drive/` is the driver and `slicer/` is the planner. This document is
+still written so that you could build the loop yourself without reading the code.
 
 ## The idea in one paragraph
 
@@ -35,31 +34,73 @@ only where a task says so, and the loop says out loud when it needs one.
 | report | where the clock went, by step and by task; the bottleneck named |
 | doctor | the mistakes already made, checked for after every task |
 | view | the dashboard: warnings first, then the facts, all read from the log |
-| driver | init → approve → run; status, report, doctor; stop and stop now |
+| slicer | the plan phase: turn a brief into branch goals, specs and every card, each reviewed |
+| cardfile | the one reader and writer of a card's note; nothing else touches the file |
+| triage | why an ending ended: the work, the machine, the rig or the gate |
+| driver | init → approve → plan → run; status, report, doctor; stop and stop now |
 | supervisor | restart a dead driver, back off on a crash loop, hourly report snapshots |
 | window | clear, print the view, sleep |
 
-## The task contract
+## The card
 
-```yaml
-- id: fetch-timeout
-  goal: one sentence, one idea
-  why: what it costs us that this is not done
-  status: todo          # the picker offers only todo
-  needs: [config-defaults]           # ids that must be done first — only real dependencies
-  files: [ ... ]        # everything the gate can fail on, and nothing that judges it
-  gate: (cd path/to/tests && timeout 600 python3 -m unittest ...)
-  done_when: what the gate proves, and nothing more
-  note: traps, the source of truth, what to do instead of guessing
-  # optional:
-  gate_files_are_the_work: true   # writing the test IS the deliverable — tell the reviewer
-  gate_has_side_effects: true     # the gate performs a live run: no red-first, take the lock
-  blocked_by_human: true          # never started; shown as held
+A card is one note in a vault you can open in Obsidian. The note *is* the card: there is no
+second copy and nothing is generated from anything, so what a person reads is byte for byte
+what the loop reads. The vault lives in the repository being built, on the campaign branch,
+so `git` is its history.
+
+````markdown
+---
+status: todo                    # the picker offers only todo; the loop writes this field
+files:                          # everything the gate can fail on, never what judges it
+  - src/fetch.py
+gate_files_are_the_work: true   # optional: writing the test IS the deliverable
+gate_has_side_effects: true     # optional: the gate performs a live run — no red-first, take the lock
+blocked_by_human: true          # optional: never started; shown as held
+---
+
+## Goal
+
+one sentence, one idea
+
+## Why
+
+what it costs us that this is not done
+
+## Done when
+
+what the gate proves, and nothing more
+
+## Gate
+
+```sh
+(cd tests && timeout 600 python3 -m unittest test_fetch)
 ```
+
+## Needs
+
+- [[T4/02-config-defaults]]
+
+## Note
+
+traps, the source of truth, what to do instead of guessing
+````
+
+The file is named number first, then the goal in a few words —
+`04-signup-form-rejects-a-blank-email.md` — so the sidebar sorts in build order. `Needs`,
+`Uses` and `Creates` are `[[wikilinks]]`, so Obsidian's graph view *is* the dependency
+graph rather than a picture of one. Front matter holds what the loop decides; the body
+holds what was written for a person, and the loop never touches it.
 
 Gate rules: every path relative to the worktree; every stage in its own subshell
 `(cd … && …)`; `set -o pipefail`; the verdict is the exit code; it must fail today for the
 reason the task exists.
+
+## Two phases that never mix
+
+Planning and building are separate commands. `drive-goal.py plan` slices until the backlog
+stops changing and builds nothing; `drive-goal.py run` builds the cards and writes none.
+A card that fails is parked, and the next plan phase is what re-slices it — so a driver
+that has nothing startable hands back to the supervisor rather than waiting.
 
 ## The order of one task, and why each step is where it is
 
@@ -134,7 +175,9 @@ speed is better task contracts, not faster builders.
 
 **It claimed the logic was generic.** It was not. Four places in the source named the work
 it was built for, one of them by copying a private directory into every worktree it
-created. A claim of genericness is a measurement, not a statement.
+created. A claim of genericness is a measurement, not a statement. Those four are
+configuration now — `DRIVE_REPO`, `DRIVE_HELPER`, `DRIVE_PROVISION_COPY` and
+`DRIVE_PROVISION_LINK` — and the measurement is still a grep of the source.
 
 **It described what the loop does and not how it is run.** The runner is the supervisor,
 not the driver, and a campaign lasts days. Any front end for this loop has to start the

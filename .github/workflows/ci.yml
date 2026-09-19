@@ -22,14 +22,11 @@ jobs:
       - name: Lint
         run: ruff check .
 
-      - name: Tests
-        run: |
-          if [ -d tests ] && [ -d plugins/drive/runtime ]; then
-            PYTHONPATH=plugins/drive/runtime python -m unittest discover -s tests -t . -v
-          else
-            echo "::notice::No runtime and tests yet — the loop has not been extracted into this repository."
-            exit 0
-          fi
+      - name: Slicer tests
+        run: cd slicer/tests && python -m unittest discover -q
+
+      - name: Driver tests
+        run: cd drive/tests && python -m unittest discover -q
 
       - name: Nothing local travels
         run: bash scripts/scrub-check.sh
