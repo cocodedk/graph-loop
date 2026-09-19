@@ -1,8 +1,8 @@
 """What no hook and no `Worktree.on_base` check ever sees: a rewrite of a
 SHARED branch ref, by any spelling, from inside a builder's own checkout.
-`symbolic-ref` re-points a ref other than HEAD, so the reference-transaction
-hook does not fire and `on_base` (which only reads HEAD) never looks at it;
-a raw file write goes through no git code at all. In a linked worktree,
+`symbolic-ref` re-points a ref other than HEAD, which `on_base` (reading only
+HEAD) never looks at and which git before 2.55 kept out of the hook; a raw
+file write goes through no git code at all. In a linked worktree,
 either one reaches the repo directly — `symbolic-ref refs/heads/campaign/
 test refs/heads/main` would make the campaign branch literally BE main, and
 the keeper's own `update-ref` would then move main itself. A task checkout
@@ -24,7 +24,7 @@ import tmp_root  # noqa: F401 — every temp file of this process under one root
 from loop import Loop
 from providers import Outcome
 from test_loop import Fakes, repo_with, task
-from test_worktree_refs import git
+from test_worktree_refs import REFUSED, git
 from worktree import Worktree
 
 EXPECTED_TESTS = 6
@@ -34,15 +34,16 @@ class SymbolicRefRewriteTest(unittest.TestCase):
     def test_a_symbolic_ref_rewrite_of_the_campaign_branch_never_moves_main(self):
         fakes = Fakes()
         returncode = None
+        stderr = ""
 
         def rewires(prompt, *, account, cwd, files, tools, denies, guard, effort="",
                     resume="", model=""):
-            nonlocal returncode
+            nonlocal returncode, stderr
             fakes.calls.append(f"build:{account}")
             done = subprocess.run(("git", "-C", cwd, "symbolic-ref",
                                    "refs/heads/campaign/test", "refs/heads/main"),
                                   capture_output=True, text=True, check=False)
-            returncode = done.returncode
+            returncode, stderr = done.returncode, done.stderr
             (pathlib.Path(cwd) / "a.py").write_text("two\n")
             return Outcome("ok", text="done")
 
@@ -51,7 +52,11 @@ class SymbolicRefRewriteTest(unittest.TestCase):
         loop = Loop(repo=root, backlog=book, space=space, build=rewires,
                    review=fakes.reviewer, branch="campaign/test")
         out = loop.run_task(book.task("T1"))
-        self.assertEqual(0, returncode)                # not refused: no hook covers it
+        # Git before 2.55 kept symref updates out of the hook, so this ran;
+        # 2.55 refuses it. Whether it runs at all is git's business; the repo
+        # being untouched either way is this test's, and the checkout's own
+        # `.git` is what makes it so.
+        self.assertTrue(returncode == 0 or REFUSED in stderr, stderr)
         self.assertEqual("done", out.state, out.why)
         self.assertEqual(base, git(root, "rev-parse", "main"))          # main never moved
         symbolic = subprocess.run(("git", "-C", root, "symbolic-ref", "-q",
@@ -72,16 +77,16 @@ class DirectRefFileWriteTest(unittest.TestCase):
         # `.git` for a private clone, and to the shared repo's for a linked one.
         fakes = Fakes()
 
+        root, book, space = repo_with(task())
+        base = git(root, "rev-parse", "main")
+        # A valid, foreign commit — not garbage bytes — so a shared object
+        # store resolves it. Made in the repo: it has an identity, a clone none.
+        foreign = git(root, "commit-tree", git(root, "rev-parse", "main^{tree}"),
+                      "-m", "foreign")
+
         def scribbles(prompt, *, account, cwd, files, tools, denies, guard, effort="",
                       resume="", model=""):
             fakes.calls.append(f"build:{account}")
-            # A valid, foreign commit — not garbage bytes — so a shared object
-            # store still resolves it and the round runs to completion; the
-            # single thing under test is whether the write reaches the repo.
-            same_tree = subprocess.run(("git", "-C", cwd, "rev-parse", "HEAD^{tree}"),
-                                       capture_output=True, text=True, check=True).stdout.strip()
-            foreign = subprocess.run(("git", "-C", cwd, "commit-tree", same_tree, "-m", "foreign"),
-                                     capture_output=True, text=True, check=True).stdout.strip()
             found = subprocess.run(("git", "-C", cwd, "rev-parse", "--git-path",
                                     "refs/heads/main"), capture_output=True, text=True,
                                    check=True).stdout.strip()
@@ -89,8 +94,6 @@ class DirectRefFileWriteTest(unittest.TestCase):
             (pathlib.Path(cwd) / "a.py").write_text("two\n")
             return Outcome("ok", text="done")
 
-        root, book, space = repo_with(task())
-        base = git(root, "rev-parse", "main")
         loop = Loop(repo=root, backlog=book, space=space, build=scribbles,
                    review=fakes.reviewer, branch="campaign/test")
         out = loop.run_task(book.task("T1"))

@@ -18,6 +18,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 from loop import Loop
 from providers import Outcome
 from test_loop import Fakes, repo_with, task
+from test_worktree_refs import REFUSED
 
 EXPECTED_TESTS = 2
 
@@ -47,7 +48,7 @@ class SneakyCommitRefusedTest(unittest.TestCase):
                    review=fakes.reviewer, branch="campaign/test")
         out = loop.run_task(book.task("T1"))
         self.assertNotEqual(0, returncode)
-        self.assertIn("aborted by hook", stderr)
+        self.assertIn(REFUSED, stderr)
         self.assertEqual("done", out.state, out.why)
         self.assertTrue(book.task("T1")["commit"])
         head = subprocess.run(("git", "-C", out.worktree, "rev-parse", "HEAD"),

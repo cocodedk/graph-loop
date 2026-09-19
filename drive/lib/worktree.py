@@ -112,9 +112,9 @@ class Worktree:
         _git(self.path, "config", "core.hooksPath", HOOKS_DIR)
 
     def on_base(self) -> None:
-        """HEAD still equals the round's own commit. `git switch` to a branch
-        that already EXISTS reattaches HEAD by a symbolic-ref update no hook
-        covers — this catches that; nothing here can reach the repo either way."""
+        """HEAD still equals the round's own commit. A builder that writes
+        `.git/HEAD` by hand runs no git code and so meets no hook — this
+        catches that; nothing here can reach the repo either way."""
         found = _git(self.path, "rev-parse", "HEAD").strip()
         if found != self.commit:
             raise HeadMoved(found)

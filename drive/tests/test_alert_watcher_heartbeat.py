@@ -79,7 +79,8 @@ class HeartbeatRoutingTest(Rig):
         self.claude_faithful_any_target()
         self.assertEqual(0, self.run_alert(
             "  !! red   (since 2026-08-31T10:00+0200)",
-            extra_env={"CLAUDE_CONFIG_DIR": "/cfg/work"}))
+            extra_env={"CLAUDE_CONFIG_DIR": "/cfg/work",
+                       "WATCHER_CONFIG_DIR": "/cfg/second"}))
         env_text = (self.camp / "claude-env.txt").read_text("utf-8")
         self.assertIn("DRIVE_MESSENGER=1", env_text)
         self.assertIn("CLAUDE_CONFIG_DIR=/cfg/second", env_text)

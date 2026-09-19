@@ -1,8 +1,8 @@
 """Every ref write a builder can attempt from inside its own checkout —
-switching to a brand-new branch, creating one without switching, resetting to
-a commit that never grew there, and a switch to a branch that already exists
-— is either refused by `lib/hooks/reference-transaction` or caught by
-`Worktree.on_base` checking HEAD. What neither of those sees at all — a
+switching to a brand-new branch, creating one without switching, and
+resetting to a commit that never grew there — is refused by
+`lib/hooks/reference-transaction`, and a HEAD written by hand, which no hook
+can see, is caught by `Worktree.on_base`. What neither of those sees at all — a
 rewrite of a shared branch ref by any spelling — is `test_worktree_private_
 refs`'s, the same 200-line split, same as the sneaky-commit case is
 `test_loop_uncommit`'s.
@@ -22,6 +22,9 @@ from providers import Outcome
 from test_loop import Fakes, loop_for, repo_with, task
 
 EXPECTED_TESTS = 5
+
+# The hook's own line; git reworded its own half of the message in 2.55.
+REFUSED = "refs are the driver's: no ref update from a builder worktree"
 
 
 def git(root, *args) -> str:
@@ -53,7 +56,7 @@ class NewBranchRefusedTest(unittest.TestCase):
                    review=fakes.reviewer, branch="campaign/test")
         out = loop.run_task(book.task("T1"))
         self.assertNotEqual(0, returncode)
-        self.assertIn("aborted by hook", stderr)
+        self.assertIn(REFUSED, stderr)
         self.assertEqual("done", out.state, out.why)
         self.assertEqual("1", git(root, "rev-list", "--count", f"{base}..campaign/test"))
 
@@ -79,7 +82,7 @@ class StrayBranchRefusedTest(unittest.TestCase):
         loop.build = branches
         out = loop.run_task(book.task("T1"))
         self.assertNotEqual(0, returncode)
-        self.assertIn("aborted by hook", stderr)
+        self.assertIn(REFUSED, stderr)
         self.assertEqual("done", out.state, out.why)
         exists = subprocess.run(("git", "-C", loop.repo, "rev-parse", "--verify", "--quiet",
                                  "refs/heads/scratch"), capture_output=True, check=False)
@@ -130,23 +133,23 @@ class ForeignResetRefusedTest(unittest.TestCase):
                    review=fakes.reviewer, branch="campaign/test")
         out = loop.run_task(book.task("T1"))
         self.assertNotEqual(0, returncode)
-        self.assertIn("aborted by hook", stderr)
+        self.assertIn(REFUSED, stderr)
         self.assertEqual(base, seen_head)             # the ref never moved
         self.assertEqual("M  a.py\n", seen_status)     # ...but the working tree already had
         self.assertEqual("foreign\n", seen_content)    # ...the foreign commit's own content
         self.assertEqual("done", out.state, out.why)   # the builder's own edit still lands
 
 
-class ExistingBranchSwitchCaughtTest(unittest.TestCase):
-    def test_switching_to_an_existing_branch_off_base_is_caught_and_discarded(self):
-        # `git switch <existing branch>` moves HEAD by a symbolic-ref update,
-        # which the hook does not cover — not refused. `Worktree.on_base` is
-        # the one thing that catches it. A checkout is a private clone, so the
-        # only branch it holds locally without first CREATING one (itself a
-        # refused write) is the repo's default, `main`; a task with earlier
-        # work on campaign/test is based off THAT, so switching to `main` is "off base".
+class HeadMovedOffBaseCaughtTest(unittest.TestCase):
+    def test_a_head_moved_off_base_is_caught_and_discarded(self):
+        # A builder holding a shell can write `.git/HEAD` itself: no git code
+        # runs, so no hook sees it on any git version, and `Worktree.on_base`
+        # is the one thing that catches it. (`git switch <existing branch>`
+        # reached the same place by a symref update until git 2.55 put those
+        # through a transaction the hook refuses.) The only branch a checkout
+        # holds is `main`; this task is based off campaign/test, so HEAD on
+        # `main` is "off base".
         fakes = Fakes()
-        returncode = None
         cwd_seen = ""
 
         root, book, space = repo_with(task())
@@ -158,22 +161,19 @@ class ExistingBranchSwitchCaughtTest(unittest.TestCase):
         subprocess.run(("git", "-C", root, "update-ref", "refs/heads/campaign/test", ahead),
                        check=True, capture_output=True)
 
-        def switches(prompt, *, account, cwd, files, tools, denies, guard, effort="",
-                     resume="", model=""):
-            nonlocal returncode, cwd_seen
+        def repoints_head(prompt, *, account, cwd, files, tools, denies, guard, effort="",
+                          resume="", model=""):
+            nonlocal cwd_seen
             fakes.calls.append(f"build:{account}")
             cwd_seen = cwd
-            done = subprocess.run(("git", "-C", cwd, "switch", "main"),
-                                  capture_output=True, text=True, check=False)
-            returncode = done.returncode
+            (pathlib.Path(cwd) / ".git" / "HEAD").write_text("ref: refs/heads/main\n")
             (pathlib.Path(cwd) / "a.py").write_text("two\n")
             return Outcome("ok", text="done")
 
-        loop = Loop(repo=root, backlog=book, space=space, build=switches,
+        loop = Loop(repo=root, backlog=book, space=space, build=repoints_head,
                    review=fakes.reviewer, branch="campaign/test")
         out = loop.run_task(book.task("T1"))
 
-        self.assertEqual(0, returncode)                     # the switch is not refused
         self.assertEqual("harness", out.state, out.why)
         self.assertFalse(pathlib.Path(cwd_seen).exists())    # the tree is discarded
         self.assertEqual(ahead, git(root, "rev-parse", "campaign/test"))   # no new commit landed

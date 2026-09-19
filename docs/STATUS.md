@@ -76,6 +76,10 @@ standing preview stays unapplied and says so once on the board. No card is stran
   you.** The guard here contained every literal it forbade and excluded itself to pass.
   Then it failed on its own pattern file. Then it caught a leak that had been committed and
   deleted, which a working-tree scan passes and a history scan does not.
+- **A check that reads the machine is not a check on the code.** Four checks here read
+  git's own wording for a refusal, which git 2.55 changed, and one needed the machine to
+  carry a git identity. All five went red on a build runner, on no change at all. Assert
+  the loop's own hook line, and make whatever a test needs inside the test.
 - **Scrub before anything enters the index.** A clean final checkout does not clean a
   history, and the guard reads the history too.
 

@@ -13,13 +13,12 @@ now, not the one thing standing between a builder and the repo.
 
 The driver still reconstructs nothing; it only CHECKS, via `Worktree.on_base`,
 that HEAD in the checkout still equals the commit the round started from.
-That check stays because isolation cannot help it: `git switch` to a BRANCH
-THAT ALREADY EXISTS re-attaches HEAD by a symbolic-ref update, which git's
-own reference-transaction hook explicitly excludes (`git help githooks`) —
-but this only misleads the checkout about its own history, nothing escapes
-to the repo, so `on_base` catches it once the branch's tip is compared
-against the base. Split out of `worktree` at the 200-line cap; `worktree`
-stays the front door.
+That check stays because isolation cannot help it: a builder holding a shell
+can write `.git/HEAD` itself, running no git code and so passing every hook
+on every git version — but this only misleads the checkout about its own
+history, nothing escapes to the repo, so `on_base` catches it once HEAD is
+compared against the base. Split out of `worktree` at the 200-line cap;
+`worktree` stays the front door.
 """
 
 from __future__ import annotations
