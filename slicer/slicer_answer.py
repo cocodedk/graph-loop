@@ -82,12 +82,20 @@ def _checked(answer: dict, checker, backlog: pathlib.Path, args: dict) -> dict:
         checked = checker(copy.deepcopy(answer["molecule"]))
     except Exception as error:
         # a checker that fails is not a reason to refuse the plan, but say so
-        trace(backlog, "cut_check_failed", error=type(error).__name__, reason=str(error))
+        trace(backlog, "cut_checked", molecule=answer["molecule"]["name"], **_counts(None),
+              findings=0, failed=f"{type(error).__name__}: {error}")
         return answer
     changed = checked.molecule != answer["molecule"]
-    trace(backlog, "cut_checked", findings=len(checked.findings), changed=changed)
+    trace(backlog, "cut_checked", molecule=answer["molecule"]["name"], **_counts(checked),
+          findings=len(checked.findings), changed=changed, failed="")
     if checked.findings:
         raise ValueError("; ".join(str(finding) for finding in checked.findings))
     if changed:
         return validate({**answer, "molecule": checked.molecule}, **args)
     return answer
+
+
+def _counts(checked) -> dict:
+    """What the check did, read off its result; a result that carries none of it reads as zero."""
+    return {key: getattr(checked, key, zero) for key, zero in
+            (("mode", ""), ("requests", 0), ("seconds", 0.0), ("usable", 0), ("merges", 0))}
