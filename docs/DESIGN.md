@@ -147,12 +147,21 @@ even its front matter, and after it `backlog_tree.read` returns what it returned
 An event it cannot make sense of is counted and stepped over — the counts are printed —
 because a memory note is worth less than the campaign it describes.
 
-**Two hands write in a memory note, and one rule tells them apart: every heading the
-command writes ends with ` — from the log`.** Any other `## ` section is a person's own,
-and comes back byte for byte, at the place in the file they put it — its index among the
-sections, which holds because the log only ever grows at the end. The one thing to know
-before writing in one by hand: do not end your own heading with that phrase, or the next
-run will take the section over as its own.
+**The command owns two things in a memory note, and nothing else in the file.** The first
+is the sections it marks: every heading it writes ends with ` — from the log`. Any other
+`## ` section is a person's own and comes back byte for byte, at the place in the file
+they put it — its index among the sections, which holds because the log only ever grows at
+the end. The one thing to know before writing in one by hand: do not end your own heading
+with that phrase, or the next run will take the section over as its own.
+
+The second is `kind` and `node` in the front matter, **and only when they are absent**. A
+note that already has front matter keeps that text exactly — it is never read into a
+mapping and written back out, which would reorder the keys, requote the values and drop
+the comments, so a vault that carries a property set on every note and queries it across
+the vault keeps that set. A missing key is added as one line at the end; a key that is
+there is left as it stands, `node` included. A `node` pointing at another note is somebody
+saying so, perhaps after a rename: the command names that card in its summary and writes
+nothing over it.
 
 The loop still does not *read* relatives, and no builder's or reviewer's prompt is fed one.
 A card's `status` stays in the card's own front matter, where the loop writes it today.

@@ -67,8 +67,9 @@ Rules it enforces, each bought with a failure:
 path: run by hand after a driver stops, it projects the campaign log onto each card's
 memory relative in `<Molecule>/relatives/`. It points at the log's numbered artifacts and
 never copies them, it never touches a card, and a second run on the same log writes
-nothing. Every heading it writes ends with ` — from the log`; every other `## ` section in
-that note is a person's and is kept where they put it. See `docs/DESIGN.md`, "Relatives".
+nothing. It owns the sections whose heading ends with ` — from the log`, and `kind` and
+`node` in the front matter only while they are absent; every other section and every other
+front-matter line is a person's and is kept exactly as they left it. See `docs/DESIGN.md`, "Relatives".
 
 Keep machinery repairs and simulation feature work in separate task contracts.
 A small fixture delivery proves the loop's controls; live mitigation still needs
