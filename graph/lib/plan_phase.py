@@ -30,6 +30,7 @@ from backlog_status import DONE, DROPPED, RUNNABLE, is_wall
 from campaign_of import backlog_of
 from finishing import ENDED_WITH_GAPS, covered_since_planning
 from slice_turn import slice_pending
+from waves import say as say_waves
 from workspace import Workspace
 
 # Verdicts that are not about the card: the run died, the review never
@@ -181,6 +182,7 @@ def command_plan(args) -> int:
     book = Backlog(backlog_of(space))
     added = plan(book, space, rounds=args.rounds)
     print(f"the plan added {added} card{'' if added == 1 else 's'}")
+    say_waves(book.tasks())     # the graph this phase leaves, as of this moment
     if args.rounds:
         return 0                     # stopped early on purpose; nothing is claimed
     done, why = finished(book, space)

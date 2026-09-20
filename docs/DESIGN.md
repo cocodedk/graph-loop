@@ -22,6 +22,7 @@ only where a task says so, and the loop says out loud when it needs one.
 | part | one job |
 |---|---|
 | backlog | which task may start: dependencies met, files disjoint, humans respected |
+| waves | the same question asked forward: what would run together, wave after wave |
 | providers | call a model and read the answer honestly; a limit or a denial is never an attempt |
 | gates | run a gate; the exit code decides; prove it red before anyone builds |
 | workspace | the campaign's memory: rotating events, timed steps, artifacts, claims, alerts, the stop flag |
@@ -40,6 +41,28 @@ only where a task says so, and the loop says out loud when it needs one.
 | driver | init → approve → plan → run; status, report, doctor; stop and stop now |
 | supervisor | restart a dead driver, back off on a crash loop, hourly report snapshots |
 | window | clear, print the view, sleep |
+
+## The frontier, and the lanes that follow it
+
+The purpose of the graph is to assign a new agent each time it branches out, as many as
+there are branches. The loop already does the running — one thread per startable card, up
+to a cap — and what it lacked was the view.
+
+`waves` is one pure function over the cards. It takes what the picker would offer,
+treats that wave as done, and asks again; the cards a wave releases are the next wave.
+`plan` prints it when it finishes and `status` prints it whenever you ask, and both label
+it as of that moment: the backlog is re-sliced between runs, so a projection is a
+snapshot and never a promise. A held card is listed as held and never scheduled — the
+hold is a person's decision, and the loop does not schedule around it. Where a wave is
+wider than the cap, the same line says how wide, what the cap is and how many turns it
+will take.
+
+Each turn writes the three numbers down as well: the width the graph offered, the cap
+the picker applied, and the lanes it ran. `report` reads them back and names the turns
+where the graph was wider than the loop, which is the only honest way to say whether the
+cap is costing anything. The cap itself is the keeper's: it rebuilds a commit whose
+branch moved under it three times before it gives up, so a fourth lane would turn
+ordinary branch movement into a lane failure. `--lanes N` lowers it and never raises it.
 
 ## The card
 

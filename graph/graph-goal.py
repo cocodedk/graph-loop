@@ -35,6 +35,7 @@ from cli_args import build_parser
 from driver_turn import after_lanes, before_turn
 from finishing import stand_down
 from loop import Loop
+from turn_plan import width_against_lanes
 from workspace_claims import _started
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -110,8 +111,11 @@ def command_run(args) -> int:
             for row in taking:
                 print(f"would run {row['id']}: {row['goal']}")
             break
-        ran, outside = run_lanes(loop, book, space, taking,
-                                 turn_id=f"turn-{started}-{int(time.time())}")
+        turn_id = f"turn-{started}-{int(time.time())}"
+        # What the graph offered against what the loop could run, before it
+        # runs: a turn that dies still says how wide its frontier was.
+        width_against_lanes(space, ready, taking, args, turn_id)
+        ran, outside = run_lanes(loop, book, space, taking, turn_id=turn_id)
         started += ran
         # The doctor and the watchdog read what this turn just did, and write
         # what they find into the log nobody is here to read (lib/driver_turn.py).

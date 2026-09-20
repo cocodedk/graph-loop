@@ -31,6 +31,7 @@ from turn import (  # noqa: F401 — the door stays here
     taking_now,
     turn_opens,
 )
+from waves import say as say_waves
 from workspace import Workspace
 
 REPO = where.repo()
@@ -151,6 +152,7 @@ def command_status(args) -> int:
         print(f"  held on the card: {', '.join(held)}")
     ready = [row["id"] for row in book.startable(running=list(running))]
     print(f"  ready now: {', '.join(ready) or 'nothing'}")
+    say_waves(book.tasks(), running=list(running))
     out = report(space)
     print(f"  attempts recorded: {sum(1 for r in rows if r.get('kind') == 'attempt')}"
           f"   known spend: ${out['spend_known']:.2f}")

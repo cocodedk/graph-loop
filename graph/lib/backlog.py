@@ -16,15 +16,13 @@ import threading
 
 import backlog_tree
 import durable
+import frontier
 import yaml  # type: ignore[import-untyped]  # no stubs in this environment
-from backlog_reach import overlap, reach
 from backlog_slice import slice_rows
 from backlog_status import (  # the vocabulary, and this file's front door for it
     CODE,
     EVIDENCE,
-    RUNNABLE,
     settled,
-    spent_its_rounds,
 )
 
 
@@ -69,41 +67,15 @@ class Backlog:
         return CODE if (task.get("files") or []) else EVIDENCE
 
     def ready(self) -> list[dict]:
-        """Every task whose status is todo and whose needs are all done.
-
-        Held tasks stay in the list: the caller has to see that they are next and
-        waiting, rather than have them silently skipped.
-        """
-        rows = self.tasks()
-        done = settled(rows)
-        ready = []
-        for row in rows:
-            if row.get("status") != RUNNABLE:
-                continue
-            if spent_its_rounds(row):
-                continue      # its rounds are spent: offering it again buys a fourth
-            if set(row.get("needs") or []) <= done:
-                ready.append(row)
-        return ready
+        """Every task whose status is todo and whose needs are all done, as
+        `frontier.ready` reads it — the one home for that question, shared with
+        the projection into waves."""
+        return frontier.ready(self.tasks())
 
     def startable(self, running: list[str] | None = None) -> list[dict]:
-        """Ready, not held for a human, and not reaching a path another task holds."""
-        held = set()
-        for task_id in running or []:
-            held |= reach(self.task(task_id) or {})
-        out, taken = [], set()
-        for row in self.ready():
-            if row.get("blocked_by_human"):
-                continue
-            if row.get("id") in taken:
-                continue      # one card per id in a turn: two lanes would share a claim
-            taken.add(row.get("id"))
-            touches = reach(row)
-            if overlap(touches, held):
-                continue
-            held |= touches
-            out.append(row)
-        return out
+        """Ready, not held for a human, and not reaching a path another task
+        holds (`frontier.startable`). One read of the file, not one per card."""
+        return frontier.startable(self.tasks(), running)
 
     def waiting_for_human(self) -> list[dict]:
         return [row for row in self.ready() if row.get("blocked_by_human")]

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 
+from turn_plan import MOST_LANES
+
 
 def build_parser(description: str, commands: dict) -> argparse.ArgumentParser:
     """`commands` maps each subcommand name to the function that runs it."""
@@ -31,8 +33,9 @@ def build_parser(description: str, commands: dict) -> argparse.ArgumentParser:
     ahead.set_defaults(run=commands["plan"])
 
     go = sub.add_parser("run")
-    go.add_argument("--lanes", type=int, default=3,
-                    help="code cards run side by side; a live card always runs alone")
+    go.add_argument("--lanes", type=int, default=MOST_LANES,
+                    help="code cards run side by side, up to this many; a live card "
+                         "always runs alone")
     go.add_argument("--max-tasks", type=int, default=0)
     go.add_argument("--dry-run", action="store_true")
     go.add_argument("--idle-seconds", type=int, default=300)

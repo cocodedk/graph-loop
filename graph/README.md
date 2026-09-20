@@ -21,14 +21,23 @@ Rules it enforces, each bought with a failure:
 
 - The backlog is the only task source. The planner selects and may slice; it
   never invents a task.
-- Up to three code cards build side by side; `--lanes` may lower that ceiling. The
-  first choice for a build is `claude-opus-5` on the work account or the
+- Up to three code cards build side by side; `--lanes` may lower that ceiling,
+  never raise it — three is the keeper's own limit, because it gives up after
+  three rebuilds of a branch that moved under it. The first choice for a build
+  is `claude-opus-5` on the work account or the
   personal one (cap), at effort high climbing to xhigh as the task's weight or a
   lost round demands — never below high, never above xhigh (`effort.py`). A refusal
   before reading skips the unavailable account or model and tries the next
   configured pair; the default belt includes Opus and Sonnet (`resources.py`,
   `accounts.py`, `models.py`). A gate that fails twice the same way re-slices the
   task.
+- The frontier is visible. `plan` and `status` print the waves the backlog would
+  run in — what could start together, then what that releases — labelled as of
+  that moment, because the next plan phase re-slices it. A held card is listed
+  as held and never scheduled. A wave wider than the cap says so in the same
+  line: how wide, the cap, how many turns it takes. Each turn records that
+  width, the cap and the lanes it ran, and `report` names the turns where the
+  graph was wider than the loop.
 - Reviews try a fresh `codex exec --model gpt-6-astra` first (gpt-5.6-sol behind it), once on the task
   contract before any edit and once on the diff, at effort medium climbing to
   high for a heavier task or a round that already failed — never below medium,
