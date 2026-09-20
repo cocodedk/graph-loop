@@ -134,7 +134,7 @@ class ANoteThatIsNotTextIsLeftExactlyAsItIs(unittest.TestCase):
         before = path.read_bytes()
         counts = remember.write_memory(root, then())
         self.assertEqual(before, path.read_bytes())
-        self.assertEqual(1, counts["left_alone"])
+        self.assertEqual(1, counts["untouched"])
 
 
 class TheCountIsAsserted(unittest.TestCase):

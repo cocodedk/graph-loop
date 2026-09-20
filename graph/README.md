@@ -69,7 +69,7 @@ memory relative in `<Molecule>/relatives/`. It points at the log's numbered arti
 never copies them, it never touches a card, and a second run on the same log writes
 nothing. It owns the sections whose heading ends with ` — from the log`, and `kind` and
 `node` in the front matter only while they are absent; every other section and every other
-front-matter line is a person's and is kept exactly as they left it. See `docs/DESIGN.md`, "Relatives".
+front-matter line is a person's and is kept exactly as they left it. See `docs/RELATIVES.md`.
 
 Keep machinery repairs and simulation feature work in separate task contracts.
 A small fixture delivery proves the loop's controls; live mitigation still needs

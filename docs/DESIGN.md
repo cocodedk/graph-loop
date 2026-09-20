@@ -98,73 +98,15 @@ reason the task exists.
 ## Relatives: memory and learning around a card
 
 A card is never edited to remember something. What is decided, tried or learned about a
-node — a molecule, an atom, a root-level note — goes in a **relative**: a separate note
-that links to the node instead. Obsidian then shows the relative as the node's neighbour in
-its graph and its backlinks, while the node stays byte for byte what it was, which is what
-keeps a card safe to have open while the loop runs.
+node goes in a **relative** — a separate note that links to the node — so Obsidian shows it
+as the node's neighbour while the node stays byte for byte what it was. Three kinds
+(`memory-`, `learning-`, `evaluation-`), each in a `relatives/` sub-folder, never beside a
+card: `molecule.ordered` reads every other `.md` in a molecule as an atom, and one it
+cannot number stops the whole backlog read. `graph-goal.py remember` writes a node's memory
+from the campaign log, by hand after a driver stops; the loop itself still neither writes
+nor reads a relative.
 
-Three kinds, told apart by the first word of the file name:
-
-| kind | file name | how many | holds |
-|---|---|---|---|
-| memory | `memory-<node>.md` | one per node, append-only, dated sections | what was decided, tried and measured — it **points to the evidence and never copies it**, so the log stays the one home of the raw record and "nothing is written down twice" stays true |
-| learning | `learning-<node>-<slug>.md` | one per learning | front matter `status: open\|adopted\|rejected`, `applies_to`, `basis: measured\|source\|design` |
-| evaluation | `evaluation-<scope>.md` | one, written when the project is done | every open learning, read against the logs and marked adopted or rejected; an adopted one becomes a change to the method |
-
-Relatives live in a `relatives/` folder: `<vault>/<Molecule>/relatives/` for a molecule and
-its atoms, `<vault>/relatives/` for a root-level note. Never pre-create a molecule folder
-to hold one — the slicer renames a finished molecule into place and refuses a name that
-already exists.
-
-And never put a relative **beside a card**. `molecule.ordered` reads every `.md` file in a
-molecule's folder as an atom except `molecule.md` itself, and a name it cannot read as
-`NN-stem.md` stops the whole read — one stray note beside the atoms breaks every card the
-picker was about to offer, not just its own. A sub-folder is skipped rather than read as an
-atom, which is why relatives live in one.
-
-A relative has a card's shape — front matter, then `## ` sections — so the loop can read it
-later without learning a second format.
-
-### `remember`: the memory relative, written from the log
-
-`graph-goal.py remember` is the one thing that writes a relative, and it is a command, not
-a step: it is run by hand after a driver has stopped, and nothing on the loop's own path —
-`run`, the driver, the supervisor, a hook — reaches it. It reads the campaign's log and the
-backlog and writes, for every card, `<backlog>/<Molecule>/relatives/memory-<card>.md`
-(`memory-molecule.md` for the molecule itself): front matter `kind: memory` and `node:` a
-wikilink the vault resolves, a `## Node` list, then one dated `## ` section per thing that
-happened — planned, each attempt with how it ended, each refusal, each gate run with its
-exit code and its seconds, the keep with its commit.
-
-It points and never copies. A section carries the event's time, the numbers and the *name*
-of the numbered artifact file — `calls/<card>/003-contract-answer.txt` — never the
-reviewer's words, never what the gate printed, never the absolute path the log records,
-which names the machine the campaign ran on. The log stays the one home of the raw record.
-
-The note is a projection: the same log gives the same bytes, so running the command twice
-writes nothing and a note thrown away is rebuilt exactly. It never touches the card, not
-even its front matter, and after it `backlog_tree.read` returns what it returned before.
-An event it cannot make sense of is counted and stepped over — the counts are printed —
-because a memory note is worth less than the campaign it describes.
-
-**The command owns two things in a memory note, and nothing else in the file.** The first
-is the sections it marks: every heading it writes ends with ` — from the log`. Any other
-`## ` section is a person's own and comes back byte for byte, at the place in the file
-they put it — its index among the sections, which holds because the log only ever grows at
-the end. The one thing to know before writing in one by hand: do not end your own heading
-with that phrase, or the next run will take the section over as its own.
-
-The second is `kind` and `node` in the front matter, **and only when they are absent**. A
-note that already has front matter keeps that text exactly — it is never read into a
-mapping and written back out, which would reorder the keys, requote the values and drop
-the comments, so a vault that carries a property set on every note and queries it across
-the vault keeps that set. A missing key is added as one line at the end; a key that is
-there is left as it stands, `node` included. A `node` pointing at another note is somebody
-saying so, perhaps after a rename: the command names that card in its summary and writes
-nothing over it.
-
-The loop still does not *read* relatives, and no builder's or reviewer's prompt is fed one.
-A card's `status` stays in the card's own front matter, where the loop writes it today.
+**The convention, and what that command owns, is in `docs/RELATIVES.md`.**
 
 ## Two phases that never mix
 

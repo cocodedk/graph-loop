@@ -8,8 +8,16 @@ record; the note is the short, durable part that travels with the card in git.
 
 Five things a node remembers, as the log spells them: `planned` (the plan phase
 grew the backlog by this card), `attempt` (one answered call and how it ended),
-`refused` and `rejected` (a review sent the work back), a `step` of the `gate`
-(its exit code and its seconds) and `accepted` (the keep, with its commit).
+`refused` (which names the step it happened at) and `rejected` (which names
+nothing), a `step` of the `gate` (its exit code and its seconds) and `accepted`
+(the keep, with its commit).
+
+A section says what the log says and not one word more. `rejected` is the case
+that taught it: the loop writes that same event when a diff review finds
+something, when a harness retry runs out and when a gate never passes
+(`loop_judge_retry.py`, `worktree_refs.py`), and the event carries nothing to
+tell those apart — so the section says the card was rejected, points at the
+log, and names no reviewer and no file.
 
 Every other kind is counted and left out, because a note that reprints the log
 is the log twice. `failed` is left out on purpose: the loop writes one beside
@@ -74,7 +82,7 @@ def _section(row: dict, found: dict, index: int):
         return [], "", ""
     summary, body = _BUILD[row["kind"]](row)
     name, after = _wanted(row)
-    where = _nearest(found, index, task, name, after) if name else ""
+    where = _written_for(found, index, task, name, after) if name else ""
     if where:
         said = "What it printed" if name == "gate-output" else "Its own words"
         body += f" {said}: calls/{task}/{where}"
@@ -100,7 +108,8 @@ def _refused(row: dict) -> tuple[str, str]:
 
 
 def _rejected(row: dict) -> tuple[str, str]:
-    return "the diff review sent it back", "the change was not accepted as it stood."
+    return "rejected", ("the card was rejected. This event does not say what decided "
+                        "it, so neither does this: read the campaign log at this time.")
 
 
 def _gate(row: dict) -> tuple[str, str]:
@@ -133,8 +142,6 @@ def _wanted(row: dict) -> tuple[str, bool]:
     (`loop_judge.judge`), a reviewer's answer before the refusal it caused."""
     if row["kind"] == "refused":
         return _POINTS_AT.get(row.get("step"), ""), False
-    if row["kind"] == "rejected":
-        return "diff-review-answer", False
     return ("gate-output", True) if row["kind"] == "step" else ("", False)
 
 
@@ -143,28 +150,40 @@ def _artifacts(rows: list) -> dict:
     found: dict = {}
     for index, row in enumerate(rows):
         if (isinstance(row, dict) and row.get("kind") == "artifact"
-                and isinstance(row.get("path"), str)):
-            found.setdefault((row.get("task"), row.get("name")), []).append(
-                (index, row["path"]))
+                and isinstance(row.get("path"), str)
+                and isinstance(row.get("task"), str)
+                and isinstance(row.get("name"), str)):
+            # Every one of those three checked before any of them is a key: a
+            # row whose `task` is a list is unhashable, and it took the whole
+            # export down with a TypeError before the counting even began.
+            found.setdefault((row["task"], row["name"]), []).append((index, row["path"]))
     return found
 
 
-def _nearest(found: dict, index: int, task: str, name: str, after: bool) -> str:
-    """The file name of the artifact of this name written closest to this
-    event, on the side the loop writes it. Both sides are searched, because a
-    campaign that died between the two leaves only the other one; `after` is
-    only which way a tie goes, and two gate runs in a row make that tie.
+def _written_for(found: dict, index: int, task: str, name: str, after: bool) -> str:
+    """The file name of the artifact THIS run wrote: of this task, of this
+    name, and the first one on the side the loop writes it — after the event
+    for a gate's output, before it for a reviewer's answer.
+
+    Never the closest one. A campaign writes one stream and three cards write
+    into it at once, so distance in that stream is a fact about the other
+    lanes: with two of them logging in between, a green gate was made to name
+    the red run's output (an independent review). Distance is gone; only this
+    task's own artifacts are looked at, and only on the one side.
+
+    A run whose artifact never landed — a campaign that died between the two —
+    names no file. No pointer is better than a pointer at another run's words.
 
     The NAME only, never the recorded path: that path is absolute, it names the
     machine the campaign ran on, and these notes are committed to the campaign
     branch where a person reads them in Obsidian.
     """
     written = found.get((task, name)) or []
-    if not written:
+    side = [path for where, path in written if (where > index) == after
+            and where != index]
+    if not side:
         return ""
-    return pathlib.PurePosixPath(
-        min(written, key=lambda pair: (abs(pair[0] - index),
-                                       0 if (pair[0] > index) == after else 1))[1]).name
+    return pathlib.PurePosixPath(side[0] if after else side[-1]).name
 
 
 def _number(value):

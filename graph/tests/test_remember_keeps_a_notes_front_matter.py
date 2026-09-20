@@ -100,14 +100,17 @@ class OnlyAMissingKeyIsAdded(unittest.TestCase):
         remember.write_memory(self.root, log())      # a completed note is stable too
         self.assertEqual(completed, note(self.root).read_bytes())
 
-    def test_a_node_line_pointing_somewhere_else_is_left_alone_and_counted(self):
+    def test_a_node_line_pointing_somewhere_else_leaves_the_whole_file_alone(self):
         """A person may have aimed it at a note that was renamed. Overwriting
-        that is deciding for them; saying so is not."""
+        that is deciding for them; saying so is not — and a note whose `node`
+        says it is about another card is not this command's to rebuild either
+        (`test_remember_owns_only_what_it_marks` holds that whole case)."""
         note(self.root).write_text(
             '---\nkind: memory\nnode: "[[T30/01-schema-renamed]]"\n---\n', "utf-8")
+        was = note(self.root).read_bytes()
         counts = remember.write_memory(self.root, log())
-        self.assertIn('node: "[[T30/01-schema-renamed]]"', front(note(self.root)))
-        self.assertEqual(1, counts["aimed_elsewhere"])
+        self.assertEqual(was, note(self.root).read_bytes())
+        self.assertEqual(1, counts["untouched"])
 
     def test_a_note_the_command_makes_itself_still_carries_both_keys(self):
         remember.write_memory(self.root, log())

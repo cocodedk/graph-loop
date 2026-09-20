@@ -31,7 +31,7 @@ import durable
 import where
 from campaign_of import backlog_of
 from remember_events import dated
-from remember_note import aimed_elsewhere, note
+from remember_note import refresh
 from workspace import Workspace
 
 FOLDER = "relatives"
@@ -49,12 +49,11 @@ def command_remember(args) -> int:
               "in a molecule's own relatives/ folder, and this backlog has none")
         return 0
     counts = write_memory(root, space.events())
-    left = f", {counts['left_alone']} left alone (not text)" if counts["left_alone"] else ""
     print(f"remember: {counts['written']} memory notes written, "
-          f"{counts['unchanged']} already saying it{left}, under {root}")
-    for name, aimed in sorted(counts["aimed_at"].items()):
-        print(f"  {name}: its front matter points at {aimed}, not at this card — left as "
-              "it is, so whoever aimed it there decides")
+          f"{counts['unchanged']} already saying it, {counts['untouched']} not written "
+          f"at all, under {root}")
+    for name, concern in sorted(counts["said"].items()):
+        print(f"  {name}: {concern}")
     print(f"  from {counts['events']} events — {counts['no_section']} of a kind this "
           f"note has no section for, {counts['not_a_card']} sections about a node the "
           f"backlog does not hold, {counts['unreadable']} it could not read")
@@ -70,8 +69,7 @@ def write_memory(root: pathlib.Path, rows: list) -> dict:
     memory, counts = dated(rows)
     paths = backlog_tree.read(root)[backlog_tree.PATHS]
     link = cardfile.linker(root)
-    counts.update(written=0, unchanged=0, left_alone=0, aimed_elsewhere=0, aimed_at={},
-                  events=len(rows),
+    counts.update(written=0, unchanged=0, untouched=0, said={}, events=len(rows),
                   not_a_card=sum(len(sections) for node, sections in memory.items()
                                  if node not in paths))
     for task_id, card in sorted(paths.items()):
@@ -83,13 +81,16 @@ def write_memory(root: pathlib.Path, rows: list) -> dict:
             # Not text this can read, so it cannot say which sections are a
             # person's: leaving the file exactly as it is, is the only answer
             # that cannot lose what somebody put there.
-            counts["left_alone"] += 1
+            counts["untouched"] += 1
+            counts["said"][task_id] = ("it is not text this can read, so which of it is "
+                                       "a person's cannot be told; nothing was changed")
             continue
-        aimed = aimed_elsewhere(was, link(task_id))
-        if aimed:
-            counts["aimed_elsewhere"] += 1
-            counts["aimed_at"][task_id] = aimed
-        text = note(link(task_id), memory.get(task_id) or [], was)
+        text, concern = refresh(link(task_id), memory.get(task_id) or [], was)
+        if concern:
+            counts["said"][task_id] = concern
+        if text is None:          # not this command's file to write
+            counts["untouched"] += 1
+            continue
         if raw == text.encode("utf-8"):
             counts["unchanged"] += 1
             continue
