@@ -115,8 +115,8 @@ a later request, counted under its own purpose.
 Observed while planning this brief. The branch writer records nothing: it has no campaign
 directory. The spec writer records its own prompts and answers, and of its independent
 reviewer only one line on standard output when it refuses. No reviewer prompt, no reviewer
-reply, no timing, no failure, no cost — for the layer where, in this planning run, nine of
-fifteen submissions were refused. The loop's own rule is that everything it says, hears
+reply, no timing, no failure, no cost — for the layer where, in this planning run, six of
+eleven specification submissions were refused. The loop's own rule is that everything it says, hears
 and measures is written to an append-only log. Task: the branch writer and the spec writer
 record, per call and for writer and reviewer alike, the prompt, the reply, the timing, any
 failure, and the cost where it is available, in the campaign's log.
