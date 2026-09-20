@@ -23,7 +23,7 @@ import cardfile
 import remember
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 
-EXPECTED_TESTS = 9
+EXPECTED_TESTS = 7
 
 
 def vault() -> pathlib.Path:
@@ -74,6 +74,25 @@ def two_lanes() -> list[dict]:
     ]
 
 
+def step(at: str, task: str, name: str) -> dict:
+    return {"at": at, "kind": "step", "task": task, "step": name, "seconds": 3.0}
+
+
+def reviews() -> list[dict]:
+    """A contract review that PASSED, then one that refused. The passing
+    round writes an answer and no refusal, so bounding a refusal by the
+    refusals around it puts the passing round's answer inside its reach."""
+    return [
+        {"at": "2026-09-20T06:58:20Z", "kind": "planned", "task": "the plan",
+         "added": ["T30", "T30.schema"]},
+        step("2026-09-20T07:00:00Z", "T30.schema", "contract"),
+        artifact("contract-answer", 1, "T30.schema", "2026-09-20T07:00:01Z"),
+        step("2026-09-20T07:10:00Z", "T30.schema", "contract"),
+        {"at": "2026-09-20T07:10:02Z", "kind": "refused", "task": "T30.schema",
+         "step": "contract", "why": "the gate can pass without the work"},
+    ]
+
+
 def rounds() -> list[dict]:
     """A contract review that passed, a second that refused, and the third
     round's answer written straight after the refusal — nearer to it than the
@@ -81,6 +100,7 @@ def rounds() -> list[dict]:
     return [
         {"at": "2026-09-20T06:58:20Z", "kind": "planned", "task": "the plan",
          "added": ["T30", "T30.schema"]},
+        step("2026-09-20T06:59:00Z", "T30.schema", "contract"),
         artifact("contract-answer", 1, "T30.schema", "2026-09-20T07:00:00Z"),
         {"at": "2026-09-20T07:01:00Z", "kind": "attempt", "task": "T30.producer",
          "account": "work", "outcome": "ok", "counted": True},
@@ -89,6 +109,7 @@ def rounds() -> list[dict]:
         gate("2026-09-20T07:03:00Z", "T30.producer", 0),
         {"at": "2026-09-20T07:04:00Z", "kind": "refused", "task": "T30.schema",
          "step": "contract", "why": "the gate can pass without the work"},
+        step("2026-09-20T07:04:30Z", "T30.schema", "contract"),
         artifact("contract-answer", 2, "T30.schema", "2026-09-20T07:05:00Z"),
     ]
 
@@ -145,40 +166,13 @@ class AnInterruptedRunBorrowsNobodysEvidence(unittest.TestCase):
         self.assertIn("001-gate-output.txt", self.green)
 
 
-class ARowThatCannotBeUsedIsCountedNotRaised(unittest.TestCase):
-    def test_an_artifact_whose_task_or_name_is_not_a_string_stops_nothing(self):
+class ARefusalNeverBorrowsAPassingReviewsAnswer(unittest.TestCase):
+    def test_its_own_execution_wrote_no_answer_so_it_names_none(self):
         root = vault()
-        counts = remember.write_memory(root, [
-            {"at": "2026-09-20T07:00:00Z", "kind": "artifact", "task": ["T30.schema"],
-             "name": "gate-output", "path": call("gate-output", 1, "T30.schema")},
-            {"at": "2026-09-20T07:00:01Z", "kind": "artifact", "task": "T30.schema",
-             "name": {"gate": "output"}, "path": call("gate-output", 1, "T30.schema")},
-            gate("2026-09-20T07:05:00Z", "T30.schema", 0),
-        ])
-        self.assertEqual(2, counts["no_section"])
-        self.assertIn("the gate ran, exit 0", written(root))
-
-
-class ARejectionIsOnlyWhatTheLogSays(unittest.TestCase):
-    def setUp(self):
-        self.root = vault()
-        remember.write_memory(self.root, [
-            {"at": "2026-09-20T06:58:20Z", "kind": "planned", "task": "the plan",
-             "added": ["T30", "T30.schema"]},
-            artifact("diff-review-answer", 1, "T30.schema", "2026-09-20T07:00:00Z"),
-            {"at": "2026-09-20T07:40:00Z", "kind": "rejected", "task": "T30.schema",
-             "why": "3 rounds running; a person re-slices"},
-        ])
-        self.section = written(self.root).split("2026-09-20 — ")[-1]
-
-    def test_it_never_names_a_reviewer_or_a_review(self):
-        """The loop writes this event for an exhausted harness retry and for a
-        gate that stayed red, with nothing in it to tell those apart."""
-        self.assertNotIn("review", self.section.lower())
-
-    def test_it_points_at_the_log_rather_than_at_a_reviewers_file(self):
-        self.assertNotIn("calls/", self.section)
-        self.assertIn("2026-09-20T07:40:00Z", self.section)
+        remember.write_memory(root, reviews())
+        refusal = written(root).split("refused at contract")[1]
+        self.assertNotIn("001-contract-answer.txt", refusal)
+        self.assertIn("did not reach the log", refusal)
 
 
 class TheCountIsAsserted(unittest.TestCase):

@@ -41,10 +41,10 @@ def dated(rows: list) -> tuple[dict, dict]:
     """
     memory: dict[str, list] = {}
     counts = {"no_section": 0, "unreadable": 0}
-    found, ran = artifacts(rows), runs(rows, _wanted)
+    found, ran = artifacts(rows), runs(rows)
     for index, row in enumerate(rows):
         try:
-            made = _section(row, index, found, span(ran, len(rows), index, row, _wanted)) \
+            made = _section(row, index, found, span(ran, len(rows), index, row)) \
                 if _readable(row) else ()
         except Exception:  # noqa: BLE001 — deliberate: see below
             # ONE event's worth of damage, counted and stepped over. Three

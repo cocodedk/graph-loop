@@ -32,7 +32,7 @@ import cardfile
 import remember
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 
-EXPECTED_TESTS = 7
+EXPECTED_TESTS = 8
 
 EXAMPLE = """## 2026-09-21 — how this note is written
 
@@ -117,6 +117,16 @@ class AnExampleInsideCodeIsNotASection(unittest.TestCase):
         root, path = given(INDENTED)
         remember.write_memory(root, grown())
         self.assertIn(INDENTED, path.read_text("utf-8"))
+
+
+class AHeadingMayBeIndentedUpToThreeSpaces(unittest.TestCase):
+    def test_an_indented_heading_is_a_heading_and_its_section_is_kept(self):
+        """CommonMark allows up to three spaces before the hashes. Missed, the
+        section was swallowed by the generated one above it and deleted."""
+        root, path = given("  ## 2026-09-21 — mine, indented\n\nkeep this line.")
+        remember.write_memory(root, grown())
+        self.assertIn("  ## 2026-09-21 — mine, indented", path.read_text("utf-8"))
+        self.assertIn("keep this line.", path.read_text("utf-8"))
 
 
 class TheLinkUnderNodeIsAskedOfRealLinesOnly(unittest.TestCase):

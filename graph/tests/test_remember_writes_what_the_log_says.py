@@ -56,6 +56,8 @@ def log() -> list[dict]:
     return [
         {"at": "2026-09-20T06:58:20Z", "kind": "planned", "task": "the plan",
          "added": ["T30", "T30.schema", "T30.producer", "T31"]},
+        {"at": "2026-09-20T07:01:00Z", "kind": "step", "task": "T30.schema",
+         "step": "contract", "seconds": 31.0},
         {"at": "2026-09-20T07:01:05Z", "kind": "artifact", "task": "T30.schema",
          "name": "contract-answer", "path": call("contract-answer"), "bytes": 77},
         {"at": "2026-09-20T07:01:06Z", "kind": "refused", "task": "T30.schema",

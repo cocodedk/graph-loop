@@ -31,13 +31,15 @@ from __future__ import annotations
 
 import re
 
-import cardfile
 import remember_front
+import remember_read
 
 MARK = " — from the log"
 NODE = "Node"
-HEADING = re.compile(r"^## +(?P<heading>.+?)[ \t]*$")
-FENCE = re.compile(r"^ {0,3}(?P<mark>`{3,}|~{3,})(?P<info>.*)$")
+# Up to three spaces before the hashes, as CommonMark has it. A heading missed
+# for its indentation was swallowed by the generated section above it and
+# deleted with it (an independent review).
+HEADING = re.compile(r"^ {0,3}## +(?P<heading>.+?)[ \t]*$")
 
 
 def refresh(target: str, written: list, was: str = "") -> tuple[str | None, str]:
@@ -48,29 +50,31 @@ def refresh(target: str, written: list, was: str = "") -> tuple[str | None, str]
     whatever the file holds today — empty for a note being made. A text of None
     says this file is not the command's to write at all.
     """
+    if not was:                       # a note the command is making: its own from end to end
+        return _put(remember_front.fresh(target), "", [], target, written), ""
     mine, why = remember_front.ours(was, target)
     if not mine:                      # the one door: nothing else decides this
         return None, why
-    found = cardfile.FRONT.match(was)
-    before, kept, unclosed = _theirs(found["body"] if found else was)
-    if unclosed:
-        # No telling where their text ends: every section after the fence would
-        # be swallowed into it and written again from the log, and the note
-        # would grow by one copy on every run.
-        return None, ("it has a fenced block nobody closed, so where a person's own "
-                      "text ends cannot be read; nothing here was changed")
-    front, concern = remember_front.block(was, target)
+    block, body = remember_read.split(was)
+    before, kept = _theirs(body)
+    return _put(block, before, kept, target, written), remember_front.missing(was)
+
+
+def _put(block: str, before: str, kept: list, target: str, written: list = ()) -> str:
+    """The note, assembled from the pieces that were already there and the
+    sections the command owns. `block` is the front matter's own bytes — never
+    rebuilt, because rebuilding it dropped a delimiter's spacing once."""
     fresh = [f"## {heading}{MARK}\n\n{said}" for heading, said in written]
     for where, text in kept:
         fresh.insert(min(where, len(fresh)), text)
     fresh = _with_node(fresh, target)
-    return "\n\n".join([front, *([before] if before else []), *fresh]) + "\n", concern
+    return block.rstrip("\n") + "\n\n" + "\n\n".join(
+        [*([before] if before else []), *fresh]) + "\n"
 
 
-def _theirs(body: str) -> tuple[str, list[tuple[int, str]], bool]:
+def _theirs(body: str) -> tuple[str, list[tuple[int, str]]]:
     """What this note holds that the command did not write: the text before the
-    first heading, and every unmarked section with where it sat — and whether a
-    fence was left open, which makes the answer unreadable.
+    first heading, and every unmarked section with where it sat.
 
     Their own bytes to the last character: only the blank lines BETWEEN pieces
     belong to this file, so a piece is taken with its trailing newlines stripped
@@ -78,51 +82,25 @@ def _theirs(body: str) -> tuple[str, list[tuple[int, str]], bool]:
     section that moves from the end of the file to the middle grows a blank
     line on every run and the note is never twice the same.
     """
-    marks, unclosed = _headings(body)
+    marks = _headings(body)
     before = body[:marks[0][0] if marks else len(body)].strip("\n")
     kept: list[tuple[int, str]] = []
     for order, (at, heading) in enumerate(marks):
         stop = marks[order + 1][0] if order + 1 < len(marks) else len(body)
         if not heading.endswith(MARK):
             kept.append((order, body[at:stop].rstrip("\n")))
-    return before, kept, unclosed
+    return before, kept
 
 
-def _headings(text: str) -> tuple[list[tuple[int, str]], bool]:
-    """Every real `## ` heading, as (where it starts, what it says), and
-    whether a fenced block was left open at the end."""
+def _headings(text: str) -> list[tuple[int, str]]:
+    """Every real `## ` heading, as (where it starts, what it says). Asked of
+    `remember_read.plain`, the one scanner that knows where code is."""
     found = []
-    plain, unclosed = _plain(text)
-    for at, line in plain:
+    for at, line in remember_read.plain(text)[0]:
         head = HEADING.match(line)
         if head:
-            found.append((at, head["heading"].rstrip()))   # a note from Windows carries \r
-    return found, unclosed
-
-
-def _plain(text: str) -> tuple[list[tuple[int, str]], bool]:
-    """Every line that is not inside a fenced code block, with where it starts.
-
-    A fence is ``` or ~~~, three or more, indented up to three spaces, with or
-    without an info string; it closes on the same character, at least as long,
-    with nothing after it. The fence lines themselves are code's, not text's.
-    """
-    lines: list[tuple[int, str]] = []
-    fence = ""
-    at = 0
-    for line in text.splitlines(keepends=True):
-        bare = line.rstrip("\r\n")
-        opened = FENCE.match(bare)
-        if fence:
-            if (opened and opened["mark"][0] == fence[0]
-                    and len(opened["mark"]) >= len(fence) and not opened["info"].strip()):
-                fence = ""
-        elif opened:
-            fence = opened["mark"]
-        else:
-            lines.append((at, bare))
-        at += len(line)
-    return lines, bool(fence)
+            found.append((at, head["heading"]))
+    return found
 
 
 def _with_node(sections: list[str], target: str) -> list[str]:
@@ -138,7 +116,7 @@ def _with_node(sections: list[str], target: str) -> list[str]:
     theirs = sections[where]
     # Asked of real lines only: a link SHOWN in a fenced example is not the
     # link, and taking it for one would leave the node with no link at all.
-    if any(row.strip() == line for _, row in _plain(theirs)[0]):
+    if any(row.strip() == line for _, row in remember_read.plain(theirs)[0]):
         return sections
     heading, _, rest = theirs.partition("\n")
     return [*sections[:where], f"{heading}\n\n{line}\n{rest}".rstrip("\n"),
@@ -147,5 +125,5 @@ def _with_node(sections: list[str], target: str) -> list[str]:
 
 def _heading(section: str) -> str:
     """A section's own heading — its first line, never a line further down."""
-    found = HEADING.match(section.split("\n", 1)[0].rstrip("\r"))
-    return found["heading"].rstrip() if found else ""
+    found = HEADING.match(section.split("\n", 1)[0])
+    return found["heading"] if found else ""

@@ -168,20 +168,21 @@ class ANoteTheCommandMakesGetsBothKeys(unittest.TestCase):
                          cardfile.FRONT.match(
                              note(root).read_text("utf-8"))["front"].splitlines())
 
-    def test_a_file_with_no_front_matter_is_given_some_and_keeps_its_text(self):
+    def test_a_file_with_no_front_matter_is_left_alone_not_given_any(self):
+        """It used to be given some, which let a foreign note be claimed:
+        without front matter nothing says whose note it is."""
         root, path = given("## 2026-09-21 — mine\n\nno front matter here.\n")
-        remember.write_memory(root, log())
-        text = path.read_text("utf-8")
-        self.assertEqual({"kind": "memory", "node": "[[T30/01-schema]]"},
-                         yaml.safe_load(cardfile.FRONT.match(text)["front"]))
-        self.assertIn("no front matter here.", text)
+        was = path.read_bytes()
+        counts = remember.write_memory(root, log())
+        self.assertEqual(was, path.read_bytes())
+        self.assertEqual(1, counts["untouched"])
 
-    def test_it_is_the_same_note_on_the_next_run(self):
-        root, path = given("## 2026-09-21 — mine\n\nno front matter here.\n")
+    def test_the_note_it_makes_itself_is_the_same_on_the_next_run(self):
+        root = vault()
         remember.write_memory(root, log())
-        before = path.read_bytes()
+        before = note(root).read_bytes()
         remember.write_memory(root, log())
-        self.assertEqual(before, path.read_bytes())
+        self.assertEqual(before, note(root).read_bytes())
 
 
 class TheCountIsAsserted(unittest.TestCase):

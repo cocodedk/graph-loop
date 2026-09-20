@@ -98,16 +98,44 @@ parse. Then **nothing is written at all** and the summary says why. Rebuilding t
 of a note that says it is about a different card is the one mistake no counter makes up
 for, and a guard that only looked at strings once let a list straight through.
 
-**A `## ` line inside a fenced code block is an example, not a heading** — not for
-ownership, not for splitting sections, not for finding the link under `## Node`. One
-scanner knows where code is, and everything that looks for a heading asks it. A fence
-nobody closed makes the note unreadable: there is no telling where a person's text ends,
-so it is left alone and said.
+**When in doubt, it does not write.** Three rounds of review each found a file spelled a
+little differently from what the command expected, written anyway, and something lost. So
+a note is refreshed only when every line of a short list is true of its raw bytes, and
+anything else is left exactly as it is, counted, and named in the summary:
 
-**Nothing in a log can stop the export.** Turning one event into a section, or into an
-index entry, happens inside one guard for that event: whatever it raises costs that event,
-which is counted, and the run carries on. Three reviews found three different fields that
-took a whole export down before the guard moved to where it belongs.
+- valid UTF-8, and no byte-order mark;
+- LF line endings only, nowhere a carriage return;
+- front matter between plain `---` lines — **an existing file is never given any**,
+  because without it nothing says whose note it is, and that is how a foreign note was
+  once claimed;
+- front matter that parses (every way the parser can fail, not only `YAMLError`: an
+  impossible date and a bad tag raise `ValueError`), and names this card by the rule
+  above;
+- every fenced block closed by the fence rule — the closing fence is the same character,
+  at least as long, with nothing after it but spaces or tabs. A non-breaking space does
+  not close a fence, and a note whose fences are not all closed is not understood.
+
+A `## ` line inside a fenced block is an example, not a heading — not for ownership, not
+for splitting sections, not for finding the link under `## Node`. One scanner knows where
+code is and everything asks it. A heading may carry up to three spaces before the hashes,
+as CommonMark has it; four make it an indented code block.
+
+A note that IS written is assembled from the pieces that were already there — the front
+matter's own bytes, the text before the first heading, each kept section — plus the
+sections the command owns. Nothing is re-spelled on the way through. The one thing it
+normalises is the blank line between two pieces, because without that a section moving
+from the end of a file to the middle grows a blank line on every run.
+
+**Nothing is written through a symlink**: not the note, not the `relatives/` folder, not
+the temporary sibling the durable write puts beside it — a symlink left at that name once
+truncated a card.
+
+**Nothing in a log can stop the export.** Every line of every part, rotated ones included,
+is read inside its own guard: a line that is not a usable JSON object is counted and
+stepped over, and the backlog is the first init event that actually names one. No usable
+init at all is an answer, printed, not a traceback. Turning one event into a section, and
+writing one note, are each guarded the same way. Four reviews found four different things
+that took a whole export down before the guards moved to where they belong.
 
 The summary is the command's account of itself: how many notes it wrote, how many already
 said it, how many it did not write, and one line per card it could not treat as its own.

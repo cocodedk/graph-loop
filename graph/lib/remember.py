@@ -28,10 +28,11 @@ import pathlib
 import backlog_tree
 import cardfile
 import durable
+import remember_log
 import where
-from campaign_of import backlog_of
 from remember_events import dated
 from remember_note import refresh
+from remember_read import understood
 from workspace import Workspace
 
 FOLDER = "relatives"
@@ -40,15 +41,18 @@ PREFIX = "memory-"
 
 def command_remember(args) -> int:
     space = Workspace(args.workspace or where.campaign())
-    recorded = backlog_of(space)
-    if not recorded:
-        raise SystemExit("this workspace has no init event; run `init` first")
-    root = pathlib.Path(recorded)
+    rows, lost = remember_log.rows(space)
+    named = remember_log.backlog(rows)
+    if not named:
+        print("this campaign's log holds no init event that names a backlog; run "
+              f"`init` first. {len(rows)} events read, {lost} lines could not be read")
+        return 1
+    root = pathlib.Path(named)
     if not root.is_dir():
         print(f"{root} is one file, not a tree of molecules: a memory relative lives "
               "in a molecule's own relatives/ folder, and this backlog has none")
         return 0
-    counts = write_memory(root, space.events())
+    counts = write_memory(root, rows)
     print(f"remember: {counts['written']} memory notes written, "
           f"{counts['unchanged']} already saying it, {counts['untouched']} not written "
           f"at all, under {root}")
@@ -56,15 +60,16 @@ def command_remember(args) -> int:
         print(f"  {name}: {concern}")
     print(f"  from {counts['events']} events — {counts['no_section']} of a kind this "
           f"note has no section for, {counts['not_a_card']} sections about a node the "
-          f"backlog does not hold, {counts['unreadable']} it could not read")
+          f"backlog does not hold, {counts['unreadable']} it could not read"
+          + (f", and {lost} log lines that could not be read at all" if lost else ""))
     return 0
 
 
 def write_memory(root: pathlib.Path, rows: list) -> dict:
     """Refresh every card's memory from these events, and say what happened.
 
-    The write is skipped when the bytes are the same, so a second run leaves
-    every mtime where it was — `backlog_tree._one` earns its keep the same way.
+    Every note is written inside its own guard, encoding and all: one note the
+    command cannot finish never costs the others.
     """
     memory, counts = dated(rows)
     paths = backlog_tree.read(root)[backlog_tree.PATHS]
@@ -73,27 +78,59 @@ def write_memory(root: pathlib.Path, rows: list) -> dict:
                   not_a_card=sum(len(sections) for node, sections in memory.items()
                                  if node not in paths))
     for task_id, card in sorted(paths.items()):
-        target = card.parent / FOLDER / f"{PREFIX}{card.stem}{cardfile.SUFFIX}"
-        raw = target.read_bytes() if target.exists() else b""
         try:
-            was = raw.decode("utf-8")
-        except UnicodeDecodeError:
-            # Not text this can read, so it cannot say which sections are a
-            # person's: leaving the file exactly as it is, is the only answer
-            # that cannot lose what somebody put there.
+            concern = _one(card, link(task_id), memory.get(task_id) or [], counts)
+        except Exception as raised:  # noqa: BLE001 — one note never costs the rest
             counts["untouched"] += 1
-            counts["said"][task_id] = ("it is not text this can read, so which of it is "
-                                       "a person's cannot be told; nothing was changed")
-            continue
-        text, concern = refresh(link(task_id), memory.get(task_id) or [], was)
+            concern = f"writing it raised {type(raised).__name__}; nothing was changed"
         if concern:
             counts["said"][task_id] = concern
-        if text is None:          # not this command's file to write
-            counts["untouched"] += 1
-            continue
-        if raw == text.encode("utf-8"):
-            counts["unchanged"] += 1
-            continue
-        durable.replace(target, text)
-        counts["written"] += 1
     return counts
+
+
+def _one(card: pathlib.Path, target: str, sections: list, counts: dict) -> str:
+    """One card's memory refreshed, and what could not be done to it."""
+    folder = card.parent / FOLDER
+    note = folder / f"{PREFIX}{card.stem}{cardfile.SUFFIX}"
+    unsafe = _unsafe(card, folder, note)
+    if unsafe:
+        counts["untouched"] += 1
+        return unsafe
+    raw = note.read_bytes() if note.exists() else b""
+    was, why = understood(raw) if raw else ("", "")
+    if raw and not was:
+        counts["untouched"] += 1
+        return f"{why}; nothing here was changed"
+    text, concern = refresh(target, sections, was)
+    if text is None:
+        counts["untouched"] += 1
+        return concern
+    if raw == text.encode("utf-8"):
+        counts["unchanged"] += 1
+        return concern
+    durable.replace(note, text)
+    counts["written"] += 1
+    return concern
+
+
+def _unsafe(card: pathlib.Path, folder: pathlib.Path, note: pathlib.Path) -> str:
+    """Why this note must not be written: anything on the way to it that is a
+    symlink, or a name the durable write would follow out of this folder.
+
+    `durable.replace` writes `.<name>.tmp` beside the note and renames it into
+    place. A symlink left at that name sent the write through it and truncated
+    a card (an independent review), so a sibling that already exists is reason
+    enough not to write.
+    """
+    beside = folder / f".{note.name}.tmp"
+    for path in (folder, note, beside):
+        if path.is_symlink():
+            return f"{path.name} is a symlink, and nothing here is written through one"
+    if folder.exists() and not folder.is_dir():
+        return f"{folder.name} is not a folder; nothing here was changed"
+    if beside.exists():
+        return (f"{beside.name} is already there, and the durable write would replace "
+                "it; nothing here was changed")
+    if folder.exists() and folder.resolve().parent != card.parent.resolve():
+        return f"{folder.name} does not resolve inside this molecule; nothing was changed"
+    return ""
