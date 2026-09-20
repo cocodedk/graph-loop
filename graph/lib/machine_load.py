@@ -1,11 +1,9 @@
 """What the machine says about itself while a turn runs, and never a raise.
 
-`/proc/meminfo` and `/proc/pressure/{cpu,memory,io}`, sampled every couple of
-seconds. Every signal is optional: a platform without pressure stall
-information, a container with no `/proc`, a kernel that renames a field — each
-reads as nothing at all rather than as an exception. A throttler that kills a
-turn is worse than no throttler, and this is the half of it that touches the
-outside world.
+`machine_read` takes one reading; this watches a turn's worth of them, every
+couple of seconds, and aggregates what it saw. A throttler that kills a turn is
+worse than no throttler, and this is the half of it that touches the outside
+world.
 
 The aggregate is the one the measurement rig used, so the numbers in
 `lanes_auto` mean what they were measured to mean: the lowest MemAvailable
@@ -18,16 +16,9 @@ from __future__ import annotations
 import threading
 from typing import NamedTuple
 
+from machine_read import Sample, meminfo, pressure, read  # noqa: F401 — the front door
+
 EVERY = 2.0          # seconds between samples, as the rungs were measured
-
-
-class Sample(NamedTuple):
-    """One reading. `None` is "this machine does not say", never zero."""
-    mem_avail_kb: int | None = None
-    swap_used_kb: int | None = None
-    psi_cpu: float | None = None
-    psi_mem: float | None = None
-    psi_io: float | None = None
 
 
 class Load(NamedTuple):
@@ -43,44 +34,9 @@ class Load(NamedTuple):
     # evidence for a CUT, but a turn nobody could finish watching is never
     # evidence that the machine can take another lane.
     broke: bool = False
-
-
-def pressure(kind: str) -> float | None:
-    """`some avg10` from one pressure file, in percent, or nothing."""
-    try:
-        with open(f"/proc/pressure/{kind}", encoding="utf-8") as handle:
-            for line in handle:
-                if line.startswith("some"):
-                    for field in line.split():
-                        if field.startswith("avg10="):
-                            return float(field.split("=", 1)[1])
-    except (OSError, ValueError):
-        return None
-    return None
-
-
-def meminfo() -> dict:
-    """The three fields this loop reads, as integers of kB."""
-    out: dict[str, int] = {}
-    try:
-        with open("/proc/meminfo", encoding="utf-8") as handle:
-            for line in handle:
-                key, _, rest = line.partition(":")
-                if key in ("MemAvailable", "SwapFree", "SwapTotal"):
-                    out[key] = int(rest.split()[0])
-    except (OSError, ValueError, IndexError):
-        return {}
-    return out
-
-
-def read() -> Sample:
-    """One reading of everything this loop knows how to ask for."""
-    fields = meminfo()
-    swap = None
-    if "SwapTotal" in fields and "SwapFree" in fields:
-        swap = fields["SwapTotal"] - fields["SwapFree"]
-    return Sample(fields.get("MemAvailable"), swap,
-                  pressure("cpu"), pressure("memory"), pressure("io"))
+    # Whether this came back from a file rather than from this process. Same
+    # rule: a cut it earned still stands, another lane is not on offer.
+    carried: bool = False
 
 
 def _most(values: list) -> float | None:
@@ -113,6 +69,23 @@ def gather(samples: list[Sample], broke: bool = False) -> Load:
                 samples=len(samples), broke=broke)
 
 
+class _Turn:
+    """One turn's readings, owned by the thread that fills them.
+
+    A reader can stall past the moment a turn ends. That thread keeps its own
+    buffer and its own flag, so a sample it finally takes lands in the turn it
+    belongs to and never in the next one — and the next turn starts from
+    nothing, not from what a thread nobody is waiting for may still add.
+    """
+
+    def __init__(self):
+        self.samples: list[Sample] = []
+        self.broke = False
+        # Its own flag, so a reader that comes back after its turn ended stops
+        # then, instead of sampling for ever into a buffer nobody reads.
+        self.over = threading.Event()
+
+
 class Watch:
     """Samples the machine while a turn's lanes run, on a thread of its own.
 
@@ -125,41 +98,58 @@ class Watch:
 
     def __init__(self, every: float = EVERY, reader=read):
         self.every, self.reader = every, reader
-        self.samples: list[Sample] = []
-        self.broke = False
-        self._stop = threading.Event()
+        self.turn = _Turn()
         self._thread: threading.Thread | None = None
+        self._stalled: list[threading.Thread] = []   # kept referenced, never reused
+
+    @property
+    def samples(self) -> list[Sample]:
+        return self.turn.samples
+
+    @property
+    def broke(self) -> bool:
+        return self.turn.broke
 
     def start(self) -> None:
-        self.broke = False
-        self.samples = self._one()
-        self.broke = not self.samples
-        self._stop.clear()
-        self._thread = threading.Thread(target=self._run, name="machine-load", daemon=True)
+        turn = _Turn()                  # a fresh buffer: the last turn keeps its own
+        turn.samples = self._one()
+        turn.broke = not turn.samples
+        self.turn = turn
+        self._thread = threading.Thread(target=self._run, args=(turn,),
+                                        name="machine-load", daemon=True)
         self._thread.start()
 
     def _one(self) -> list[Sample]:
-        """One reading, or none at all. Never an exception: a machine that will
-        not be read is not a reason to end a turn."""
+        """One WHOLE reading, or none at all. Never an exception: a machine
+        that will not be read is not a reason to end a turn, and a reading with
+        nothing in it is not a reading."""
         try:
-            return [self.reader()]
+            one = self.reader()
         except Exception:   # noqa: BLE001 — a sample nobody could take is not a dead turn
             return []
+        return [one] if getattr(one, "whole", False) else []
 
-    def _run(self) -> None:
-        while not self._stop.wait(self.every):
+    def _run(self, turn: _Turn) -> None:
+        while not turn.over.wait(self.every):
             one = self._one()
             if not one:
                 # It will not start working again inside this turn, and the
                 # turn must not read as a quiet one for want of a reading.
-                self.broke = True
+                turn.broke = True
                 return
-            self.samples += one
+            turn.samples.append(one[0])
 
     def stop(self) -> Load:
         """Stop sampling and hand back what was seen, however little."""
-        self._stop.set()
-        if self._thread is not None:
-            self._thread.join(timeout=self.every + 1.0)
+        turn, thread = self.turn, self._thread
+        turn.over.set()
+        if thread is not None:
+            thread.join(timeout=self.every + 1.0)
+            if thread.is_alive():
+                # Still inside a read. What it eventually returns belongs to
+                # this turn's buffer, which nothing reads again, and a turn
+                # whose reader never came back is not a measured one.
+                turn.broke = True
+                self._stalled.append(thread)
             self._thread = None
-        return gather(self.samples, self.broke)
+        return gather(list(turn.samples), turn.broke)

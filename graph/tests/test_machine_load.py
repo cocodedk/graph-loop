@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import pathlib
 import sys
+import threading
 import time
 import unittest
 import unittest.mock
@@ -22,7 +23,7 @@ import tmp_root  # noqa: F401 — every temp file of this process under one root
 from lanes_auto import decide
 from machine_load import Sample, Watch, gather
 
-EXPECTED_TESTS = 8
+EXPECTED_TESTS = 12
 
 # t=0, 2, 12, 16 and 38 seconds of the three-lane rung.
 RUNG = [Sample(11830676, 17323412, 0.47, 0.22, 67.80),
@@ -30,6 +31,17 @@ RUNG = [Sample(11830676, 17323412, 0.47, 0.22, 67.80),
         Sample(9353396, 17323412, 2.59, 0.06, 47.49),
         Sample(5723920, 17323412, 8.26, 0.04, 40.56),
         Sample(13192892, 18666848, 2.75, 0.72, 39.24)]
+
+
+LATE = Sample(1, 1)          # what the stalled reader says, far too late
+
+
+def _settle(watch: Watch, seconds: float = 0.5) -> None:
+    """Give the sampling thread its chance to notice, without waiting for ever
+    on a flag the test may be about to prove is never set."""
+    until = time.monotonic() + seconds
+    while time.monotonic() < until and not watch.broke:
+        time.sleep(0.01)
 
 
 class GatherTest(unittest.TestCase):
@@ -95,11 +107,72 @@ class BrokenTest(unittest.TestCase):
 
         watch = Watch(0.01, dies)
         watch.start()
-        while not watch.broke:
-            time.sleep(0.01)
+        _settle(watch)
         load = watch.stop()
         self.assertTrue(load.broke)
         self.assertEqual("hold", decide(width=3, allow=1, ran=1, load=load).move)
+
+
+class EmptyTest(unittest.TestCase):
+    def test_a_sample_that_carries_nothing_is_not_a_reading(self):
+        # A real /proc failure comes back as an EMPTY Sample, not as a raise.
+        # Counted as readings, a whole baseline and two of those give a turn
+        # that "moved no swap" because nobody could look.
+        first = [Sample(13230344, 16903492, 0.0, 0.0, 88.88)]
+
+        def fades() -> Sample:
+            return first.pop() if first else Sample()
+
+        watch = Watch(0.01, fades)
+        watch.start()
+        _settle(watch)
+        load = watch.stop()
+        self.assertTrue(load.broke)
+        self.assertEqual("hold", decide(width=3, allow=1, ran=1, load=load).move)
+
+    def test_a_reading_missing_half_its_numbers_is_not_one_either(self):
+        self.assertFalse(Sample(13230344, None).whole)
+        self.assertFalse(Sample().whole)
+        self.assertTrue(Sample(13230344, 16903492).whole)      # psi stays optional
+
+
+class StalledTest(unittest.TestCase):
+    """A reader can stall past the end of its turn. What it finally says
+    belongs to that turn, and that turn was never measured."""
+
+    def _one_that_stalls(self):
+        """A reader whose SECOND call blocks: the baseline lands, the first
+        sample under load does not come back."""
+        held, calls = threading.Event(), []
+
+        def stalls() -> Sample:
+            calls.append(1)
+            if len(calls) == 2:
+                held.wait(5)
+                return LATE
+            return Sample(13230344, 16903492, 0.0, 0.0, 88.88)
+
+        return Watch(0.01, stalls), held
+
+    def test_a_reader_that_will_not_stop_marks_the_turn_broken(self):
+        watch, held = self._one_that_stalls()
+        watch.start()
+        time.sleep(0.1)                     # the thread is inside the blocked read
+        self.assertTrue(watch.stop().broke)
+        held.set()
+
+    def test_a_late_sample_never_lands_in_the_next_turn(self):
+        watch, held = self._one_that_stalls()
+        watch.start()
+        time.sleep(0.1)
+        first = watch.stop()
+        watch.start()                       # a new turn, a new buffer
+        held.set()                          # and only now does the old read return
+        time.sleep(0.1)
+        second = watch.stop()
+        self.assertTrue(first.broke)
+        self.assertNotIn(LATE, watch.samples)
+        self.assertGreaterEqual(second.samples, 1)
 
 
 class ReadTest(unittest.TestCase):

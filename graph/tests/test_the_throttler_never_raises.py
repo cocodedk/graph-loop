@@ -71,7 +71,8 @@ class FaultTest(unittest.TestCase):
                                         side_effect=ValueError("no")):
             self.assertEqual(2, hand.lanes(5))
             self.assertEqual(1, hand.lanes(1))   # never more than there are cards
-        self.assertIn("deciding", [row["what"] for row in faults(here)])
+        self.assertIn("deciding this turn's lanes",
+                      [row["what"] for row in faults(here)])
 
     def test_a_state_file_a_crash_cut_in_half_is_not_a_dead_driver(self):
         here = space()
@@ -103,7 +104,7 @@ class FaultTest(unittest.TestCase):
         hand.watch = unittest.mock.Mock()
         hand.watch.stop.side_effect = RuntimeError("the thread is gone")
         hand.closes("turn-0-1", 3)
-        self.assertIn("reading what the turn cost", [row["what"] for row in faults(here)])
+        self.assertIn("reading the machine", [row["what"] for row in faults(here)])
 
 
 class QuietTest(unittest.TestCase):

@@ -86,16 +86,18 @@ def _clean(load: Load | None, gate_ratio: float | None) -> bool:
     disk is not one to ask more of.
 
     A turn nobody could measure is never clean — a lane is added on evidence or
-    not at all. That takes two readings: the first is the baseline, taken with
-    no lane running, and a turn with only that one says nothing about what the
-    lanes did. A reading that broke part way says no more (`Load.broke`),
-    however many samples it managed before it stopped.
+    not at all, and doubt resolves downward. That takes two readings taken by
+    THIS process in THIS turn: the first is the baseline, with no lane running,
+    and a turn with only that one says nothing about what the lanes did. A
+    reading that broke part way says no more (`Load.broke`), however many
+    samples it managed; nor does one read back from a file (`Load.carried`),
+    because the turn that made it was run by a process that is gone.
     """
     if cut_reason(load, gate_ratio):
         return False
     if load is None or load.swap_growth_kb is None:
         return False
-    if load.broke or load.samples < MEASURED:
+    if load.broke or load.carried or load.samples < MEASURED:
         return False
     return load.swap_growth_kb <= SWAP_QUIET_KB
 
@@ -106,6 +108,8 @@ def _why_not(load: Load | None) -> str:
         return ""
     if load.broke:
         return " (the machine stopped answering part way)"
+    if load.carried:
+        return " (the last reading is another driver's, so it cannot add)"
     if load.samples < MEASURED:
         return " (nothing was read while the lanes ran)"
     return f" (swap moved {_mb(load.swap_growth_kb)})"

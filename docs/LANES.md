@@ -33,9 +33,19 @@ ordinary branch movement into a lane failure. `--lanes N` lowers it and never ra
 to a throttler instead: lanes in a turn are the smallest of the frontier's width, the
 owner's ceiling, the keeper's three, and what the machine will take.
 
-It never raises. Every reading, every decision, every write is wrapped, and a fault
-returns the last value known to be safe and says so in the log — including the fault
-nobody could write down. A throttler that kills a turn is worse than no throttler.
+**It never raises, and that is a shape rather than a promise.** Every method the driver
+calls goes through one door that catches everything, and the answer it falls back to is
+arithmetic over numbers already in memory: no file, no `/proc`, no log — because that is
+the only path left once everything else has failed. Saying that a fault happened is a
+boundary like any other and is wrapped the same way; the line that said so once printed
+outside the guard around it, which made a closed stdout the thing that killed the driver.
+A throttler that kills a turn is worse than no throttler.
+
+**A lane is added only on positive proof, and doubt resolves downward.** A turn earns
+another lane only when THIS driver measured it in THIS turn: two whole readings at least
+— an empty or half-read `/proc` is a broken reading, not a reading — the sampling thread
+back in time, and nothing flagged. Everything else holds where it is. A cut needs no such
+proof: what a reading saw, it saw, even if it stopped early.
 
 It starts at the ceiling when one is given, because starting at one lane would
 serialise cards the graph has just said are independent. With no ceiling it starts at
@@ -51,11 +61,10 @@ the measurements paid for: io pressure on the machine this was built on sat at 8
 while it was idle and was *lower* under load. An absolute threshold would have
 throttled it to one lane for ever, so io is recorded and never cut on.
 
-A turn is only evidence for ANOTHER lane when it was actually measured: two readings at
-least — the baseline is one, and a turn with only that says nothing about what the lanes
-did — and none of them failed part way. A reader that dies under load leaves swap
-"unmoved" and pressure "flat" because nobody looked, and that must not earn a lane. A
-reading that stopped early is still evidence for a CUT: what it saw, it saw.
+A reader that dies under load leaves swap "unmoved" and pressure "flat" because nobody
+looked. So does one that stalls past the end of its turn — it keeps its own buffer, its
+own flag and its own stop, so whatever it finally says lands in the turn it belongs to
+and never in the next one, and that turn counts as unmeasured.
 
 What cuts, halving and holding still for two turns after: swap growing by more than
 500 MB inside a turn — the only criterion that fired in the measurement, at three
@@ -74,7 +83,11 @@ baseline, the signals, the lanes chosen and the reason in words.
 What it carries between turns lives in one file in the campaign directory, never in the
 vault: the allowance, the turns it is holding still for, one lane's measured cost, and
 the last turn's reading itself. The driver is killed and started again routinely, so a
-cut a turn earned has to survive the process that earned it. That file is read by a
-driver that did not write it and is never trusted — every value is made into the type it
-is read as, or dropped, so a state file of nonsense costs a dull answer and never a dead
-driver.
+cut a turn earned has to survive the process that earned it — and the reading is put on
+the platter FIRST when a turn closes, before the gate timing, which is a nicety that
+once took the reading down with it.
+
+That file is read by a driver that did not write it and is never trusted. Every value is
+made into the type it is read as, or dropped, so a state file of nonsense costs a dull
+answer and never a dead driver; and a reading that comes back from it is marked as
+carried, so the first decision after a restart can hold or cut, never climb.

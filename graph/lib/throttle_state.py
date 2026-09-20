@@ -85,11 +85,12 @@ def load_of(row) -> Load | None:
     base = row.get("baseline")
     base = base if isinstance(base, dict) else {}
     fields = {name: _signal(row.get(name)) for name in Load._fields
-              if name not in ("baseline", "samples", "broke")}
+              if name not in ("baseline", "samples", "broke", "carried")}
     return Load(baseline=Sample(**{name: _signal(base.get(name))
                                    for name in Sample._fields}),
                 samples=_counted(row.get("samples")),
-                broke=bool(row.get("broke")), **fields)
+                broke=bool(row.get("broke")), carried=bool(row.get("carried")),
+                **fields)
 
 
 def fields(row) -> dict:

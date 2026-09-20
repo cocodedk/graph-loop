@@ -6,6 +6,7 @@ degrade to a safe number rather than kill the driver it is read by.
 
 from __future__ import annotations
 
+import json
 import pathlib
 import sys
 import tempfile
@@ -22,7 +23,7 @@ from machine_load import Load, Sample
 from throttle import Throttle
 from workspace import Workspace
 
-EXPECTED_TESTS = 8
+EXPECTED_TESTS = 11
 
 # The three-lane rung: 1.3 GB of swap moved inside the turn.
 HEAVY = Load(baseline=Sample(11830676, 17323412, 0.47, 0.22, 67.8),
@@ -66,6 +67,33 @@ class CorruptTest(unittest.TestCase):
         self.assertIsNone(throttle_state.load_of("not a reading"))
 
 
+class RestoredTest(unittest.TestCase):
+    """A restart may carry a CUT forward, never a reason to add a lane.
+
+    Whatever is in that file was written by a process that is gone, and a turn
+    is only proof of what a machine will take while the process that measured
+    it is still the one deciding. So the first decision after a restart can
+    hold or cut; it cannot climb.
+    """
+
+    def test_a_reading_from_the_file_never_earns_another_lane(self):
+        here = space()
+        (here.root / throttle_state.STATE).write_text(
+            '{"allow": 1, "ran": 1, "load": {"samples": 2, "swap_growth_kb": 0}}',
+            "utf-8")
+        self.assertEqual(1, driver(here).lanes(5))
+        self.assertEqual(1, driver(here).lanes(5))      # and not two, then three
+
+    def test_a_whole_reading_from_the_file_does_not_either(self):
+        here = space()
+        light = HEAVY._replace(swap_growth_kb=0, mem_avail_min_kb=10511392,
+                               psi_cpu_max=0.78, psi_mem_max=0.0)
+        (here.root / throttle_state.STATE).write_text(
+            json.dumps({"allow": 1, "ran": 1, "load": throttle_state.as_row(light)}),
+            "utf-8")
+        self.assertEqual(1, driver(here).lanes(5))
+
+
 class CeilingTest(unittest.TestCase):
     def test_the_fallback_obeys_a_ceiling_lowered_since(self):
         # The allowance of three is in the file; the owner restarts with one.
@@ -107,6 +135,23 @@ class CarriedTest(unittest.TestCase):
         kept = throttle_state.read(here.root / throttle_state.STATE)
         self.assertEqual(1343436, kept["load"]["swap_growth_kb"])
         self.assertEqual(HEAVY, throttle_state.load_of(kept["load"]))
+
+    def test_a_gate_history_that_cannot_be_read_never_costs_the_load(self):
+        # Closing a turn does two things: it keeps what the machine did, and it
+        # times this turn's gates. The second is a nicety; the first is the
+        # only reason the next driver can cut. A failure in the nicety used to
+        # take the load with it.
+        here = space()
+        hand = driver(here, load=HEAVY)
+        hand.lanes(5)
+        hand.opens()
+        with unittest.mock.patch.object(Workspace, "events",
+                                        side_effect=OSError("unreadable log")):
+            hand.closes("turn-0-1", 3)
+        self.assertEqual(1343436,
+                         throttle_state.read(here.root / throttle_state.STATE)
+                         ["load"]["swap_growth_kb"])
+        self.assertEqual(1, driver(here).lanes(5))
 
     def test_a_campaign_that_never_ran_a_turn_carries_nothing(self):
         here = space()
