@@ -82,12 +82,17 @@ class FaultTest(unittest.TestCase):
         self.assertIn("making itself ready", [row["what"] for row in faults(here)])
 
     def test_a_state_file_that_cannot_be_written_still_gives_a_number(self):
+        # One lane, not the ceiling: opening AT the ceiling is an increase like
+        # any other, and an increase nobody could write down is not granted
+        # (`test_an_increase_is_the_last_thing_that_happens`). The next turn,
+        # on a disk that came back, opens at three.
         here = space()
         hand = Throttle(here, args(lanes_max=3))
         with unittest.mock.patch.object(durable, "replace",
                                         side_effect=OSError("full disk")):
-            self.assertEqual(3, hand.lanes(5))
-        self.assertIn("keeping its state", [row["what"] for row in faults(here)])
+            self.assertEqual(1, hand.lanes(5))
+        self.assertIn("deciding this turn's lanes", [row["what"] for row in faults(here)])
+        self.assertEqual(3, hand.lanes(5))
 
     def test_a_log_that_cannot_be_written_is_not_the_end_of_the_turn(self):
         # The last line of defence: the recorder itself is the thing that fails.
@@ -95,7 +100,7 @@ class FaultTest(unittest.TestCase):
         hand = Throttle(here, args(lanes_max=3))
         with unittest.mock.patch.object(Workspace, "event",
                                         side_effect=OSError("full disk")):
-            self.assertEqual(3, hand.lanes(5))
+            self.assertEqual(1, hand.lanes(5))   # an increase nobody could record
             hand.closes("turn-0-1", 3)
 
     def test_a_watch_that_will_not_stop_still_lets_the_turn_close(self):

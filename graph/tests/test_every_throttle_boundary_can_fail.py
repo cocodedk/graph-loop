@@ -162,7 +162,9 @@ class BoundaryTest(unittest.TestCase):
              unittest.mock.patch.object(machine_load, "read", angry):
             hand = Throttle(here, args(lanes_max=2))
             hand.opens()
-            self.assertEqual(2, hand.lanes(5))
+            # One lane: with every boundary broken, opening at the ceiling is
+            # an increase that could not be written down, so it is not granted.
+            self.assertEqual(1, hand.lanes(5))
             self.assertEqual(1, hand.lanes(1))     # never more cards than there are
             hand.closes("turn-0-1", 3)
 

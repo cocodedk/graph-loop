@@ -47,7 +47,12 @@ only when THIS driver measured it in THIS turn — two whole readings at least (
 half-read `/proc` is a broken reading, not a reading), taken by a reader that started,
 stayed alive and came back on its own. A thread that never started, one that died on any
 exception at all, one that stalled past its turn, a buffer left from a turn before, a
-reading read back from a file: none of it counts, and the decision holds where it is. The
+reading read back from a file: none of it counts, and the decision holds where it is.
+Holding costs nothing, so an INCREASE is the last thing that happens: the candidate is
+worked out, then the log entry and the state file are written, and only if every one of
+those worked is the raised number handed back — a full disk, an unwritable log or a gate
+history nobody can read all leave the count where it was, said once. A CUT is the other
+way round, adopted at once with the writing after it, for the same reason. The
 buffer is cleared at the start of every turn before anything else can fail, and the
 baseline is taken by the sampling thread with a bounded wait, so a `/proc` read that never
 returns costs one turn's evidence rather than the driver. A cut needs none of this: what a

@@ -113,16 +113,32 @@ class Throttle(Guarded):
                              most=MOST_LANES)
 
     def _decide(self, width: int) -> int:
+        """The candidate decision, and then — for an INCREASE, and only for an
+        increase — every step of granting it, before it is granted.
+
+        Holding costs nothing: no disk, no log, no history. Raising the count
+        does, because the next driver runs on what was written down. So the
+        raised number is the last thing that happens here and nothing in its
+        path is guarded: a full disk or a log nobody can write falls out to
+        `lanes`, whose fallback is the count this driver already holds, and is
+        said there, once. A CUT is the other way round — adopted at once, with
+        the writing after it and best effort — because doubt resolves downward.
+        """
         out = lanes_auto.decide(
             width=int(width), ceiling=self.ceiling, most=MOST_LANES, allow=self.allow,
             ran=int(self.state.get("ran") or 0),
             hold=int(self.state.get("hold") or 0), load=self.load,
             lane_cost_kb=float(self.state.get("lane_cost_kb") or LANE_COST_KB),
             gate_ratio=self.state.get("gate_ratio"))
-        self.allow = out.allow                 # in memory first: the fallback reads it
-        self.state.update(allow=out.allow, hold=out.hold)
-        self._guard("keeping its state", self._save)
-        self._guard("writing the decision down", lambda: self._record(width, out))
+        raised = {**self.state, "allow": out.allow, "hold": out.hold}
+        if out.allow > self.allow:
+            self._record(width, out)                    # said, then kept, then held
+            throttle_state.write(self.path, raised)
+            self.allow, self.state = out.allow, raised
+        else:
+            self.allow, self.state = out.allow, raised
+            self._guard("writing the decision down", lambda: self._record(width, out))
+            self._guard("keeping its state", self._save)
         self._guard("saying so", lambda: print(f"  lanes: {out.lanes} — {out.why}"))
         return out.lanes
 
@@ -156,8 +172,16 @@ class Throttle(Guarded):
         # can fail: it is the only reason the next driver can cut, and the gate
         # timing below is a nicety that once took it down with it.
         self._guard("keeping its state", self._save)
-        self.state["gate_ratio"] = self._guard(
-            "timing this turn's gates", lambda: self._gate_ratio(turn_id, ran))
+        read, ratio = self._guard(
+            "timing this turn's gates",
+            lambda: (True, self._gate_ratio(turn_id, ran)), lambda: (False, None))
+        self.state["gate_ratio"] = ratio
+        if not read:
+            # Part of this turn could not be read, so the turn is not evidence
+            # for another lane — the same law a dead reader answers to. It may
+            # still cut on what the machine did say.
+            self.load = self.load._replace(broke=True)
+            self.state["load"] = throttle_state.as_row(self.load)
         self._guard("keeping its state", self._save)
 
     def _gate_ratio(self, turn_id: str, ran: int) -> float | None:
