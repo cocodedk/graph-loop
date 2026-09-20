@@ -1,6 +1,7 @@
 # Grilling stage — decisions the RFC left open
 
-Status: **confirmed by the owner, 2026-09-20 — revision 3.** Specifications are written from
+Status: **D1–D6 and T1 confirmed by the owner, 2026-09-20 — revision 3.** T2 and T3 below were
+added the same day at the owner's request and are tasks, not yet specified. Specifications are written from
 this revision and name the decisions they implement. A change to any decision here needs a
 new revision, a new confirmation, and a review of what was built from the old one. A
 decisions model's confidence never authorised any of these; the owner's confirmation did.
@@ -132,3 +133,43 @@ eleven specification submissions were refused. The loop's own rule is that every
 and measures is written to an append-only log. Task: the branch writer and the spec writer
 record, per call and for writer and reviewer alike, the prompt, the reply, the timing, any
 failure, and the cost where it is available, in the campaign's log.
+
+## T2 — Retained task: the decisions model checks quality before slicing and before cards are published
+
+The owner's request, 2026-09-20: make the decisions model an integral part of judgment, not
+only of the interview — the quality of plans and slices decides the quality of the work.
+Two checkpoints. **Before slicing:** are the approved decisions represented, are the
+requirements consistent, is acceptance observable, are prerequisites clear — proceed, return
+the specification for repair, or return a missing decision to grilling. **After slicing,
+before publishing cards:** does every requirement have coverage; does each card have one
+coherent job, sufficient permissions, correct dependencies, and a gate that tests the
+promised behaviour — accept the decomposition for independent review, or send specific cards
+back. Separate, focused questions per requirement and per card, each answering pass, fail or
+insufficient evidence, combined in code. Code checks the mechanical facts (missing
+identifiers, cycles). The model's judgments drive repair and escalation; the text model
+investigates a finding and revises the work; the independent reviewer stays responsible for
+broader omissions. A revision invalidates the judgments it touches: approval belongs to the
+exact revision checked. Evidence, question, result, probabilities, timing, cost and what
+happened next are logged. The rollout is D3's: observe, then act, evaluated on real plans
+and slices, measuring missed defects and unnecessary refusals alongside speed.
+
+First run by hand, the same day, on five specifications of this brief: thirty judgments in
+under three seconds. "No contradiction with the decisions" and "one capability" passed at
+0.78–0.99 for all five. The one confident *fail* (0.77, "the decisions it cites are not
+required by its acceptance") was investigated and was wrong — three acceptance items
+require D5. That is why a fail sends a finding to be investigated and never refuses work by
+itself, and why this starts in observe.
+
+## T3 — Retained task: the decisions model takes part in choosing where to cut
+
+The owner's request, 2026-09-20. The text model proposes candidate boundaries grounded in
+the requirements, the code, the interfaces and the dependencies. The decisions model judges
+each one — split here, keep together, or insufficient evidence — from evidence-backed
+alternatives, and its judgments change the decomposition: coupled work stays together,
+independently verifiable work is separated, and weak cuts send the text model back for
+better alternatives. A good cut leaves one coherent responsibility on each side, a clear
+interface between them, each piece testable after its declared prerequisites, and little
+coordination or repeated editing across cards. Code then checks the whole decomposition for
+missing requirements, conflicting boundaries and cycles; the slicer writes the cards; T2's
+second checkpoint and the independent review follow. Improvement is measured by fewer
+re-slices, fewer integration failures and fewer missed requirements.
