@@ -125,8 +125,37 @@ atom, which is why relatives live in one.
 A relative has a card's shape — front matter, then `## ` sections — so the loop can read it
 later without learning a second format.
 
-The loop does not write or read relatives yet. A card's `status` stays in the card's own
-front matter, where the loop writes it today.
+### `remember`: the memory relative, written from the log
+
+`graph-goal.py remember` is the one thing that writes a relative, and it is a command, not
+a step: it is run by hand after a driver has stopped, and nothing on the loop's own path —
+`run`, the driver, the supervisor, a hook — reaches it. It reads the campaign's log and the
+backlog and writes, for every card, `<backlog>/<Molecule>/relatives/memory-<card>.md`
+(`memory-molecule.md` for the molecule itself): front matter `kind: memory` and `node:` a
+wikilink the vault resolves, a `## Node` list, then one dated `## ` section per thing that
+happened — planned, each attempt with how it ended, each refusal, each gate run with its
+exit code and its seconds, the keep with its commit.
+
+It points and never copies. A section carries the event's time, the numbers and the *name*
+of the numbered artifact file — `calls/<card>/003-contract-answer.txt` — never the
+reviewer's words, never what the gate printed, never the absolute path the log records,
+which names the machine the campaign ran on. The log stays the one home of the raw record.
+
+The note is a projection: the same log gives the same bytes, so running the command twice
+writes nothing and a note thrown away is rebuilt exactly. It never touches the card, not
+even its front matter, and after it `backlog_tree.read` returns what it returned before.
+An event it cannot make sense of is counted and stepped over — the counts are printed —
+because a memory note is worth less than the campaign it describes.
+
+**Two hands write in a memory note, and one rule tells them apart: every heading the
+command writes ends with ` — from the log`.** Any other `## ` section is a person's own,
+and comes back byte for byte, at the place in the file they put it — its index among the
+sections, which holds because the log only ever grows at the end. The one thing to know
+before writing in one by hand: do not end your own heading with that phrase, or the next
+run will take the section over as its own.
+
+The loop still does not *read* relatives, and no builder's or reviewer's prompt is fed one.
+A card's `status` stays in the card's own front matter, where the loop writes it today.
 
 ## Two phases that never mix
 

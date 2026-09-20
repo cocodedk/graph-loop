@@ -21,7 +21,7 @@ def build_parser(description: str, commands: dict) -> argparse.ArgumentParser:
     src.add_argument("--source", action="append", required=True,
                      help="approved repo-relative source path; repeatable")
     src.set_defaults(run=commands["sources"])
-    for name in ("approve", "status", "report", "doctor"):
+    for name in ("approve", "status", "report", "doctor", "remember"):
         sub.add_parser(name).set_defaults(run=commands[name])
 
     ahead = sub.add_parser("plan")
