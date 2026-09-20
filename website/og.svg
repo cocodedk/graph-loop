@@ -1,0 +1,26 @@
+<!-- Social preview. Render: chromium --headless --screenshot=og.png --window-size=1200,630 og.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="Helvetica, Arial, sans-serif">
+  <rect width="1200" height="630" fill="#0b0e11"/>
+  <g transform="translate(80,86)">
+    <rect width="56" height="56" rx="13" fill="#13181d" stroke="#222a31"/>
+    <path d="M18 19h20a7 7 0 0 1 0 14H18a7 7 0 0 0 0 14" fill="none" stroke="#6ee7a8" stroke-width="4.5" stroke-linecap="round"/>
+    <circle cx="18" cy="19" r="6" fill="#6ee7a8"/>
+    <circle cx="18" cy="47" r="4.5" fill="#98a3ac"/>
+  </g>
+  <text x="156" y="128" fill="#e7ebee" font-size="34" font-weight="600" font-family="Menlo, monospace">graph-loop</text>
+  <text x="80" y="256" fill="#e7ebee" font-size="62" font-weight="700">An unattended agent</text>
+  <text x="80" y="330" fill="#e7ebee" font-size="62" font-weight="700">coding loop</text>
+  <text x="80" y="400" fill="#98a3ac" font-size="30">One model builds the task. Another refuses work that only looks done.</text>
+  <g transform="translate(80,452)" font-size="26" fill="#e7ebee">
+    <rect width="182" height="58" rx="29" fill="#13181d" stroke="#222a31"/>
+    <text x="91" y="37" text-anchor="middle">refuse</text>
+    <rect x="198" width="182" height="58" rx="29" fill="#13181d" stroke="#222a31"/>
+    <text x="289" y="37" text-anchor="middle">build</text>
+    <rect x="396" width="182" height="58" rx="29" fill="#13181d" stroke="#222a31"/>
+    <text x="487" y="37" text-anchor="middle">gate</text>
+    <rect x="594" width="182" height="58" rx="29" fill="#13181d" stroke="#6ee7a8"/>
+    <text x="685" y="37" text-anchor="middle" fill="#6ee7a8">commit</text>
+  </g>
+  <text x="80" y="575" fill="#98a3ac" font-size="24">Built by Babak Bandpey · cocode.dk · linkedin.com/in/babakbandpey</text>
+  <rect y="622" width="1200" height="8" fill="#6ee7a8"/>
+</svg>
