@@ -104,6 +104,19 @@ Gate rules: every path relative to the worktree; every stage in its own subshell
 `(cd … && …)`; `set -o pipefail`; the verdict is the exit code; it must fail today for the
 reason the task exists.
 
+## Relatives: memory and learning around a card
+
+A card is never edited to remember something. What is decided, tried or learned about a
+node goes in a **relative** — a separate note that links to the node — so Obsidian shows it
+as the node's neighbour while the node stays byte for byte what it was. Three kinds
+(`memory-`, `learning-`, `evaluation-`), each in a `relatives/` sub-folder, never beside a
+card: `molecule.ordered` reads every other `.md` in a molecule as an atom, and one it
+cannot number stops the whole backlog read. `graph-goal.py remember` writes a node's memory
+from the campaign log, by hand after a driver stops; the loop itself still neither writes
+nor reads a relative.
+
+**The convention, and what that command owns, is in `docs/RELATIVES.md`.**
+
 ## Two phases that never mix
 
 Planning and building are separate commands. `graph-goal.py plan` slices until the backlog

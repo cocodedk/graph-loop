@@ -7,6 +7,7 @@
     graph-goal.py run [--lanes 3|auto [--lanes-max N]] [--max-tasks N] [--dry-run]
     graph-goal.py status
     graph-goal.py report
+    graph-goal.py remember
     graph-goal.py doctor
     graph-goal.py stop [--now]
 
@@ -35,6 +36,7 @@ from cli_args import build_parser
 from driver_turn import after_lanes, before_turn
 from finishing import stand_down
 from loop import Loop
+from remember import command_remember  # a hand-run command, never a step of the loop
 from throttle import Throttle
 from turn_plan import code_first, width_against_lanes
 from workspace_claims import _started
@@ -148,6 +150,7 @@ def main(argv=None) -> int:
         "init": command_init, "sources": command_sources,
         "approve": command_approve, "status": command_status,
         "report": command_report, "doctor": command_doctor,
+        "remember": command_remember,
         "plan": command_plan, "run": command_run, "stop": command_stop})
     args = parser.parse_args(argv)
     return args.run(args)

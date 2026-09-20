@@ -91,6 +91,28 @@ is written. One backlog went from 3 startable to 14 by cutting three false edges
 observing, a task whose test is the deliverable, and anything a person must see before it
 runs.
 
+## Memory and learning go beside the node, never in it
+
+A card is never edited to remember something learned about it. Write it in a **relative**:
+a separate note that links to the node instead of editing it.
+
+| kind | file name | holds |
+|---|---|---|
+| memory | `memory-<node>.md` | one per node, append-only — points to the evidence, never copies it |
+| learning | `learning-<node>-<slug>.md` | one proposed rule, `status: open\|adopted\|rejected` |
+| evaluation | `evaluation-<scope>.md` | every open learning, read at the end and marked adopted or rejected |
+
+Place them in `<vault>/<Molecule>/relatives/` for a molecule and its atoms, or
+`<vault>/relatives/` for a root-level note.
+
+**Never leave a note beside a card.** A molecule's folder is read as one atom per
+`NN-stem.md` file; a name that does not fit that shape stops the whole backlog read, so a
+memory note dropped next to the atoms breaks every card the picker was about to offer, not
+just its own.
+
+At the end of a project every open learning is read against the logs and marked adopted or
+rejected; an adopted one becomes a change to the method, delivered like any other task.
+
 ## Reviewing a backlog before it runs
 
 Read each task and ask, in this order:

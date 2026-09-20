@@ -75,6 +75,11 @@ standing preview stays unapplied and says so once on the board. No card is stran
 
 ## What is still owed
 
+- The loop does not READ relatives: nothing feeds one into a builder's or reviewer's
+  prompt, and there is no `evaluate` command. Writing is covered — `graph-goal.py
+  remember` projects the campaign log onto each card's memory relative — but it is a
+  command run by hand after a driver stops, not a step, and a test reads the source to say
+  so. The convention's door — never beside a card — is pinned by its own test.
 - The loop's status vocabulary is its own (`todo`, `sliced`, `rejected`, `needs_slice`, …)
   rather than the four agreed words, `sliced → implemented → verified → merged`.
 - A card should park on its **first** failure. It cannot yet: one counter is incremented
