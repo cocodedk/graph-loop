@@ -67,7 +67,7 @@ class MainCutCheckTest(unittest.TestCase):
         with mock.patch.object(slicer, "decide", model), \
                 mock.patch.object(slicer, "make_checker", wraps=slicer.make_checker) as made:
             passed = run_main("--campaign", str(campaign), target="T1")
-            passed["checker"]({"atoms": [{"id": "a"}, {"id": "b"}]})
+            passed["checker"]({"atoms": [{"name": "a"}, {"name": "b"}]})
         self.assertEqual(passed["repo"], made.call_args.args[1])   # the space is the repository
         self.assertTrue(model.called)                       # the ask ran, it did not fail first
         self.assertTrue(all(call.args[0].get("wall") == CARD

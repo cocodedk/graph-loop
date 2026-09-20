@@ -25,14 +25,14 @@ class Asked:
 def for_cuts(molecule: dict) -> list[Asked]:
     """One `Asked` per adjacent pair of atoms: keep the cut, or join the two."""
     atoms = molecule["atoms"]
-    return [Asked(_cut_id(first["id"], second["id"]),
+    return [Asked(_cut_id(first["name"], second["name"]),
                   {"first": first, "second": second},
                   {"cut": _cut()})
             for first, second in zip(atoms, atoms[1:])]
 
 
 def _cut_id(first, second) -> str:
-    """Both ids, written whole, and the length of the first says where it ends: an id
+    """Both names, written whole, and the length of the first says where it ends: a name
     may hold a colon, and `a:b` + `c` must not read the same as `a` + `b:c`."""
     first = str(first)
     return f"cut:{len(first)}:{first}:{second}"
@@ -41,7 +41,7 @@ def _cut_id(first, second) -> str:
 def for_atoms(molecule: dict, wall=None) -> list[Asked]:
     """One `Asked` per atom. The wall, when there is one, rides along untouched:
     its shape is not declared anywhere, so nothing here reads it."""
-    return [Asked(f"atom:{atom['id']}",
+    return [Asked(f"atom:{atom['name']}",
                   {"atom": atom} if wall is None else {"atom": atom, "wall": wall},
                   _atom())
             for atom in molecule["atoms"]]

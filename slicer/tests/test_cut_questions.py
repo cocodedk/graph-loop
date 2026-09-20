@@ -18,7 +18,7 @@ ATOM_QUESTIONS = {"one_job", "claims_only_what_is_proved", "files_sufficient"}
 
 
 def atom(name: str) -> dict:
-    return {"id": f"atom-{name}", "goal": f"do {name}", "files": [f"{name}.py"],
+    return {"name": f"atom-{name}", "goal": f"do {name}", "files": [f"{name}.py"],
             "gate": f"test {name}", "done_when": f"{name} works"}
 
 
@@ -97,7 +97,7 @@ class BothTest(unittest.TestCase):
 
 
     def test_a_colon_in_an_id_does_not_make_two_ids_the_same(self):
-        whole = {"atoms": [{"id": "a"}, {"id": "b:c"}, {"id": "a:b"}, {"id": "c"}]}
+        whole = {"atoms": [{"name": "a"}, {"name": "b:c"}, {"name": "a:b"}, {"name": "c"}]}
         found = cut_questions.for_cuts(whole) + cut_questions.for_atoms(whole)
         self.assertEqual(7, len({asked.id for asked in found}))
         for asked, (one, two) in zip(cut_questions.for_cuts(whole),
