@@ -173,3 +173,26 @@ coordination or repeated editing across cards. Code then checks the whole decomp
 missing requirements, conflicting boundaries and cycles; the slicer writes the cards; T2's
 second checkpoint and the independent review follow. Improvement is measured by fewer
 re-slices, fewer integration failures and fewer missed requirements.
+
+## T4 — Retained task: a decisions model wherever the loop repeats a judgment
+
+The owner's request, 2026-09-20: decisions models are to be part of the loop's judgment
+wherever that saves time — plans, slices, reviews and the rest — not only the interview.
+Reviews are 70–99 % of a campaign's clock; a half-second pre-screen that finds a defect before
+a minutes-long review is where the time is.
+
+Candidates, each a set of atomic questions over evidence the loop already holds: the six
+contract-review questions before a paid contract review; a diff pre-screen (writes outside
+the card's files, edits to the judge, a test that asserts nothing) before the diff review;
+a failed gate's output classified as the work's or the machine's, which is the second
+counter `docs/STATUS.md` still owes; which repair a refusal calls for; whether a stretch of
+the log is a loop spinning; and T2 and T3 above. Triage already has such a rung.
+
+Three rules carry over from D2, D3 and D6. **Observe before act**, per question, switched
+on by a person from a report that exposes its numbers — the first runs by hand gave usable
+confidence on about half the questions asked and one confident verdict that was wrong.
+**A verdict routes; it never refuses or accepts work by itself** — a fail sends a finding to
+be investigated, a pass still meets the independent reviewer until act is earned. **The
+provider is a seam, not a vendor**: open stand-ins for the hosted model and a public
+benchmark for them now exist, and a model that runs on the owner's machine removes both the
+network dependency and the question of what leaves it.
