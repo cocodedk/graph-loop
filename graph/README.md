@@ -31,6 +31,15 @@ Rules it enforces, each bought with a failure:
   configured pair; the default belt includes Opus and Sonnet (`resources.py`,
   `accounts.py`, `models.py`). A gate that fails twice the same way re-slices the
   task.
+- `--lanes auto [--lanes-max N]` lets the machine decide instead: lanes in a
+  turn are the smallest of the frontier's width, that ceiling, the keeper's
+  three and what the machine will take. It starts at the ceiling when one is
+  given, adds one lane per clean turn, halves and then holds still for two
+  turns when swap grows by more than 500 MB inside a turn, when memory or cpu
+  pressure rises more than 20 points over that turn's own baseline, or when a
+  gate takes more than 2.5 times its time alone. It never raises: a fault
+  returns the last safe value and says so in the log. Every decision is an
+  event with its inputs.
 - The frontier is visible. `plan` and `status` print the waves the backlog would
   run in — what could start together, then what that releases — labelled as of
   that moment, because the next plan phase re-slices it. A held card is listed

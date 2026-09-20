@@ -13,12 +13,17 @@ The runtime is here. This file says what is proven, what is not, and what is sti
 - `plugins/graph/` — the method as a Claude Code skill; useful without the driver.
 - `scripts/scrub-check.sh` — nothing local travels, checked over contents, filenames and
   the whole history.
+- `--lanes auto` is an option, off unless asked for: a throttler that reads
+  `/proc` every two seconds and decides each turn's lanes from a rise over that
+  turn's own baseline. Its numbers come from a ladder of one, two and three
+  lanes measured on one real machine; the criterion that fired there was swap,
+  at three lanes. It never raises into the loop, and `--lanes N` is untouched.
 - The frontier is visible: `plan` and `status` print the waves the backlog would run in,
   each turn records that width against its lane cap, and `report` names the turns where
   the graph was wider than the loop. The projection is a snapshot — the next plan phase
   re-slices the backlog — and it is labelled as one wherever it is printed.
 
-Both suites run here: the slicer's 211 tests are green and the driver's suite is 1580
+Both suites run here: the slicer's 211 tests are green and the driver's suite is 1623
 tests. Six of them need a machine this one is not — a non-root user, a sandbox that can
 take a variable out of a gate's environment, and a real session launcher — so how many
 pass is a fact about the machine, not about the loop. `ruff check .` is clean.
@@ -47,6 +52,11 @@ synthetic tests in `test_triage_repair_requeue`, `test_triage_repair_rounds` and
 `test_activation_never_recomputes_a_repair`.
 
 ## What is not proven
+
+`--lanes auto` has not driven a real campaign. The decision is measured and tested as a
+table, the throttler is proved not to raise under injected faults, and it has been run
+end to end against stubbed lanes — but no unattended campaign has used it, so what it
+does to a real backlog over days is not known.
 
 **No campaign has finished unattended.** Seven runs on the code that came here: the
 seventh built all three of its buildable cards and parked none, and could not end — fixed

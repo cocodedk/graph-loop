@@ -23,6 +23,7 @@ only where a task says so, and the loop says out loud when it needs one.
 |---|---|
 | backlog | which task may start: dependencies met, files disjoint, humans respected |
 | waves | the same question asked forward: what would run together, wave after wave |
+| throttle | `--lanes auto`: how many lanes this machine will take, turn by turn |
 | providers | call a model and read the answer honestly; a limit or a denial is never an attempt |
 | gates | run a gate; the exit code decides; prove it red before anyone builds |
 | workspace | the campaign's memory: rotating events, timed steps, artifacts, claims, alerts, the stop flag |
@@ -47,6 +48,43 @@ only where a task says so, and the loop says out loud when it needs one.
 The purpose of the graph is to assign a new agent each time it branches out, as many as
 there are branches. The loop already does the running; the view of it, the record of what
 the cap costs and the projection into waves are `LANES.md`, beside this file.
+
+## `--lanes auto`, and why it reads a rise and not a level
+
+`--lanes N` is a cap and stays one. `--lanes auto [--lanes-max N]` hands the number
+to a throttler instead: lanes in a turn are the smallest of the frontier's width, the
+owner's ceiling, the keeper's three, and what the machine will take.
+
+It never raises. Every reading, every decision, every write is wrapped, and a fault
+returns the last value known to be safe and says so in the log — including the fault
+nobody could write down. A throttler that kills a turn is worse than no throttler.
+
+It starts at the ceiling when one is given, because starting at one lane would
+serialise cards the graph has just said are independent. With no ceiling it starts at
+one lane and adds one per clean turn.
+
+Signals are read at the start of a turn, with no lane running, and again every two
+seconds while the lanes run: `MemAvailable` and swap from `/proc/meminfo`, `some
+avg10` from each of `/proc/pressure/{cpu,memory,io}`. Each is optional — a platform
+that does not have it reads as nothing rather than as zero.
+
+Every judgement is a **rise over that turn's own baseline**, and that is the lesson
+the measurements paid for: io pressure on the machine this was built on sat at 88–94 %
+while it was idle and was *lower* under load. An absolute threshold would have
+throttled it to one lane for ever, so io is recorded and never cut on.
+
+What cuts, halving and holding still for two turns after: swap growing by more than
+500 MB inside a turn — the only criterion that fired in the measurement, at three
+lanes (1.1–1.3 GB) while every gate still passed; memory or cpu pressure more than 20
+points over the baseline; a gate taking more than 2.5 times the time the same gate
+took alone. What holds without cutting: swap that moved at all, and a turn where
+`MemAvailable` minus a 3 GB reserve is below one lane's cost — about 2.6 GB on that
+machine, measured from the first turn's drop, and assumed to be 2.5 GB until a turn
+measures it.
+
+Every decision is an event carrying its inputs: the width, each ceiling, the
+baseline, the signals, the lanes chosen and the reason in words. What it carries
+between turns lives in the campaign directory, never in the vault.
 
 ## The card
 
