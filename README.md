@@ -3,7 +3,7 @@
 A method for breaking a large body of work into tasks an agent loop can run unattended, and
 the design of a loop that runs them.
 
-**What this repository contains:** the loop itself — `drive/`, the driver, and `slicer/`,
+**What this repository contains:** the loop itself — `graph/`, the driver, and `slicer/`,
 the plan phase that writes the cards — plus the method as a Claude Code skill, the design,
 and the diary of building and running it.
 
@@ -37,7 +37,7 @@ better task contracts, not faster builders.
 
 ```
 /plugin marketplace add cocodedk/graph-loop
-/plugin install drive@graph-loop
+/plugin install graph@graph-loop
 ```
 
 The skill fires when you are slicing work into tasks for an unattended run, judging whether
@@ -59,17 +59,17 @@ you see what buying them cost.
 ## Run it
 
 ```
-export DRIVE_REPO=/path/to/the/repository/being/built
-export DRIVE_CAMPAIGN=$DRIVE_REPO/scratchpad/campaign
+export GRAPH_REPO=/path/to/the/repository/being/built
+export GRAPH_CAMPAIGN=$GRAPH_REPO/scratchpad/campaign
 
-python3 drive/drive-goal.py init --goal "..." --backlog "$DRIVE_REPO/vault" \
+python3 graph/graph-goal.py init --goal "..." --backlog "$GRAPH_REPO/vault" \
                                  --branch campaign/one --source spec/brief.md
-python3 drive/drive-goal.py approve       # you have read the goal and the sources
-python3 drive/drive-goal.py plan          # write every card, reviewed; build nothing
-python3 drive/drive-goal.py run           # build the cards; write none
+python3 graph/graph-goal.py approve       # you have read the goal and the sources
+python3 graph/graph-goal.py plan          # write every card, reviewed; build nothing
+python3 graph/graph-goal.py run           # build the cards; write none
 ```
 
-A campaign runs for days, so the thing that actually runs it is `drive/supervisor.sh`, not
+A campaign runs for days, so the thing that actually runs it is `graph/supervisor.sh`, not
 the driver: start it and return, then read state from the campaign's log. Never hold a
 session open waiting for a campaign to end.
 

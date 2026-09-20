@@ -2,7 +2,7 @@
 
 A gate that tees or redirects into a bare filename writes into the tree it
 is meant to judge -- the fault that cost a 20-minute build (2026-09-03)
-before the drive loop's own lane guard caught it (`loop_judge_retry.py`,
+before the graph loop's own lane guard caught it (`loop_judge_retry.py`,
 `gate_left_its_lane`), after the build was already paid for. The slicer
 refuses what the driver would refuse, before anything is spent.
 

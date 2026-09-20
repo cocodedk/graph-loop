@@ -1,7 +1,7 @@
 """A run of the slicer suite leaves TMPDIR as it found it: every temp file of
 the test process lives under one root that goes at exit. The suite left 101
 directories in the host's /tmp per run, and that /tmp filling on 2026-09-03
-killed every process on the host. The drive suite's test, copied here because
+killed every process on the host. The graph suite's test, copied here because
 the two suites are separate processes with separate guards."""
 
 from __future__ import annotations

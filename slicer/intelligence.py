@@ -1,4 +1,4 @@
-"""Read-only model calls for the speccer and slicer, from the drive resource belt."""
+"""Read-only model calls for the speccer and slicer, from the graph resource belt."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ import pathlib
 import subprocess
 import sys
 
-DRIVE_LIB = pathlib.Path(__file__).resolve().parents[1] / "drive" / "lib"
-sys.path.insert(0, str(DRIVE_LIB))
+GRAPH_LIB = pathlib.Path(__file__).resolve().parents[1] / "graph" / "lib"
+sys.path.insert(0, str(GRAPH_LIB))
 
 import accounts  # type: ignore[import-not-found]
 import providers  # type: ignore[import-not-found]
@@ -29,7 +29,7 @@ class Reply:
 
 def _argv(resource) -> list[str]:
     return [
-        os.environ.get("DRIVE_CLAUDE", "claude"), "-p", "--output-format", "json",
+        os.environ.get("GRAPH_CLAUDE", "claude"), "-p", "--output-format", "json",
         "--permission-mode", "dontAsk", "--no-session-persistence",
         *tools.READ_ONLY_FLAGS,
         "--allowedTools", tools.READ, "--disallowedTools",
@@ -77,7 +77,7 @@ def _call(step: str, prompt: str, answer: str, seconds: float, **fields) -> None
 def ask(prompt: str, repo: pathlib.Path, *, runner=process_runner.run) -> Reply:
     """Ask the plan belt with only Read, Grep and Glob available.
 
-    Through the drive loop's one runner, like every other paid child: the
+    Through the graph loop's one runner, like every other paid child: the
     planner leads its own process group, so it ends when this call ends, and
     it dies with this slicer — which dies with the driver. Started by
     `subprocess.run`, a planner outlived the driver that was paying for it.
@@ -145,7 +145,7 @@ def review(prompt: str, repo: pathlib.Path | None, *, binary: str | None = None)
               outcome=kind, account=str(account or ""))
         last[0] = now
 
-    out = providers.codex(binary or os.environ.get("DRIVE_CODEX", "codex"),
+    out = providers.codex(binary or os.environ.get("GRAPH_CODEX", "codex"),
                           prompt, cwd=str(repo) if repo else "", effort="medium",
                           attempt=noted)
     if not out.ok:
@@ -154,7 +154,7 @@ def review(prompt: str, repo: pathlib.Path | None, *, binary: str | None = None)
         # shape the parser rightly refuses — a REJECT carrying accept: true —
         # has read the repository and said what is wrong, and filing that as
         # silence threw away three correct findings and put the card out of
-        # reach of a repair round (2026-09-18). The drive side already draws
+        # reach of a repair round (2026-09-18). The graph side already draws
         # this line; this is the same one.
         silent = resources.refused_before_reading(out.kind)
         return Reply(False, text=out.text,

@@ -4,7 +4,7 @@ predicate, not by re-reading the gate text itself.
 Split out as a sibling of test_contracts.py at the 200-line cap. The
 predicate's own cases (exact header, semicolon-joined, leading comment,
 split across two lines, reordered flags) live where the predicate lives,
-`drive/tests/test_gate_shell.py` -- this file only proves
+`graph/tests/test_gate_shell.py` -- this file only proves
 `_task` defers to it, the same way test_contracts_liveness.py proves
 `_task` defers to `is_live` rather than re-deriving it.
 """

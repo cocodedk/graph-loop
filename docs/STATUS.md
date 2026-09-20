@@ -1,20 +1,20 @@
 # Status, and where to pick this up
 
-Last updated 19 September 2026.
+Last updated 20 September 2026.
 
 The runtime is here. This file says what is proven, what is not, and what is still owed.
 
 ## What is here
 
-- `drive/` — the driver, the supervisor, the watcher and its stand-in, the dashboard.
+- `graph/` — the driver, the supervisor, the watcher and its stand-in, the dashboard.
 - `slicer/` — the plan phase: a branch writer, a speccer and the slicer that writes every
   card, each with its own independent reviewer.
 - `docs/` — the design, this file, and the diary of what each rule cost.
-- `plugins/drive/` — the method as a Claude Code skill; useful without the driver.
+- `plugins/graph/` — the method as a Claude Code skill; useful without the driver.
 - `scripts/scrub-check.sh` — nothing local travels, checked over contents, filenames and
   the whole history.
 
-Both suites run here: the slicer's 211 tests are green, and 1530 of the driver's 1536 pass.
+Both suites run here: the slicer's 211 tests are green, and 1552 of the driver's 1558 pass.
 The six that do not need a machine this one is not — a non-root user, a sandbox that can
 take a variable out of a gate's environment, and a real session launcher. `ruff check .`
 is clean.
@@ -26,13 +26,13 @@ that. Each is configuration now, and nothing else names a particular project:
 
 | variable | what it names | default |
 |---|---|---|
-| `DRIVE_REPO` | the repository being built | the directory you run from |
-| `DRIVE_CAMPAIGN` | where the campaign remembers | `$DRIVE_REPO/scratchpad/drive-campaigns/current` |
-| `DRIVE_BACKLOG` | the vault of cards | `$DRIVE_REPO/vault` |
-| `DRIVE_HELPER` | that repository's own command tool, for a live card | none, and a live card gets no helper grant |
-| `DRIVE_PROVISION_COPY` | gitignored folders a checkout needs, copied in | none |
-| `DRIVE_PROVISION_LINK` | folders a checkout needs, symlinked | none |
-| `DRIVE_ACCOUNTS` | `name=configdir` pairs the belt walks | one account on the default configuration |
+| `GRAPH_REPO` | the repository being built | the directory you run from |
+| `GRAPH_CAMPAIGN` | where the campaign remembers | `$GRAPH_REPO/scratchpad/graph-campaigns/current` |
+| `GRAPH_BACKLOG` | the vault of cards | `$GRAPH_REPO/vault` |
+| `GRAPH_HELPER` | that repository's own command tool, for a live card | none, and a live card gets no helper grant |
+| `GRAPH_PROVISION_COPY` | gitignored folders a checkout needs, copied in | none |
+| `GRAPH_PROVISION_LINK` | folders a checkout needs, symlinked | none |
+| `GRAPH_ACCOUNTS` | `name=configdir` pairs the belt walks | one account on the default configuration |
 | `WATCHER_CONFIG_DIR` | the account the watcher session runs on | the default account |
 
 Eleven checks stayed behind, because their input was another repository's own records: two
@@ -49,6 +49,10 @@ seventh built all three of its buildable cards and parked none, and could not en
 since, but not measured since. Until a campaign finishes on its own, the difference
 between this and a tool in a shell loop is the person typing the loop.
 
+Triage asks a decisions model before the text model when its table cannot name a cause.
+That rung has never been reached in a live run — every ending so far was named by the
+table — so its numbers are replays of recorded endings, not a measurement.
+
 Automatic gate repair is off. TRIAGE still works out how to repair a mute gate and writes
 that repair as a preview needing an approval; nothing writes that approval now, so a
 standing preview stays unapplied and says so once on the board. No card is stranded by it.
@@ -61,7 +65,7 @@ standing preview stays unapplied and says so once on the board. No card is stran
   both when the work fails and when the machine fails, so setting the cap to one would
   throw away paid work on a usage limit. That needs two counters.
 - `lib/triage_preview.py` is dead while gate repair is off.
-- `drive/BLUEPRINT.md` has table cells a thousand characters long. It is the reference for
+- `graph/BLUEPRINT.md` has table cells a thousand characters long. It is the reference for
   every part and nobody can read it in that shape.
 
 ## The rules this repository bought

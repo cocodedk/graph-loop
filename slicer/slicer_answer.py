@@ -10,9 +10,9 @@ import pathlib
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
-DRIVE_LIB = HERE.parent / "drive" / "lib"
+GRAPH_LIB = HERE.parent / "graph" / "lib"
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(DRIVE_LIB))
+sys.path.insert(0, str(GRAPH_LIB))
 
 import asking
 from backlog import Backlog  # type: ignore[import-not-found]

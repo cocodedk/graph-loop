@@ -20,9 +20,9 @@ import unittest
 from unittest import mock
 
 HERE = pathlib.Path(__file__).resolve().parents[1]
-DRIVE_LIB = HERE.parent / "drive" / "lib"
+GRAPH_LIB = HERE.parent / "graph" / "lib"
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(DRIVE_LIB))
+sys.path.insert(0, str(GRAPH_LIB))
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 from backlog import Backlog  # type: ignore[import-not-found]
 from test_tree import task

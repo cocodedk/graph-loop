@@ -23,7 +23,7 @@ jobs:
         id: version
         run: |
           set -euo pipefail
-          manifest=plugins/drive/.claude-plugin/plugin.json
+          manifest=plugins/graph/.claude-plugin/plugin.json
           if [ ! -f "$manifest" ]; then
             echo "::error::$manifest does not exist yet — nothing to release."
             exit 1

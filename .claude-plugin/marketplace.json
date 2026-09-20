@@ -1,15 +1,15 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "graph-loop",
-  "description": "Local marketplace shipping the drive plugin alongside the loop's source.",
+  "description": "Local marketplace shipping the graph plugin alongside the loop's source.",
   "owner": {
     "name": "Babak Bandpey",
     "email": "bb@cocode.dk"
   },
   "plugins": [
     {
-      "name": "drive",
-      "source": "./plugins/drive",
+      "name": "graph",
+      "source": "./plugins/graph",
       "description": "Slice a large body of work into atomic, gate-first tasks an agent loop can run unattended."
     }
   ]

@@ -1,0 +1,100 @@
+<title>Graph Loop Workflow</title>
+<style>
+  body { background: #f7f6f3; color: #1a1a1a; font: 14px/1.5 system-ui, sans-serif;
+         display: flex; justify-content: center; padding: 24px 8px; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) body { background: #16181d; color: #e8e6e1; }
+  }
+  :root[data-theme="dark"] body { background: #16181d; color: #e8e6e1; }
+  figure { margin: 0; max-width: 980px; width: 100%; }
+  svg { max-width: 100%; height: auto; display: block; }
+  figcaption { margin-top: 10px; font-size: 13px; opacity: .75; text-align: center; }
+</style>
+<figure>
+<svg viewBox="0 0 980 780" role="img" aria-label="One turn of the graph loop: specs go through the slicer into the backlog; triage classifies the last endings and routes repairs; the builder's work passes four checks before it is kept; the supervisor watches from outside every 15 minutes.">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g fill="none" stroke="currentColor" stroke-width="2">
+    <!-- left column: planning -->
+    <rect x="40"  y="30"  width="240" height="64" rx="10"/>
+    <rect x="40"  y="150" width="240" height="64" rx="10" stroke="#c8571f" stroke-width="3"/>
+    <rect x="40"  y="270" width="240" height="64" rx="10"/>
+    <!-- triage -->
+    <rect x="40"  y="420" width="240" height="88" rx="10" stroke="#c8571f" stroke-width="3"/>
+    <!-- main build chain, right side -->
+    <rect x="460" y="30"  width="240" height="64" rx="10"/>
+    <rect x="460" y="150" width="240" height="64" rx="10"/>
+    <rect x="460" y="270" width="240" height="64" rx="10"/>
+    <rect x="460" y="390" width="240" height="64" rx="10"/>
+    <rect x="460" y="510" width="240" height="64" rx="10"/>
+    <rect x="460" y="630" width="240" height="64" rx="10"/>
+    <!-- supervisor panel -->
+    <rect x="750" y="30" width="200" height="220" rx="10" stroke-dasharray="7 5"/>
+  </g>
+
+  <g font-size="16" font-weight="600" fill="currentColor" text-anchor="middle">
+    <text x="160" y="57">SPECS</text>
+    <text x="160" y="177">SLICER</text>
+    <text x="160" y="297">BACKLOG</text>
+    <text x="160" y="447">TRIAGE</text>
+    <text x="580" y="57">PICK A CARD</text>
+    <text x="580" y="177">CONTRACT REVIEW</text>
+    <text x="580" y="297">PROVE THE TEST RED</text>
+    <text x="580" y="417">BUILDER WORKS</text>
+    <text x="580" y="537">GATE + DIFF REVIEW</text>
+    <text x="580" y="657">KEEP ON THE BRANCH</text>
+    <text x="850" y="57">SUPERVISOR</text>
+  </g>
+  <g font-size="12" fill="currentColor" text-anchor="middle" opacity="0.85">
+    <text x="160" y="78">what must be true (canon)</text>
+    <text x="160" y="198">cuts specs into small cards</text>
+    <text x="160" y="318">cards waiting to be built</text>
+    <text x="160" y="468">reads every failure,</text>
+    <text x="160" y="484">names its kind, repairs</text>
+    <text x="160" y="500">the same bug queue-wide</text>
+    <text x="580" y="78">one card, one worktree</text>
+    <text x="580" y="198">a reviewer reads the card first</text>
+    <text x="580" y="318">a test that never failed proves nothing</text>
+    <text x="580" y="438">only the card's listed files</text>
+    <text x="580" y="558">exit code + independent reviewer</text>
+    <text x="580" y="678">re-checked beside everyone's work</text>
+    <text x="850" y="82">outside the loop</text>
+    <text x="850" y="112">restarts a dead driver</text>
+    <text x="850" y="136">every 15 min: board check</text>
+    <text x="850" y="160">red → messages WATCHER</text>
+    <text x="850" y="184">unreachable → emails the owner</text>
+    <text x="850" y="208">15 min standing red →</text>
+    <text x="850" y="226">one important email</text>
+  </g>
+
+  <!-- flow arrows -->
+  <g stroke="currentColor" stroke-width="2" fill="none" marker-end="url(#a)">
+    <line x1="160" y1="94"  x2="160" y2="146"/>
+    <line x1="160" y1="214" x2="160" y2="266"/>
+    <line x1="280" y1="290" x2="456" y2="70"/>
+    <line x1="580" y1="94"  x2="580" y2="146"/>
+    <line x1="580" y1="214" x2="580" y2="266"/>
+    <line x1="580" y1="334" x2="580" y2="386"/>
+    <line x1="580" y1="454" x2="580" y2="506"/>
+    <line x1="580" y1="574" x2="580" y2="626"/>
+    <!-- failure feedback: any check → triage -->
+    <path d="M 460 545 C 340 545, 320 490, 284 470" stroke="#c8571f" stroke-width="2.5"/>
+    <!-- triage routes -->
+    <path d="M 160 508 C 160 560, 130 560, 120 340" stroke="#c8571f" stroke-width="2.5"/>
+    <path d="M 100 420 C 90 380, 90 260, 100 218" stroke="#c8571f" stroke-width="2.5"/>
+  </g>
+  <g font-size="12" fill="currentColor">
+    <text x="330" y="165" transform="rotate(-31 330 165)">startable cards</text>
+    <text x="300" y="512" fill="#c8571f">any refusal or failure, with its evidence</text>
+    <text x="175" y="560" fill="#c8571f">work is fine → back in the queue, repaired</text>
+    <text x="20" y="375" fill="#c8571f" transform="rotate(-90 20 375)">card is wrong → re-slice</text>
+  </g>
+  <g font-size="13" fill="currentColor" text-anchor="middle">
+    <text x="580" y="730" font-weight="600">kept work = a commit the next card builds on</text>
+  </g>
+</svg>
+<figcaption>One turn of the graph loop. Left: planning — specs are sliced into cards; triage reads every failure and either repairs the card or sends it back for re-slicing. Right: the build chain — four checks stand between a card and the branch. Dashed: the supervisor, watching from outside every 15 minutes.</figcaption>
+</figure>

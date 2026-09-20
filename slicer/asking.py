@@ -16,7 +16,7 @@ from asking_lists import (  # noqa: F401 — asking stays the one door
     replacements,
 )
 from review_scope import (
-    VERDICT,  # type: ignore[import-not-found]  # drive/lib, on the path
+    VERDICT,  # type: ignore[import-not-found]  # graph/lib, on the path
 )
 from slicer_law import lineage
 from slicer_state import files

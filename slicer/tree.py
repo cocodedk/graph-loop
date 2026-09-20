@@ -1,4 +1,4 @@
-"""Publish one validated molecule as notes, without changing the drive reader.
+"""Publish one validated molecule as notes, without changing the graph reader.
 
 Every file this writes is an Obsidian note (`cardfile`), so the molecule a
 reviewer accepted and the vault a person opens are the same files.
@@ -11,8 +11,8 @@ import shutil
 import sys
 import tempfile
 
-DRIVE_LIB = pathlib.Path(__file__).resolve().parents[1] / "drive" / "lib"
-sys.path.insert(0, str(DRIVE_LIB))
+GRAPH_LIB = pathlib.Path(__file__).resolve().parents[1] / "graph" / "lib"
+sys.path.insert(0, str(GRAPH_LIB))
 import cardfile  # type: ignore[import-not-found]
 import durable  # type: ignore[import-not-found]
 from backlog import Backlog  # type: ignore[import-not-found]

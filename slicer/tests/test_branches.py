@@ -12,7 +12,7 @@ import yaml  # type: ignore[import-untyped]
 
 HERE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(HERE.parent / "drive" / "lib"))
+sys.path.insert(0, str(HERE.parent / "graph" / "lib"))
 import cardfile  # type: ignore[import-not-found]
 from branches import prompt, write_answer
 from intelligence import Reply

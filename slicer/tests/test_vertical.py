@@ -1,4 +1,4 @@
-"""One goal reaches the unchanged drive picker through the speccer and slicer."""
+"""One goal reaches the unchanged graph picker through the speccer and slicer."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import tmp_root  # noqa: F401 — every temp file of this process under one root
 import yaml  # type: ignore[import-untyped]
 
 SLICER = pathlib.Path(__file__).resolve().parents[1]
-DRIVE = SLICER.parent / "drive" / "drive-goal.py"
+GRAPH = SLICER.parent / "graph" / "graph-goal.py"
 sys.path.insert(0, str(SLICER))
 from intelligence import Reply
 from speccer import write_answer
@@ -47,13 +47,13 @@ class Vertical(unittest.TestCase):
             sort_keys=False)
         self.assertEqual(("published", "greeting"), run_answer(
             sliced, repo=repo, backlog=backlog, sources=[pathlib.Path(source)]))
-        env = {**os.environ, "DRIVE_REPO": str(repo), "DRIVE_BACKLOG": str(backlog),
-               "DRIVE_CAMPAIGN": str(campaign), "DRIVE_BRANCH": "campaign/fictive"}
-        subprocess.run([sys.executable, str(DRIVE), "init", "--backlog", str(backlog)],
+        env = {**os.environ, "GRAPH_REPO": str(repo), "GRAPH_BACKLOG": str(backlog),
+               "GRAPH_CAMPAIGN": str(campaign), "GRAPH_BRANCH": "campaign/fictive"}
+        subprocess.run([sys.executable, str(GRAPH), "init", "--backlog", str(backlog)],
                        env=env, check=True, capture_output=True, text=True)
-        subprocess.run([sys.executable, str(DRIVE), "approve"], env=env, check=True,
+        subprocess.run([sys.executable, str(GRAPH), "approve"], env=env, check=True,
                        capture_output=True, text=True)
-        done = subprocess.run([sys.executable, str(DRIVE), "run", "--dry-run"], env=env,
+        done = subprocess.run([sys.executable, str(GRAPH), "run", "--dry-run"], env=env,
                               check=True, capture_output=True, text=True)
         self.assertIn("would run greeting: return one greeting", done.stdout)
 

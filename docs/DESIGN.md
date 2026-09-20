@@ -4,7 +4,7 @@ How to build this loop, anywhere. What each part is, why it exists, and the orde
 makes it safe to leave alone. `DIARY.md` beside this file is the story of how it was
 learned; this file is the design.
 
-The runtime is here: `drive/` is the driver and `slicer/` is the planner. This document is
+The runtime is here: `graph/` is the driver and `slicer/` is the planner. This document is
 still written so that you could build the loop yourself without reading the code.
 
 ## The idea in one paragraph
@@ -97,8 +97,8 @@ reason the task exists.
 
 ## Two phases that never mix
 
-Planning and building are separate commands. `drive-goal.py plan` slices until the backlog
-stops changing and builds nothing; `drive-goal.py run` builds the cards and writes none.
+Planning and building are separate commands. `graph-goal.py plan` slices until the backlog
+stops changing and builds nothing; `graph-goal.py run` builds the cards and writes none.
 A card that fails is parked, and the next plan phase is what re-slices it — so a driver
 that has nothing startable hands back to the supervisor rather than waiting.
 
@@ -176,8 +176,8 @@ speed is better task contracts, not faster builders.
 **It claimed the logic was generic.** It was not. Four places in the source named the work
 it was built for, one of them by copying a private directory into every worktree it
 created. A claim of genericness is a measurement, not a statement. Those four are
-configuration now — `DRIVE_REPO`, `DRIVE_HELPER`, `DRIVE_PROVISION_COPY` and
-`DRIVE_PROVISION_LINK` — and the measurement is still a grep of the source.
+configuration now — `GRAPH_REPO`, `GRAPH_HELPER`, `GRAPH_PROVISION_COPY` and
+`GRAPH_PROVISION_LINK` — and the measurement is still a grep of the source.
 
 **It described what the loop does and not how it is run.** The runner is the supervisor,
 not the driver, and a campaign lasts days. Any front end for this loop has to start the

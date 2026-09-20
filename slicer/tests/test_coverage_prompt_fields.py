@@ -30,14 +30,14 @@ EXPECTED_TESTS = 1
 # How the work went, never what was promised: every such key the live tree
 # carries. None of it may reach the reviewer.
 RUN_STATE = {
-    "worktree": "/tmp/drive-a/task-T18", "rebuild_from": "/tmp/drive-a/task-T18",
+    "worktree": "/tmp/graph-a/task-T18", "rebuild_from": "/tmp/graph-a/task-T18",
     "session": "01J", "session_account": "plan", "rebuild_round": 2, "rounds": 3,
     "replans": 1, "replan_history": ["rewritten once"], "rejections": 2,
     "refused_why": "the gate did not fail first", "kept_at": "2026-09-08T00:00:00Z",
     "commit": "deadbeef", "triage": "work", "blocked_by_human": True,
     "contract_seen": "a digest", "done_why": "the gate passed", "sliced_into": ["T18"],
     "gate_reviewed_first": True, "dependency_note": "T1 first", "subtasks_source": "T12",
-    "finished": {"phase": "gate", "tree": "/tmp/drive-a/task-T18", "contract": "a digest",
+    "finished": {"phase": "gate", "tree": "/tmp/graph-a/task-T18", "contract": "a digest",
                  "diff": "a digest"},
 }
 
