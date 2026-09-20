@@ -23,6 +23,7 @@ only where a task says so, and the loop says out loud when it needs one.
 |---|---|
 | backlog | which task may start: dependencies met, files disjoint, humans respected |
 | waves | the same question asked forward: what would run together, wave after wave |
+| throttle | `--lanes auto`: how many lanes this machine will take, turn by turn |
 | providers | call a model and read the answer honestly; a limit or a denial is never an attempt |
 | gates | run a gate; the exit code decides; prove it red before anyone builds |
 | workspace | the campaign's memory: rotating events, timed steps, artifacts, claims, alerts, the stop flag |
@@ -46,7 +47,8 @@ only where a task says so, and the loop says out loud when it needs one.
 
 The purpose of the graph is to assign a new agent each time it branches out, as many as
 there are branches. The loop already does the running; the view of it, the record of what
-the cap costs and the projection into waves are `LANES.md`, beside this file.
+the cap costs, the projection into waves and `--lanes auto` — the throttler that reads
+this machine and never raises into the loop — are `LANES.md`, beside this file.
 
 ## The card
 

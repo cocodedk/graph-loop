@@ -143,17 +143,20 @@ class Workspace(ClaimsMixin, FlagsMixin, AlertsMixin, LockMixin):
         Every step of every task is timed, because a campaign that cannot say
         which step owns the clock cannot be made faster.
         """
-        started = time.time()
+        # One clock for every duration: monotonic, never the wall clock, which
+        # a backward adjustment can make a ten-second gate look like one of
+        # (`throttle_gates` learns that as its lone time). Wall is for `at`.
+        started = time.monotonic()
         extra: dict = {}
         try:
             yield lambda **fields: extra.update(fields)
         except Exception as error:          # recorded, then re-raised
             self.event("step", task=task_id, step=name,
-                       seconds=round(time.time() - started, 3),
+                       seconds=round(time.monotonic() - started, 3),
                        error=f"{type(error).__name__}: {error}", **extra)
             raise
         self.event("step", task=task_id, step=name,
-                   seconds=round(time.time() - started, 3), **extra)
+                   seconds=round(time.monotonic() - started, 3), **extra)
 
     def artifact(self, task_id: str, name: str, text: str) -> str:
         """Write one prompt, answer, diff or gate output down, and index it.

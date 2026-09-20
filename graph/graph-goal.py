@@ -4,7 +4,7 @@
     graph-goal.py init --backlog <file> [--goal "..."] [--branch <name>] [--source <path>]...
     graph-goal.py approve
     graph-goal.py plan [--rounds N]
-    graph-goal.py run [--lanes 3] [--max-tasks N] [--dry-run]
+    graph-goal.py run [--lanes 3|auto [--lanes-max N]] [--max-tasks N] [--dry-run]
     graph-goal.py status
     graph-goal.py report
     graph-goal.py doctor
@@ -35,7 +35,8 @@ from cli_args import build_parser
 from driver_turn import after_lanes, before_turn
 from finishing import stand_down
 from loop import Loop
-from turn_plan import width_against_lanes
+from throttle import Throttle
+from turn_plan import code_first, width_against_lanes
 from workspace_claims import _started
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -80,6 +81,9 @@ def command_run(args) -> int:
     if not args.dry_run:   # a dry run is not the driver: it announces nothing and reads no flag
         space.event("driver_started", pid=os.getpid(), started=_started(os.getpid()))   # the board reads this
     started_at = space.code_digest()   # what the code IS, so a touched mtime is not a change
+    # `--lanes auto` only: with a number, and in a dry run, this does nothing
+    # at all — no reading of the machine, no file, no event.
+    throttle = Throttle(space, args)
     while True:
         before_turn(loop, book, space, args)   # recover a decision, then reconcile
         ending = turn_opens(space, book, args, started_at, started)
@@ -106,7 +110,8 @@ def command_run(args) -> int:
             space.event("idle", unfinished=left, running=running, sleep=args.idle_seconds)
             space.idle(args.idle_seconds)
             continue
-        taking = taking_now(ready, args, started)
+        chosen = throttle.lanes(len(code_first(ready)))
+        taking = taking_now(ready, args, started, chosen)
         if args.dry_run:
             for row in taking:
                 print(f"would run {row['id']}: {row['goal']}")
@@ -114,8 +119,12 @@ def command_run(args) -> int:
         turn_id = f"turn-{started}-{int(time.time())}"
         # What the graph offered against what the loop could run, before it
         # runs: a turn that dies still says how wide its frontier was.
-        width_against_lanes(space, ready, taking, args, turn_id)
-        ran, outside = run_lanes(loop, book, space, taking, turn_id=turn_id)
+        width_against_lanes(space, ready, taking, args, turn_id, chosen)
+        throttle.opens()      # the baseline, read with no lane running
+        try:
+            ran, outside = run_lanes(loop, book, space, taking, turn_id=turn_id)
+        finally:
+            throttle.closes(turn_id, len(taking))
         started += ran
         # The doctor and the watchdog read what this turn just did, and write
         # what they find into the log nobody is here to read (lib/driver_turn.py).

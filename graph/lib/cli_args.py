@@ -4,7 +4,14 @@ from __future__ import annotations
 
 import argparse
 
+from lanes_auto import AUTO
 from turn_plan import MOST_LANES
+
+
+def lane_count(value: str):
+    """`--lanes N` is a cap and stays one; `--lanes auto` hands the number to
+    the throttler, which never returns more than the keeper's ceiling."""
+    return AUTO if value.strip().lower() == AUTO else int(value)
 
 
 def build_parser(description: str, commands: dict) -> argparse.ArgumentParser:
@@ -33,9 +40,14 @@ def build_parser(description: str, commands: dict) -> argparse.ArgumentParser:
     ahead.set_defaults(run=commands["plan"])
 
     go = sub.add_parser("run")
-    go.add_argument("--lanes", type=int, default=MOST_LANES,
+    go.add_argument("--lanes", type=lane_count, default=MOST_LANES,
                     help="code cards run side by side, up to this many; a live card "
-                         "always runs alone")
+                         "always runs alone. `auto` lets the machine decide each "
+                         "turn, under --lanes-max")
+    go.add_argument("--lanes-max", type=int, default=0,
+                    help="with --lanes auto: the owner's ceiling for this machine, "
+                         "where it starts. Without one it starts at a single lane "
+                         "and adds one per clean turn")
     go.add_argument("--max-tasks", type=int, default=0)
     go.add_argument("--dry-run", action="store_true")
     go.add_argument("--idle-seconds", type=int, default=300)
