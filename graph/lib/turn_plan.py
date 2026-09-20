@@ -8,7 +8,60 @@ and a turn only builds — so what is left here is the one choice of cards.
 
 from __future__ import annotations
 
-from backlog_status import is_live, runs_alone
+from backlog_status import runs_alone
+
+# Three at most, whatever anybody asks for: the keeper rebuilds a commit whose
+# branch moved under it three times before it gives up, so a fourth lane would
+# turn ordinary branch movement into a lane failure. It is the loop's own
+# ceiling, not a preference, and it is also `--lanes`' default.
+MOST_LANES = 3
+
+
+def code_first(ready: list[dict]) -> list[dict]:
+    """What this turn is really choosing among — the picker's own pool.
+
+    A card at the head that runs alone IS the turn: a live card acts on the one
+    shared stack, and a no-files evidence card has no edit for a lane to build,
+    so either one runs by itself. Behind a code card the pool is the code
+    cards: a live card reserves nothing there, and an evidence card cannot
+    take a lane either, so counting them as width reported a lane-cap
+    bottleneck on a turn that ran everything it could.
+
+    The picker and the recorder both start here, or the record describes a
+    turn that did not happen.
+    """
+    if not ready:
+        return []
+    if runs_alone(ready[0]):
+        return ready[:1]
+    return [row for row in ready if not runs_alone(row)]
+
+
+def lane_cap(ready: list[dict], args) -> int:
+    """How many lanes this turn may use, and the one place that says so.
+
+    One for a card that runs alone; otherwise the smallest of what was asked
+    for and the keeper's ceiling. The recorder below and the picker read the
+    same answer, because a cap read twice is a cap that can disagree with
+    itself in the record.
+    """
+    if not ready or runs_alone(ready[0]):
+        return 1
+    return max(1, min(MOST_LANES, args.lanes))
+
+
+def width_against_lanes(space, ready: list[dict], taking: list[dict],
+                        args, turn_id: str) -> dict:
+    """Record what the graph offered this turn against what the loop could run.
+
+    Here, because these three numbers are this module's own decision: the
+    width it was given, the cap it applied and the cards it handed back. Read
+    anywhere else they are a second opinion, and `report` names the turns
+    where the graph was wider than the loop from this record alone.
+    """
+    offered = code_first(ready)
+    return space.event("turn_lanes", turn=turn_id, width=len(offered),
+                       cap=lane_cap(offered, args), lanes=len(taking))
 
 
 def taking_now(ready: list[dict], args, started: int = 0) -> list[dict]:
@@ -18,21 +71,15 @@ def taking_now(ready: list[dict], args, started: int = 0) -> list[dict]:
     and an evidence card in the middle of the queue was once protected while the
     third code card behind it was built.
     """
-    # A live card reserves nothing in a code turn: it runs alone anyway, and its
-    # files would otherwise keep a safe lane empty.
-    if ready and not is_live(ready[0]):
-        ready = [row for row in ready if not is_live(row)] or ready
+    ready = code_first(ready)
     if not ready:
         return []
     # A live card acts on one shared stack, so it runs alone; code cards run
-    # side by side, each in its own worktree, up to args.lanes.
-    # Three at most: the keeper rebuilds a commit whose branch moved under it
-    # three times before it gives up, so a fourth lane would turn ordinary
-    # branch movement into a lane failure.
+    # side by side, each in its own worktree, up to the cap.
     # A lane is for a CODE card. A live card and a no-files evidence card
     # both run alone (backlog_status.runs_alone) — for two different
     # reasons — rather than holding a lane.
-    lanes = max(1, min(3, args.lanes)) if not runs_alone(ready[0]) else 1
+    lanes = lane_cap(ready, args)
     taking = [row for row in ready if not runs_alone(row)][:lanes] if lanes > 1 else ready[:1]
     if args.max_tasks:
         taking = taking[:max(0, args.max_tasks - started)]

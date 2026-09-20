@@ -13,11 +13,15 @@ The runtime is here. This file says what is proven, what is not, and what is sti
 - `plugins/graph/` — the method as a Claude Code skill; useful without the driver.
 - `scripts/scrub-check.sh` — nothing local travels, checked over contents, filenames and
   the whole history.
+- The frontier is visible: `plan` and `status` print the waves the backlog would run in,
+  each turn records that width against its lane cap, and `report` names the turns where
+  the graph was wider than the loop. The projection is a snapshot — the next plan phase
+  re-slices the backlog — and it is labelled as one wherever it is printed.
 
-Both suites run here: the slicer's 211 tests are green, and 1552 of the driver's 1558 pass.
-The six that do not need a machine this one is not — a non-root user, a sandbox that can
-take a variable out of a gate's environment, and a real session launcher. `ruff check .`
-is clean.
+Both suites run here: the slicer's 211 tests are green and the driver's suite is 1580
+tests. Six of them need a machine this one is not — a non-root user, a sandbox that can
+take a variable out of a gate's environment, and a real session launcher — so how many
+pass is a fact about the machine, not about the loop. `ruff check .` is clean.
 
 ## What the move changed
 

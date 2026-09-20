@@ -22,6 +22,7 @@ only where a task says so, and the loop says out loud when it needs one.
 | part | one job |
 |---|---|
 | backlog | which task may start: dependencies met, files disjoint, humans respected |
+| waves | the same question asked forward: what would run together, wave after wave |
 | providers | call a model and read the answer honestly; a limit or a denial is never an attempt |
 | gates | run a gate; the exit code decides; prove it red before anyone builds |
 | workspace | the campaign's memory: rotating events, timed steps, artifacts, claims, alerts, the stop flag |
@@ -40,6 +41,12 @@ only where a task says so, and the loop says out loud when it needs one.
 | driver | init → approve → plan → run; status, report, doctor; stop and stop now |
 | supervisor | restart a dead driver, back off on a crash loop, hourly report snapshots |
 | window | clear, print the view, sleep |
+
+## The frontier, and the lanes that follow it
+
+The purpose of the graph is to assign a new agent each time it branches out, as many as
+there are branches. The loop already does the running; the view of it, the record of what
+the cap costs and the projection into waves are `LANES.md`, beside this file.
 
 ## The card
 
