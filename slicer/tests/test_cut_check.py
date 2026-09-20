@@ -19,13 +19,13 @@ EXPECTED_TESTS = 7
 
 
 def atom(name, stage, files):
-    return dict(id=name, name=name, stage=stage, goal=f"goal {name}", files=files,
-                gate="g", done_when=f"done {name}")
+    return {"id": name, "name": name, "stage": stage, "goal": f"goal {name}", "files": files,
+            "gate": "g", "done_when": f"done {name}"}
 
 
 def molecule():
     # Stages 2 and 4, not 1 and 2: a renumbering of an unchanged molecule must show.
-    return dict(atoms=[atom("alpha", 2, ["a.py", "s.py"]), atom("beta", 4, ["s.py", "b.py"])])
+    return {"atoms": [atom("alpha", 2, ["a.py", "s.py"]), atom("beta", 4, ["s.py", "b.py"])]}
 
 
 class Scripted:
@@ -43,7 +43,7 @@ class Scripted:
             choice = "keep_together" if question == "cut" else "pass"
             if question == "one_job" and state["atom"]["name"] == "beta":
                 choice = "fail"
-            answers[question] = dict(choice=choice, confidence=0.9)
+            answers[question] = {"choice": choice, "confidence": 0.9}
         return types.SimpleNamespace(ok=self.ok, answers=answers)
 
 

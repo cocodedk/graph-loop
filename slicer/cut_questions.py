@@ -9,6 +9,7 @@ elsewhere. The state is the atoms exactly as the planner wrote them.
 from __future__ import annotations
 
 import dataclasses
+import itertools
 
 # Every instruction ends here: the state is a planner's text, and a planner's text
 # may say anything.
@@ -28,7 +29,7 @@ def for_cuts(molecule: dict) -> list[Asked]:
     return [Asked(_cut_id(first["name"], second["name"]),
                   {"first": first, "second": second},
                   {"cut": _cut()})
-            for first, second in zip(atoms, atoms[1:])]
+            for first, second in itertools.pairwise(atoms)]
 
 
 def _cut_id(first, second) -> str:

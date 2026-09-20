@@ -61,8 +61,8 @@ def run_answer(text: str, *, repo: pathlib.Path, backlog: pathlib.Path,
         close(backlog, sources, verdict.text, repo, rows)
         return "covered", answer["reason"]
     if checker is not None:
-        answer = _checked(answer, checker, backlog, dict(repo=repo, sources=sources,
-                                                         rows=rows, target=target))
+        answer = _checked(answer, checker, backlog, {"repo": repo, "sources": sources,
+                                                     "rows": rows, "target": target})
     if target:
         trace(backlog, "progress_review_call", target=target_id)
         verdict = judge(asking.progress_prompt(repo, target, answer["molecule"]))
@@ -80,7 +80,7 @@ def _checked(answer: dict, checker, backlog: pathlib.Path, args: dict) -> dict:
         # a copy: a checker that edits in place and then fails, or returns the
         # molecule it edited, must not alter or hide a change from the original
         checked = checker(copy.deepcopy(answer["molecule"]))
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001 — `checker` is an injected call, may raise anything
         # a checker that fails is not a reason to refuse the plan, but say so
         trace(backlog, "cut_checked", molecule=answer["molecule"]["name"], **_counts(None),
               findings=0, failed=f"{type(error).__name__}: {error}")

@@ -15,7 +15,6 @@ import yaml  # type: ignore[import-untyped]  # no stubs in this environment
 HERE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE / "lib"))
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
-
 from cli_args import build_parser
 from cuts_command import command_cuts
 from workspace import Workspace

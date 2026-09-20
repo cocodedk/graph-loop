@@ -12,7 +12,6 @@ import tmp_root  # noqa: F401 — every temp file of this process under one root
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import yaml  # type: ignore[import-untyped]
-
 from cut_states import load, switch
 
 

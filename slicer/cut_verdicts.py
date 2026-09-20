@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import itertools
 from typing import NamedTuple
 
 import cut_questions
@@ -55,7 +56,7 @@ def merges(molecule: object, verdicts: list[Verdict]) -> list[tuple[str, str]]:
     atoms = _atoms(molecule)
     keep = [v.id for v in verdicts if v.usable and v.question == "cut" and v.choice == "keep_together"]
     pairs = []
-    for first, second in zip(atoms, atoms[1:]):
+    for first, second in itertools.pairwise(atoms):
         one, two = first.get("name"), second.get("name")
         if not (isinstance(one, str) and isinstance(two, str) and one and two):
             continue

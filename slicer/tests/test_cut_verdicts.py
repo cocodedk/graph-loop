@@ -16,13 +16,13 @@ EXPECTED_TESTS = 10
 
 
 def atom(name, stage, files, gate="g"):
-    return dict(name=name, stage=stage, goal=f"goal {name}", files=files,
-                gate=gate, done_when=f"done {name}")
+    return {"name": name, "stage": stage, "goal": f"goal {name}", "files": files,
+            "gate": gate, "done_when": f"done {name}"}
 
 
-MOLECULE = dict(atoms=[atom("alpha", 1, ["a.py", "s.py"], "gate one"),
-                       atom("beta", 2, ["s.py", "b.py"], "gate two"),
-                       atom("gamma", 3, ["c.py"])])
+MOLECULE = {"atoms": [atom("alpha", 1, ["a.py", "s.py"], "gate one"),
+                     atom("beta", 2, ["s.py", "b.py"], "gate two"),
+                     atom("gamma", 3, ["c.py"])]}
 
 
 def asked(ident, *questions):
@@ -30,11 +30,14 @@ def asked(ident, *questions):
 
 
 def answer(ok=True, **given):
-    rows = {q: dict(choice=c, confidence=p) for q, (c, p) in given.items()}
+    rows = {q: {"choice": c, "confidence": p} for q, (c, p) in given.items()}
     return types.SimpleNamespace(ok=ok, answers=rows)
 
 
-def cut(choice, confidence, ident=_cut_id("alpha", "beta")):
+DEFAULT_CUT_ID = _cut_id("alpha", "beta")
+
+
+def cut(choice, confidence, ident=DEFAULT_CUT_ID):
     return read(asked(ident, "cut"), answer(cut=(choice, confidence)))
 
 
@@ -82,7 +85,8 @@ class CutVerdicts(unittest.TestCase):
         self.assertEqual(len(MOLECULE["atoms"]), 3)
 
     def test_overlapping_pairs_lose_nothing_whatever_order_they_come_in(self):
-        four = dict(atoms=[atom(n, i, ["s.py"], f"gate {n}") for i, n in enumerate(("alpha", "beta", "gamma", "delta"), 1)])
+        four = {"atoms": [atom(n, i, ["s.py"], f"gate {n}")
+                          for i, n in enumerate(("alpha", "beta", "gamma", "delta"), 1)]}
         made = apply_merges(four, [("beta", "gamma"), ("alpha", "beta"), ("gamma", "delta")])
         (only,) = made["atoms"]
         self.assertEqual(only["name"], "alpha")

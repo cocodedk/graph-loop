@@ -22,7 +22,7 @@ class CutHook(unittest.TestCase):
             calls.append((molecule, campaign, space, ask, wall))
             return result
 
-        ask, molecule = object(), dict(atoms=[])
+        ask, molecule = object(), {"atoms": []}
         got = make_checker("camp", "space", ask, wall="wall", check=check)(molecule)
         self.assertIs(got, result)
         self.assertEqual(calls, [(molecule, "camp", "space", ask, "wall")])

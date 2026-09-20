@@ -12,7 +12,11 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "slicer"))
 
 # ponytail: `_read` is private to cut_states; a public `history()` there would
 # replace it, and this import with it.
-from cut_states import _read, load, switch  # type: ignore[import-not-found]  # noqa: E402
+from cut_states import (  # type: ignore[import-not-found]
+    _read,
+    load,
+    switch,
+)
 
 
 def command_cuts(args) -> int:

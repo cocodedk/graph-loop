@@ -36,8 +36,8 @@ def _ask_all(molecule, wall, ask) -> tuple[list, int, float]:
         began = time.monotonic()
         try:
             answer = ask(asked.state, asked.questions)
-        except Exception:
-            continue
+        except Exception:  # noqa: BLE001, S112 — `ask` is an injected call to a decisions
+            continue       # model; one failed question must not fail the whole check
         finally:
             seconds += time.monotonic() - began
         verdicts += cut_verdicts.read(asked, answer)
