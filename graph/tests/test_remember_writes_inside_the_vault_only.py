@@ -15,13 +15,14 @@ import pathlib
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import cardfile
 import remember
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 
-EXPECTED_TESTS = 7
+EXPECTED_TESTS = 10
 
 
 def molecule(folder: pathlib.Path) -> None:
@@ -57,7 +58,7 @@ class AMoleculeThatResolvesOutsideIsSkipped(unittest.TestCase):
         counts = remember.write_memory(root, log())
         self.assertEqual(sorted(path.name for path in away.iterdir()),
                          ["01-schema.md", "molecule.md"])
-        self.assertEqual(2, counts["untouched"])
+        self.assertEqual(1, counts["untouched"])
 
     def test_it_is_reported_rather_than_done_quietly(self):
         """A molecule folder that is a link is refused for being one, before
@@ -67,9 +68,8 @@ class AMoleculeThatResolvesOutsideIsSkipped(unittest.TestCase):
         away = outside()
         molecule(away)
         (root / "T30").symlink_to(away, target_is_directory=True)
-        said = remember.write_memory(root, log())["said"]["T30.schema"]
+        said = remember.write_memory(root, log())["said"]["T30"]
         self.assertIn("symlink", said)
-        self.assertIn("T30", said)
 
 
 class AMoleculeSeenTwiceIsExportedOnce(unittest.TestCase):
@@ -91,7 +91,7 @@ class AMoleculeSeenTwiceIsExportedOnce(unittest.TestCase):
         self.assertNotIn("[[T00/", text)
 
     def test_the_linked_name_is_skipped_and_said(self):
-        self.assertIn("symlink", self.counts["said"]["T00.schema"])
+        self.assertIn("symlink", self.counts["said"]["T00"])
 
 
 class NothingIsWrittenThroughASymlink(unittest.TestCase):
@@ -122,6 +122,55 @@ class NothingIsWrittenThroughASymlink(unittest.TestCase):
         counts = remember.write_memory(root, log())
         self.assertEqual(was, card.read_bytes())
         self.assertEqual(1, counts["untouched"])
+
+
+class ATempNamePlantedMidWriteIsNotFollowed(unittest.TestCase):
+    def test_a_symlink_appearing_after_the_check_truncates_nothing(self):
+        """The existence check and the write are two moments. A link planted
+        between them was opened by name and its target emptied."""
+        root = vault()
+        card = root / "T30" / "01-schema.md"
+        was = card.read_bytes()
+        (root / "T30" / "relatives").mkdir()
+        real = remember.render
+
+        def planting(target, sections):
+            # at the temp name of the card being written this very moment
+            beside = (root / "T30" / "relatives" /
+                      f".memory-{target.rsplit('/', 1)[1]}.md.tmp")
+            if not beside.exists() and not beside.is_symlink():
+                beside.symlink_to(card)      # somebody plants it, right now
+            return real(target, sections)
+
+        with mock.patch.object(remember, "render", planting):
+            counts = remember.write_memory(root, log())
+        self.assertEqual(was, card.read_bytes())
+        self.assertIn("temp file", counts["said"]["T30.schema"])
+
+
+class AMoleculeItCannotReadIsSkippedNotCrashedOn(unittest.TestCase):
+    def test_a_symlinked_molecule_is_refused_before_anything_in_it_is_read(self):
+        """Its own `molecule.md` need not even be a card: the folder is
+        refused for being a link, and nothing inside it is opened."""
+        root = vault()
+        away = outside()
+        away.mkdir(parents=True)
+        (away / cardfile.HEAD).write_text("no front matter at all\n", "utf-8")
+        (root / "T00").symlink_to(away, target_is_directory=True)
+        counts = remember.write_memory(root, log())
+        self.assertIn("symlink", counts["said"]["T00"])
+        self.assertTrue((root / "T30" / "relatives" / "memory-01-schema.md").exists())
+
+    def test_a_molecule_whose_atoms_do_not_read_is_skipped_and_said(self):
+        root = vault()
+        stray = root / "T31"
+        stray.mkdir()
+        (stray / cardfile.HEAD).write_text(
+            cardfile.dump({"goal": "a lone piece", "status": "todo"}), "utf-8")
+        (stray / "not-an-atom.md").write_text("this carries no order\n", "utf-8")
+        counts = remember.write_memory(root, log())
+        self.assertIn("could not be read", counts["said"]["T31"])
+        self.assertTrue((root / "T30" / "relatives" / "memory-01-schema.md").exists())
 
 
 class TheCountIsAsserted(unittest.TestCase):

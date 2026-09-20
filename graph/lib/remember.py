@@ -25,13 +25,14 @@ from __future__ import annotations
 
 import pathlib
 
-import backlog_tree
 import cardfile
 import durable
+import molecule
 import remember_log
 import where
 from remember_events import dated
 from remember_note import ours, render
+from remember_safe import still, unsafe
 from workspace import Workspace
 
 FOLDER = "relatives"
@@ -72,13 +73,13 @@ def write_memory(root: pathlib.Path, rows: list) -> dict:
     command cannot finish never costs the others.
     """
     memory, counts = dated(rows)
-    paths = backlog_tree.read(root)[backlog_tree.PATHS]
+    counts.update(written=0, unchanged=0, untouched=0, said={}, events=len(rows))
+    paths = _cards(root, counts)
     link = cardfile.linker(root)
     inside = root.resolve()
     done: set = set()
-    counts.update(written=0, unchanged=0, untouched=0, said={}, events=len(rows),
-                  not_a_card=sum(len(sections) for node, sections in memory.items()
-                                 if node not in paths))
+    counts["not_a_card"] = sum(len(sections) for node, sections in memory.items()
+                               if node not in paths)
     for task_id, card in sorted(paths.items()):
         try:
             concern = _one(inside, done, card, link(task_id),
@@ -91,15 +92,52 @@ def write_memory(root: pathlib.Path, rows: list) -> dict:
     return counts
 
 
+def _cards(root: pathlib.Path, counts: dict) -> dict:
+    """Every card this command may write a memory for: its id and its file.
+
+    Read from the folders and the file names alone — no card's contents are
+    ever parsed here. `backlog_tree.read` does parse them, and one note that
+    is not a card took the whole command down with it; a molecule whose atoms
+    will not read is this command's to step over, not to raise on.
+
+    A folder that is a symlink is refused BEFORE anything inside it is opened:
+    where it leads is not the question, and its own `molecule.md` need not
+    even be a card for the answer to be no.
+    """
+    found: dict = {}
+    for folder in sorted(root.iterdir()):
+        head = folder / cardfile.HEAD
+        if folder.name.startswith(".") or not folder.is_dir():
+            continue
+        if folder.is_symlink():
+            counts["untouched"] += 1
+            counts["said"][folder.name] = ("it is a symlink to another folder, so "
+                                           "nothing is exported under this name")
+            continue
+        if not head.exists():
+            continue
+        try:
+            atoms = molecule.ordered(folder)
+        except (OSError, ValueError) as unreadable:
+            counts["untouched"] += 1
+            counts["said"][folder.name] = (f"its atoms could not be read, so none of "
+                                           f"them was written: {unreadable}")
+            continue
+        found[folder.name] = head
+        for atom in atoms:
+            found[molecule.atom_id(folder.name, atom.name)] = atom
+    return found
+
+
 def _one(inside: pathlib.Path, done: set, card: pathlib.Path, target: str,
          sections: list, counts: dict) -> str:
     """One card's memory refreshed, and what could not be done to it."""
     folder = card.parent / FOLDER
     note = folder / f"{PREFIX}{card.stem}{cardfile.SUFFIX}"
-    unsafe = _unsafe(inside, done, card, folder, note)
-    if unsafe:
+    refused = unsafe(inside, done, card, folder, note)
+    if refused:
         counts["untouched"] += 1
-        return unsafe
+        return refused
     text = render(target, sections)
     raw = note.read_bytes() if note.exists() else None
     if raw is not None and raw == text.encode("utf-8"):
@@ -111,63 +149,15 @@ def _one(inside: pathlib.Path, done: set, card: pathlib.Path, target: str,
     # The same question again, with the new bytes already on the platter and
     # the rename one step away: what was read above is stale by now, and
     # somebody saving inside that moment had their edit renamed over.
-    if durable.replace(note, text, guard=lambda: _still(note, raw)) is None:
+    try:
+        put = durable.replace(note, text, guard=lambda: still(note, raw), exclusive=True)
+    except OSError:
+        # The sibling name was taken, or it was a link this refused to open.
+        # Either way something else is using it and nothing here is guessed.
+        counts["untouched"] += 1
+        return "kept: a temp file was in the way"
+    if put is None:
         counts["untouched"] += 1
         return HAND
     counts["written"] += 1
     return ""
-
-
-def _still(note: pathlib.Path, raw: bytes | None) -> bool:
-    """Whether the file is still what the ownership check above saw: the same
-    bytes, or still not there at all."""
-    return (note.read_bytes() if note.exists() else None) == raw
-
-
-def _unsafe(inside: pathlib.Path, done: set, card: pathlib.Path,
-            folder: pathlib.Path, note: pathlib.Path) -> str:
-    """Why this note must not be written.
-
-    Two questions, because either alone lets a write escape. Where does the
-    path REALLY lead — asked of the filesystem, of every ancestor at once, so a
-    molecule folder that is itself a link cannot take its notes out of the
-    vault. And is anything on the last stretch a link at all — because one
-    pointing back INSIDE the vault resolves happily and would still land the
-    write on a card. `durable.replace` writes `.<name>.tmp` beside the note and
-    renames it into place, so that name is a target as much as the note is.
-    """
-    piece = card.parent
-    if piece.is_symlink():
-        # It may resolve inside the vault or out of it, and neither is a
-        # reason to write: under this name the notes would carry this name's
-        # backlinks into another molecule's folder, and the molecule that
-        # really lives there would then find a note that is not its own and
-        # keep it — losing its history to a link somebody made.
-        return (f"{piece.name} is a symlink to another folder, so nothing is exported "
-                "under this name")
-    real = note.resolve()
-    if real in done:
-        return f"{piece.name} holds the note another name in this backlog already wrote"
-    done.add(real)
-    beside = folder / f".{note.name}.tmp"
-    for path in (folder, note, beside):
-        if path.is_symlink():
-            return f"{path.name} is a symlink, and nothing here is written through one"
-        if not _within(inside, path):
-            return f"{path.name} resolves outside the vault; nothing there was written"
-    if folder.exists() and not folder.is_dir():
-        return f"{folder.name} is not a folder; nothing here was changed"
-    if beside.exists():
-        return (f"{beside.name} is already there, and the durable write would replace "
-                "it; nothing here was changed")
-    return ""
-
-
-def _within(inside: pathlib.Path, path: pathlib.Path) -> bool:
-    """Whether this path really lies in the vault. `resolve` answers for every
-    ancestor, and for a path that is not there yet it answers for the part
-    that is."""
-    try:
-        return path.resolve().is_relative_to(inside)
-    except OSError:
-        return False

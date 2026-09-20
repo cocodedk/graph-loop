@@ -94,6 +94,19 @@ resolved vault root. A link is refused even when it resolves back inside, becaus
 pointing at a card would land the write there. That covers the note, its folder and the
 `.<name>.tmp` sibling the durable write renames into place.
 
+### What this does not defend against
+
+A hostile local process racing the filesystem during a run. The command resolves every
+path, refuses every symlink it can see and creates its temporary file exclusively, so a
+link that is there when it looks is never followed. A process that swaps `relatives/` for
+a symlink in the milliseconds between that check and the write can still win, and closing
+that would mean holding directory handles and writing through `openat` for the whole run.
+
+This is a person's own vault on their own machine, run by hand after a driver has stopped.
+A process able to rewrite the vault's folders under it can rewrite the notes directly and
+needs no race to do it, so the race buys an attacker nothing they did not already have.
+Deliberately not built; say so rather than assume it.
+
 **Nothing in a log can stop the export.** Every line of every part, rotated ones included,
 is read inside its own guard: a line that is not a usable JSON object is counted and
 stepped over, and the backlog is the first init event that actually names one. No usable
