@@ -32,17 +32,43 @@ Do not start a campaign when:
 
 ## Writing a task contract
 
-```yaml
-- id: fetch-timeout
-  goal: one sentence, one idea
-  why: what it costs that this is not done
-  status: todo
-  needs: [config-defaults]           # only real dependencies
-  files: [ ... ]        # everything the gate can fail on, never the test that judges it
-  gate: (cd path/to/tests && timeout 600 python3 -m unittest ...)
-  done_when: what the gate proves, and nothing more
-  note: traps, the source of truth, what to do instead of guessing
+A card is one note in a vault you can open in Obsidian. Front matter holds what the loop
+decides; the body holds what a person wrote, and `Needs` is a `[[wikilink]]`, so the graph
+view is the dependency graph.
+
+````markdown
+---
+status: todo
+files:                  # everything the gate can fail on, never the test that judges it
+  - src/fetch.py
+---
+
+## Goal
+
+one sentence, one idea
+
+## Why
+
+what it costs that this is not done
+
+## Done when
+
+what the gate proves, and nothing more
+
+## Gate
+
+```sh
+(cd tests && timeout 600 python3 -m unittest test_fetch)
 ```
+
+## Needs
+
+- [[T4/02-config-defaults]]
+
+## Note
+
+traps, the source of truth, what to do instead of guessing
+````
 
 **Gates first.** Write the end state as commands that fail today. No task exists before its
 gate does. Every path relative to the worktree, every stage in its own subshell, and the

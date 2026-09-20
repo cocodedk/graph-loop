@@ -8,10 +8,16 @@ refuses any task whose gate could pass without the work, a builder does one task
 in a private worktree, a gate command's exit code is the verdict, a fresh
 reviewer reads the finished diff, and only then is the work committed.
 
-**The runtime is not here yet.** This repository currently carries the design,
-the diary and the skill. The code arrives later, in one piece, from a source that
-has stopped moving. Do not partially import it; a half-moved loop is worse than
-none, because the half that runs is the half nobody reads.
+The runtime is here. `drive/` is the driver, `slicer/` is the plan phase that
+writes the cards, `docs/` is the writing and `plugins/drive/` is the skill.
+A card is one Obsidian note in a vault inside the repository being built; the
+note is the card, and the loop writes only its front matter.
+
+The loop no longer lives inside what it builds, so four things are
+configuration and nothing else names a particular project: `DRIVE_REPO` (the
+repository being built), `DRIVE_HELPER` (that repository's own command tool, if
+it has one), and `DRIVE_PROVISION_COPY` / `DRIVE_PROVISION_LINK` (the
+gitignored material a checkout needs). Adding a fifth such name is a defect.
 
 ## Nothing local travels
 
@@ -49,6 +55,9 @@ If it fails, fix the file. Never the check.
   request.
 - Fix a bug at its root: one guard in the shared function, after reading every
   caller.
+- A deliberate shortcut carries a `# ponytail: <ceiling>, <upgrade path>`
+  comment, so the next reader knows it was chosen rather than missed.
+- Code lints clean before it commits (`ruff check .`).
 - A new check is not trusted until the case it exists to catch has been made to
   fail in front of you. This is not a style preference — the guard in this
   repository caught its own pattern file the first time it was run properly, and
