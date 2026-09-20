@@ -11,6 +11,7 @@ worth less than the campaign it describes.
 from __future__ import annotations
 
 import argparse
+import collections
 import contextlib
 import io
 import pathlib
@@ -29,9 +30,6 @@ from cli_args import build_parser
 from workspace import Workspace
 
 EXPECTED_TESTS = 9
-
-NAMES = ("init", "sources", "approve", "status", "report", "doctor", "plan", "run",
-         "stop", "remember")
 
 # Reaching the command is importing its module or calling it, by name. The bare
 # word is ordinary English and half the loop uses it about something else.
@@ -117,7 +115,9 @@ class TheCommandIsNotOnTheLoopsPath(unittest.TestCase):
         self.assertEqual([], named, "a hand-run command must stay off the loop's path")
 
     def test_the_command_line_knows_it_and_it_takes_no_argument(self):
-        parser = build_parser("a test", dict.fromkeys(NAMES, "marker"))
+        """Every subcommand answers "marker", so a command added beside this
+        one never has to be named here for this to go on passing."""
+        parser = build_parser("a test", collections.defaultdict(lambda: "marker"))
         self.assertEqual("marker", parser.parse_args(["remember"]).run)
 
 
