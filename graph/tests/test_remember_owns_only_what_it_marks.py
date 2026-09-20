@@ -133,7 +133,7 @@ class FlowStyleFrontMatterIsLeftAloneNotCorrupted(unittest.TestCase):
         front = cardfile.FRONT.match(path.read_text("utf-8"))["front"]
         self.assertEqual("{kind: memory, tags: [keep]}", front)
         self.assertEqual({"kind": "memory", "tags": ["keep"]}, yaml.safe_load(front))
-        self.assertIn("flow style", counts["said"]["T30.schema"])
+        self.assertIn("never edited", counts["said"]["T30.schema"])
 
     def test_an_empty_flow_mapping_neither_raises_nor_becomes_nonsense(self):
         root, path = given("---\n{}\n---\n")

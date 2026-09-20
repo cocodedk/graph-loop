@@ -47,12 +47,15 @@ of the numbered artifact file — `calls/<card>/003-contract-answer.txt` — nev
 reviewer's words, never what the gate printed, never the absolute path the log records,
 which names the machine the campaign ran on. The log stays the one home of the raw record.
 
-The file a section points at is the one THIS run wrote: of this card, of that artifact's
-name, and the first one on the side the loop writes it — after the event for a gate's
-output, before it for a reviewer's answer. Never the closest one in the log. A campaign
-writes one stream and three cards write into it at once, so distance there is a fact about
-the other lanes, and it once made a green gate name the red run's output. A run whose
-artifact never landed names no file: no pointer beats a pointer at another run's words.
+The file a section points at is the one THIS execution wrote. Two things bound an
+execution: the window from that card's previous run of the same kind to its next one, and
+the `turn` the loop stamps on every event written while one is open. Inside those bounds,
+on the side the loop writes it — after the event for a gate's output, before it for an
+answer. Never the closest one in the log: a campaign writes one stream and three cards
+write into it at once, so distance there is a fact about the other lanes, and it once made
+a green gate name the red run's output. A run whose artifact is not in its own bounds
+names no file and says the evidence never reached the log — a pointer at a neighbour's
+file reads as evidence, which is worse than none.
 
 And a section says what the log says, not what it can guess. `rejected` is the case that
 taught it: the loop writes that same event when a diff review finds something, when a
@@ -74,19 +77,37 @@ the file they put it (its index among the sections, which holds because the log 
 grows at the end). The one thing to know before writing in one by hand: do not end your
 own heading with that phrase, or the next run will take the section over as its own.
 
-The second is `kind` and `node` in the front matter, **and only when the note carries
-neither**. A note that already has front matter keeps that text exactly — it is never read
-into a mapping and written back out, which would reorder the keys, requote the values and
-drop the comments, so a vault that carries a property set on every note and queries it
-across the vault keeps that set. A missing key is added as one line; a key that is there
-stands, whatever it says. Front matter written in YAML flow style — `{kind: memory}` —
-takes no line, because one put after the closing brace is not in the mapping and not even
-YAML: it is left exactly as it is and the summary says which key was left out.
+The second is the front matter of a note **it makes itself**, which gets `kind` and
+`node`. That is the whole of it.
 
-**A note whose `node` points at another card is not written at all.** Somebody aimed it
-there, perhaps after a rename, and rebuilding the history of a note that says it is about
-a different card is the one mistake no counter makes up for. The summary names that card
-and says nothing here was changed — and nothing was.
+**Front matter that is already there is never edited. At all.** Not a line added, not a
+key completed. YAML has more valid spellings than a text edit can know about — flow
+mappings, blocks indented two spaces, an explicit `...` terminator, anchors, comments —
+and three separate attempts to add a missing key safely each broke a valid note in front
+of a reviewer. Reading it into a mapping and writing it back is no better: it loses the
+order, the quoting and the comments somebody chose, which for a vault that carries a
+property set on every note and queries it across the vault is the whole point of the set.
+So an existing note's front matter comes back byte for byte, and if it has no `kind` or no
+`node` the summary says so and nothing is added.
+
+**Whose note it is, is asked once and conservatively.** A note is this card's to refresh
+only when its front matter has no `node` at all — then it is this card's by where it sits
+— or when `node` is a string and exactly this card's link. Anything else is somebody
+else's: another card's link, a list holding one, a number, front matter that will not
+parse. Then **nothing is written at all** and the summary says why. Rebuilding the history
+of a note that says it is about a different card is the one mistake no counter makes up
+for, and a guard that only looked at strings once let a list straight through.
+
+**A `## ` line inside a fenced code block is an example, not a heading** — not for
+ownership, not for splitting sections, not for finding the link under `## Node`. One
+scanner knows where code is, and everything that looks for a heading asks it. A fence
+nobody closed makes the note unreadable: there is no telling where a person's text ends,
+so it is left alone and said.
+
+**Nothing in a log can stop the export.** Turning one event into a section, or into an
+index entry, happens inside one guard for that event: whatever it raises costs that event,
+which is counted, and the run carries on. Three reviews found three different fields that
+took a whole export down before the guard moved to where it belongs.
 
 The summary is the command's account of itself: how many notes it wrote, how many already
 said it, how many it did not write, and one line per card it could not treat as its own.

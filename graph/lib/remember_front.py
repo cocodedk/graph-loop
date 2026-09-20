@@ -1,94 +1,81 @@
-"""A memory note's front matter: the person's, with two keys added if absent.
+"""Whose memory note this is, and its front matter — which is never edited.
 
-It is kept as TEXT and never read into a mapping and written back out — that
-reorders the keys, requotes the values and drops the comments, and a vault that
-carries a property set on every note and queries it across the vault would lose
-that set every time the command ran.
+**The command does not edit front matter that is already there. At all.** Not a
+line added, not a key completed. YAML has more valid spellings than a text edit
+can know about — flow mappings, blocks indented two spaces, an explicit `...`
+terminator, anchors, comments — and three separate attempts to add a missing
+key safely each broke a valid note in front of a reviewer. Reading it into a
+mapping and writing it back is no better: it loses the order, the quoting and
+the comments somebody chose. So a note the command MAKES gets `kind` and
+`node`; a note that exists keeps its own bytes, and the summary says what is
+missing from it.
 
-Only `kind` and `node` are this command's, and only while the note carries
-neither. A key that is there stands, whatever it says, and a `node` aimed at
-another note means the whole file is somebody else's business.
+**Whose note it is, is asked once, here, and conservatively.** No `node` at all
+means it is this card's by where it sits. A `node` that is a string and exactly
+this card's link means the same. Anything else is somebody else's: another
+card's link, a list holding one, a number, front matter that will not parse.
+The list is the one that mattered — a guard that only looked at strings let it
+through and a foreign note's history was rebuilt under a foreign link.
 """
 
 from __future__ import annotations
 
 import cardfile
 import yaml  # type: ignore[import-untyped]  # no stubs in this environment
-from front_matter import entry
 
 KIND = "memory"
+OWNED = ("kind", "node")
+
+
+def ours(was: str, target: str) -> tuple[bool, str]:
+    """Whether this file is this card's memory to refresh, and why not.
+
+    The only door: nothing else in the command decides whether to write a note.
+    """
+    found = cardfile.FRONT.match(was)
+    if not found:
+        return True, ""                      # no front matter: nothing else claims it
+    holds = _holds(found["front"])
+    if holds is None:
+        return False, ("its front matter will not read as a mapping, so nothing here "
+                       "can say which card it is about; nothing here was changed")
+    if "node" not in holds:
+        return True, ""                      # unclaimed: this card's by where it sits
+    aimed = holds["node"]
+    if isinstance(aimed, str) and aimed == f"[[{target}]]":
+        return True, ""
+    return False, (f"its front matter names {str(aimed)[:80]} as its node, not this "
+                   "card; nothing here was changed")
 
 
 def block(was: str, target: str) -> tuple[str, str]:
-    """The front-matter block this note should carry, and what could not be
-    done to it. The concern is empty when there was nothing to say."""
+    """The front-matter block this note carries, and what is missing from it.
+
+    A note that exists gets its own text back, to the byte. Only a note being
+    made gets one written, and only that one is ever this command's to write.
+    """
     found = cardfile.FRONT.match(was)
     if not found:
         return "---\n" + yaml.safe_dump(
             {"kind": KIND, "node": f"[[{target}]]"},
             sort_keys=False, allow_unicode=True).rstrip() + "\n---", ""
-    front = found["front"]
-    kept = f"---\n{front}\n---"
-    if not front.strip():
-        return _added("", target), ""      # nothing there: the two lines are the whole of it
-    holds = _mapping(front)
-    if holds is None:
-        return kept, ("its front matter is not a mapping this can read, so kind and "
-                      "node were left out of it")
-    missing = [key for key, _ in _wanted(target) if entry(front, key) is None]
-    if not missing:
-        return kept, ""
-    if holds.flow_style:
-        # `{kind: memory}` holds its keys inside the braces. A line put after
-        # the closing one is not in the mapping — it is not even YAML, and the
-        # note would stop parsing for everyone, this command included.
-        return kept, (f"its front matter is written in flow style, where {_and(missing)} "
-                      "cannot be added as a line, so it was left out")
-    return _added(front, target), ""
+    holds = _holds(found["front"]) or {}
+    missing = [key for key in OWNED if key not in holds]
+    return f"---\n{found['front']}\n---", "" if not missing else (
+        f"its front matter carries no {' and no '.join(missing)}, and front matter "
+        "that is already there is never edited, so nothing was added")
 
 
-def aimed_elsewhere(was: str, target: str) -> str:
-    """The node this file already points at, when that is not `target`.
+def _holds(front: str) -> dict | None:
+    """This front matter as a mapping, or None when it is not one — a list, a
+    scalar, several documents in one, or text somebody broke while editing.
 
-    A person may have aimed it at a note that was since renamed. The command
-    then writes NOTHING here: rebuilding the history of a note that says it is
-    about another card is the one mistake no counter makes up for.
+    Read only. Nothing is ever written back through this.
     """
-    found = cardfile.FRONT.match(was)
     try:
-        holds = yaml.safe_load(found["front"]) if found else None
-    except yaml.YAMLError:
-        return ""
-    aimed = holds.get("node") if isinstance(holds, dict) else None
-    return "" if not isinstance(aimed, str) or aimed == f"[[{target}]]" else aimed
-
-
-def _added(front: str, target: str) -> str:
-    """The front matter with each missing key put in as one line, through
-    `cardfile.patch` — the one writer here that adds a front-matter line and
-    leaves every other byte of the note where it was."""
-    text = f"---\n{front}\n---\n"
-    for key, value in _wanted(target):
-        if entry(cardfile.FRONT.match(text)["front"], key) is None:
-            text = cardfile.patch(text, key, value)
-    return text.rstrip("\n")
-
-
-def _wanted(target: str) -> tuple[tuple[str, str], ...]:
-    return ("kind", KIND), ("node", f"[[{target}]]")
-
-
-def _mapping(front: str):
-    """This front matter as a YAML mapping node, or None when it is not one —
-    a list, a scalar, or text somebody broke while editing it. Composed, not
-    loaded: `flow_style` is the thing being asked about, and only the node
-    carries it."""
-    try:
-        holds = yaml.compose(front)
+        holds = yaml.safe_load(front)
     except yaml.YAMLError:
         return None
-    return holds if isinstance(holds, yaml.MappingNode) else None
-
-
-def _and(missing: list) -> str:
-    return " and ".join(missing)
+    if holds is None:
+        return {}
+    return holds if isinstance(holds, dict) else None

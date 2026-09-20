@@ -23,7 +23,7 @@ import cardfile
 import remember
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 
-EXPECTED_TESTS = 6
+EXPECTED_TESTS = 9
 
 
 def vault() -> pathlib.Path:
@@ -117,6 +117,32 @@ class EvidenceBelongsToTheRunThatMadeIt(unittest.TestCase):
         root = vault()
         remember.write_memory(root, [gate("2026-09-20T07:05:00Z", "T30.schema", 0)])
         self.assertNotIn("calls/", written(root))
+
+
+class AnInterruptedRunBorrowsNobodysEvidence(unittest.TestCase):
+    """A campaign killed between a gate and the artifact it was about to write
+    leaves a run with no output. The next run of the same card writes one —
+    and it is not this run's, however near it sits."""
+
+    def setUp(self):
+        self.root = vault()
+        remember.write_memory(self.root, [
+            {"at": "2026-09-20T06:58:20Z", "kind": "planned", "task": "the plan",
+             "added": ["T30", "T30.schema"]},
+            gate("2026-09-20T07:05:00Z", "T30.schema", 1),       # killed before its write
+            gate("2026-09-20T07:20:00Z", "T30.schema", 0),
+            artifact("gate-output", 1, "T30.schema", "2026-09-20T07:20:01Z"),
+        ])
+        self.red, self.green = written(self.root).split("the gate ran, exit ")[1:]
+
+    def test_the_interrupted_run_points_at_no_file_at_all(self):
+        self.assertNotIn("calls/", self.red)
+
+    def test_it_says_the_evidence_never_reached_the_log(self):
+        self.assertIn("did not reach the log", self.red)
+
+    def test_the_run_that_did_write_one_still_names_it(self):
+        self.assertIn("001-gate-output.txt", self.green)
 
 
 class ARowThatCannotBeUsedIsCountedNotRaised(unittest.TestCase):

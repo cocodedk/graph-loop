@@ -27,7 +27,7 @@ already carries the exit code that says the same thing.
 
 from __future__ import annotations
 
-import pathlib
+from remember_evidence import artifacts, runs, span, written_for
 
 READ = ("attempt", "refused", "rejected", "accepted", "step")
 
@@ -41,19 +41,24 @@ def dated(rows: list) -> tuple[dict, dict]:
     """
     memory: dict[str, list] = {}
     counts = {"no_section": 0, "unreadable": 0}
-    found = _artifacts(rows)
+    found, ran = artifacts(rows), runs(rows, _wanted)
     for index, row in enumerate(rows):
-        if not _readable(row):
-            counts["unreadable"] += 1
-            continue
-        made = _section(row, found, index)
+        try:
+            made = _section(row, index, found, span(ran, len(rows), index, row, _wanted)) \
+                if _readable(row) else ()
+        except Exception:  # noqa: BLE001 — deliberate: see below
+            # ONE event's worth of damage, counted and stepped over. Three
+            # reviews found three different fields that took the whole export
+            # down, each fixed where it was found; the guard belongs here, once,
+            # where nothing in a log can reach past the event it arrived in.
+            made = ()
         if made is None:
             counts["no_section"] += 1
             continue
-        nodes, summary, body = made
-        if not nodes:
+        if not made or not made[0]:
             counts["unreadable"] += 1
             continue
+        nodes, summary, body = made
         for node in nodes:
             memory.setdefault(node, []).append(
                 (f"{row['at'][:10]} — {summary}",
@@ -67,7 +72,7 @@ def _readable(row) -> bool:
             and isinstance(row.get("at"), str) and len(row["at"]) >= 10)
 
 
-def _section(row: dict, found: dict, index: int):
+def _section(row: dict, index: int, found: dict, span: tuple):
     """This event as (the nodes it is about, its heading, its body), or None
     when a memory has no section for its kind."""
     if row["kind"] == "planned":
@@ -82,10 +87,10 @@ def _section(row: dict, found: dict, index: int):
         return [], "", ""
     summary, body = _BUILD[row["kind"]](row)
     name, after = _wanted(row)
-    where = _written_for(found, index, task, name, after) if name else ""
-    if where:
+    if name:
         said = "What it printed" if name == "gate-output" else "Its own words"
-        body += f" {said}: calls/{task}/{where}"
+        where = written_for(found, task, name, after, span)
+        body += f" {said}: calls/{task}/{where}" if where else f" {said} did not reach the log."
     return [task], summary, body
 
 
@@ -143,48 +148,6 @@ def _wanted(row: dict) -> tuple[str, bool]:
     if row["kind"] == "refused":
         return _POINTS_AT.get(row.get("step"), ""), False
     return ("gate-output", True) if row["kind"] == "step" else ("", False)
-
-
-def _artifacts(rows: list) -> dict:
-    """Where each (task, artifact name) was written, in one pass over the log."""
-    found: dict = {}
-    for index, row in enumerate(rows):
-        if (isinstance(row, dict) and row.get("kind") == "artifact"
-                and isinstance(row.get("path"), str)
-                and isinstance(row.get("task"), str)
-                and isinstance(row.get("name"), str)):
-            # Every one of those three checked before any of them is a key: a
-            # row whose `task` is a list is unhashable, and it took the whole
-            # export down with a TypeError before the counting even began.
-            found.setdefault((row["task"], row["name"]), []).append((index, row["path"]))
-    return found
-
-
-def _written_for(found: dict, index: int, task: str, name: str, after: bool) -> str:
-    """The file name of the artifact THIS run wrote: of this task, of this
-    name, and the first one on the side the loop writes it — after the event
-    for a gate's output, before it for a reviewer's answer.
-
-    Never the closest one. A campaign writes one stream and three cards write
-    into it at once, so distance in that stream is a fact about the other
-    lanes: with two of them logging in between, a green gate was made to name
-    the red run's output (an independent review). Distance is gone; only this
-    task's own artifacts are looked at, and only on the one side.
-
-    A run whose artifact never landed — a campaign that died between the two —
-    names no file. No pointer is better than a pointer at another run's words.
-
-    The NAME only, never the recorded path: that path is absolute, it names the
-    machine the campaign ran on, and these notes are committed to the campaign
-    branch where a person reads them in Obsidian.
-    """
-    written = found.get((task, name)) or []
-    side = [path for where, path in written if (where > index) == after
-            and where != index]
-    if not side:
-        return ""
-    return pathlib.PurePosixPath(side[0] if after else side[-1]).name
-
 
 def _number(value):
     """The value when it is a number the note can print, None otherwise. A
