@@ -12,7 +12,7 @@ branches absent?** If yes it is a branch; if no it belongs to the branch beside
 it. That is the gate rule one level up, and it is the only rule this needs.
 
 It writes acceptance in words and never a gate. The slicer derives gates from
-acceptance and the drive loop still proves every gate red before anyone builds.
+acceptance and the graph loop still proves every gate red before anyone builds.
 
 Standalone, like the speccer: no service stands behind it, and `NEEDS_PERSON`
 is a terminal gap rather than a queue — the brief does not support a branching,
@@ -27,7 +27,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(HERE.parent / "drive" / "lib"))
+sys.path.insert(0, str(HERE.parent / "graph" / "lib"))
 
 import cardfile  # type: ignore[import-not-found]
 from contracts import mapping, safe_name

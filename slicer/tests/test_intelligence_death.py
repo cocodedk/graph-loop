@@ -20,7 +20,7 @@ import unittest
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 
 HERE = pathlib.Path(__file__).resolve().parents[1]
-DRIVE_LIB = HERE.parents[0] / "drive" / "lib"
+GRAPH_LIB = HERE.parents[0] / "graph" / "lib"
 EXPECTED_TESTS = 2
 
 # The middle level: a real `intelligence.ask` whose planner command is a sleep
@@ -39,7 +39,7 @@ with (unittest.mock.patch.object(intelligence.resources, "belt", return_value=be
     intelligence.ask("plan this", pathlib.Path("."))
 """
 
-# The top level: the driver, starting the slicer the way the drive loop does.
+# The top level: the driver, starting the slicer the way the graph loop does.
 DRIVER = """
 import sys
 sys.path.insert(0, {lib!r})
@@ -69,7 +69,7 @@ class ThreeLevelDeathTest(unittest.TestCase):
         tmp = pathlib.Path(tempfile.mkdtemp())
         planner_pid, slicer, driver_py = tmp / "planner", tmp / "slicer.py", tmp / "driver.py"
         slicer.write_text(SLICER.format(here=str(HERE), planner=planner_pid))
-        driver_py.write_text(DRIVER.format(lib=str(DRIVE_LIB), python=sys.executable,
+        driver_py.write_text(DRIVER.format(lib=str(GRAPH_LIB), python=sys.executable,
                                            slicer=str(slicer)))
         driver = subprocess.Popen([sys.executable, str(driver_py)])
         self.addCleanup(driver.wait)

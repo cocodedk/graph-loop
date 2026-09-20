@@ -13,8 +13,8 @@ import sys
 from contract_paths import _inside, _strings
 from gate_output import unsafe_gate_sinks
 
-DRIVE_LIB = pathlib.Path(__file__).resolve().parents[1] / "drive" / "lib"
-sys.path.insert(0, str(DRIVE_LIB))
+GRAPH_LIB = pathlib.Path(__file__).resolve().parents[1] / "graph" / "lib"
+sys.path.insert(0, str(GRAPH_LIB))
 from backlog_status import is_live  # type: ignore[import-not-found]
 from gate_shell import (  # type: ignore[import-not-found]
     has_pipefail_header,
@@ -42,7 +42,7 @@ def _task(task: dict, repo: pathlib.Path, known: set[str]) -> None:
         # card in eight of run 6 opened its gate with `cd` to it. It is the
         # slicer's own throwaway worktree (`clean_tree.PREFIX`), deleted before
         # any builder runs, so the gate judged nothing — and the card carried a
-        # machine path into a tracked note. The drive loop's doctor catches it a
+        # machine path into a tracked note. The graph loop's doctor catches it a
         # repair round later; this is the round.
         raise ValueError(
             "the gate names the directory you are running in, which is a throwaway "

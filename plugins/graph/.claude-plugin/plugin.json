@@ -1,0 +1,13 @@
+{
+  "name": "graph",
+  "description": "Slice a large body of work into atomic, gate-first tasks an agent loop can run unattended.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Babak Bandpey",
+    "email": "bb@cocode.dk"
+  },
+  "homepage": "https://github.com/cocodedk/graph-loop",
+  "repository": "https://github.com/cocodedk/graph-loop",
+  "license": "MIT",
+  "keywords": ["agent-loop", "backlog", "task-contracts", "unattended", "review"]
+}

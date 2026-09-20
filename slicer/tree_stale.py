@@ -19,8 +19,8 @@ import pathlib
 import sys
 import tempfile
 
-DRIVE_LIB = pathlib.Path(__file__).resolve().parents[1] / "drive" / "lib"
-sys.path.insert(0, str(DRIVE_LIB))
+GRAPH_LIB = pathlib.Path(__file__).resolve().parents[1] / "graph" / "lib"
+sys.path.insert(0, str(GRAPH_LIB))
 import backlog_tree  # type: ignore[import-not-found]
 import cardfile  # type: ignore[import-not-found]
 import durable  # type: ignore[import-not-found]

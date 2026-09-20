@@ -16,7 +16,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(HERE.parent / "drive" / "lib"))
+sys.path.insert(0, str(HERE.parent / "graph" / "lib"))
 
 import cardfile  # type: ignore[import-not-found]
 from contracts import mapping, safe_name

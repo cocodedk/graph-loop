@@ -21,7 +21,7 @@ from unittest import mock
 
 HERE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(HERE.parent / "drive" / "lib"))
+sys.path.insert(0, str(HERE.parent / "graph" / "lib"))
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 import tree_stale
 from test_stale_child_is_retired import staled

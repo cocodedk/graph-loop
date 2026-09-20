@@ -24,7 +24,7 @@ git config push.autoSetupRemote true
 
 ```
 (cd slicer/tests && python3 -m unittest discover -q)
-(cd drive/tests && python3 -m unittest discover -q)
+(cd graph/tests && python3 -m unittest discover -q)
 ruff check .
 bash scripts/scrub-check.sh
 ```

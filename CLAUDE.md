@@ -8,15 +8,15 @@ refuses any task whose gate could pass without the work, a builder does one task
 in a private worktree, a gate command's exit code is the verdict, a fresh
 reviewer reads the finished diff, and only then is the work committed.
 
-The runtime is here. `drive/` is the driver, `slicer/` is the plan phase that
-writes the cards, `docs/` is the writing and `plugins/drive/` is the skill.
+The runtime is here. `graph/` is the driver, `slicer/` is the plan phase that
+writes the cards, `docs/` is the writing and `plugins/graph/` is the skill.
 A card is one Obsidian note in a vault inside the repository being built; the
 note is the card, and the loop writes only its front matter.
 
 The loop no longer lives inside what it builds, so four things are
-configuration and nothing else names a particular project: `DRIVE_REPO` (the
-repository being built), `DRIVE_HELPER` (that repository's own command tool, if
-it has one), and `DRIVE_PROVISION_COPY` / `DRIVE_PROVISION_LINK` (the
+configuration and nothing else names a particular project: `GRAPH_REPO` (the
+repository being built), `GRAPH_HELPER` (that repository's own command tool, if
+it has one), and `GRAPH_PROVISION_COPY` / `GRAPH_PROVISION_LINK` (the
 gitignored material a checkout needs). Adding a fifth such name is a defect.
 
 ## Nothing local travels

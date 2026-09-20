@@ -3,7 +3,7 @@ the repository it judges.
 
 Split out as a sibling of test_contracts.py at the 200-line cap: this is the
 regression for the defect that cost a 20-minute build (2026-09-03) — a
-published gate teed into a bare filename and the drive loop's own lane guard
+published gate teed into a bare filename and the graph loop's own lane guard
 caught the fault only after the build was paid for.
 """
 

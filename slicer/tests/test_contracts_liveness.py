@@ -28,7 +28,7 @@ class LiveAuthorityTest(unittest.TestCase):
         # this fixpoint the patch target does not exist, and that AttributeError
         # is itself the proof _task re-derived liveness from the raw field
         # instead of reading the shared predicate (test_backlog_status_live.py
-        # patches every drive caller the same way).
+        # patches every graph caller the same way).
         repo = pathlib.Path(tempfile.mkdtemp())
         (repo / "specs").mkdir()
         (repo / "specs" / "greeting.md").write_text("# Greeting\nA greeting is returned.\n", "utf-8")

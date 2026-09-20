@@ -37,7 +37,7 @@ class CampaignRecords(unittest.TestCase):
         import types as _t
 
         import intelligence
-        sys.path.insert(0, str(HERE.parents[0] / "drive" / "lib"))
+        sys.path.insert(0, str(HERE.parents[0] / "graph" / "lib"))
         from workspace import Workspace  # type: ignore[import-not-found]
         space = Workspace(tempfile.mkdtemp()).init(goal="t", backlog="x")
         belt = [_t.SimpleNamespace(model="m1", account="work", agent="claude"),
@@ -47,7 +47,7 @@ class CampaignRecords(unittest.TestCase):
             _t.SimpleNamespace(returncode=0, stderr="",
                                stdout=json.dumps({"result": "result: NO_GAP"}))]
         import os
-        with unittest.mock.patch.dict(os.environ, {"DRIVE_ACCOUNTS": "work,second=/cfg/second"}), \
+        with unittest.mock.patch.dict(os.environ, {"GRAPH_ACCOUNTS": "work,second=/cfg/second"}), \
              unittest.mock.patch.object(intelligence, "CAMPAIGN", pathlib.Path(space.root)), \
              unittest.mock.patch.object(intelligence.resources, "belt", return_value=belt):
             reply = intelligence.ask("plan this", pathlib.Path("."),
@@ -67,7 +67,7 @@ class ReviewRecords(unittest.TestCase):
         import tempfile
 
         import intelligence
-        sys.path.insert(0, str(HERE.parents[0] / "drive" / "lib"))
+        sys.path.insert(0, str(HERE.parents[0] / "graph" / "lib"))
         from workspace import Workspace  # type: ignore[import-not-found]
         space = Workspace(tempfile.mkdtemp()).init(goal="t", backlog="x")
 

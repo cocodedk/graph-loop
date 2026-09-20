@@ -1,6 +1,6 @@
 """A card quoted a rule from the wrong layer back at the planner.
 
-The drive loop's REPLAN rewrites one card, may not add a file, and records its
+The graph loop's REPLAN rewrites one card, may not add a file, and records its
 refusals on the card — "it may narrow the grant, never widen it". The slicer is
 shown the whole card, read that as its own law, and answered `needs_person`,
 which `repair.REPAIRABLE` excludes by design, so nothing could challenge it.

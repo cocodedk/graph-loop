@@ -3,7 +3,7 @@
 A campaign was planned end to end on this branch on 2026-09-18 — brief, six
 branches, six specs, fourteen cards — and everything below is something that
 actually went wrong in it, not something imagined. The plan-phase stop is the
-ninth and lives with the drive suite; these are the slicer chain's.
+ninth and lives with the graph suite; these are the slicer chain's.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ import unittest.mock
 
 HERE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(HERE.parent / "drive" / "lib"))
+sys.path.insert(0, str(HERE.parent / "graph" / "lib"))
 
 import branches
 import speccer
@@ -154,7 +154,7 @@ class AnAnsweredReviewIsNotASilentOneTest(unittest.TestCase):
     `review_unavailable` and out of the repair rounds. An unambiguous REJECT
     and three findings were filed as silence (2026-09-18, the second run).
 
-    The drive side already draws this line: `resources.refused_before_reading`
+    The graph side already draws this line: `resources.refused_before_reading`
     is capacity, limit and auth — the refusals where the model never read the
     question. `malformed` is not one of them, and its own comment says so.
     """

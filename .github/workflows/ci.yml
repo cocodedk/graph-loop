@@ -28,7 +28,7 @@ jobs:
         run: cd slicer/tests && python -m unittest discover -q
 
       - name: Driver tests
-        run: cd drive/tests && python -m unittest discover -q
+        run: cd graph/tests && python -m unittest discover -q
 
       - name: Nothing local travels
         run: bash scripts/scrub-check.sh

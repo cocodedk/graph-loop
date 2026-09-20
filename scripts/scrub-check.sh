@@ -18,7 +18,7 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-denylist="${1:-${DRIVE_SCRUB_DENYLIST:-}}"
+denylist="${1:-${GRAPH_SCRUB_DENYLIST:-}}"
 fail=0
 
 contents() {  # <label> <extended-regex>

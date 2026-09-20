@@ -11,8 +11,8 @@ import sys
 
 from slicer_graph import _graph, _ordered
 
-DRIVE_LIB = pathlib.Path(__file__).resolve().parents[1] / "drive" / "lib"
-sys.path.insert(0, str(DRIVE_LIB))
+GRAPH_LIB = pathlib.Path(__file__).resolve().parents[1] / "graph" / "lib"
+sys.path.insert(0, str(GRAPH_LIB))
 from backlog_status import DONE, DROPPED  # type: ignore[import-not-found]
 
 

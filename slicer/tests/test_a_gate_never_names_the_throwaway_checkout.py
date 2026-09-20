@@ -8,7 +8,7 @@ runs, so the gate would have judged nothing — and the card carried a machine
 path into a tracked note, which is exactly what the loop's own repository has
 a scrub check to keep out.
 
-The drive loop's doctor catches it, a published card and a repair round later.
+The graph loop's doctor catches it, a published card and a repair round later.
 This is that round: the prompt no longer hands the path over, and a gate that
 names it anyway is refused before the card is written.
 """
