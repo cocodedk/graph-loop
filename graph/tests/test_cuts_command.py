@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import collections
 import contextlib
 import io
 import pathlib
@@ -21,7 +22,13 @@ from workspace import Workspace
 
 EXPECTED_TESTS = 4
 
-OTHERS = ("init", "sources", "approve", "status", "report", "doctor", "plan", "run", "stop")
+
+def _other_subcommands() -> tuple[str, ...]:
+    """Every name `build_parser` wires up besides `cuts`, read from the parser
+    itself — a command added there needs no matching update here."""
+    blank = build_parser("graph", collections.defaultdict(lambda: None))
+    [action] = [a for a in blank._subparsers._group_actions if hasattr(a, "choices")]
+    return tuple(name for name in action.choices if name != "cuts")
 
 
 def _campaign() -> Workspace:
@@ -31,7 +38,7 @@ def _campaign() -> Workspace:
 
 
 def _parse(space: Workspace, *words: str):
-    commands = {name: None for name in OTHERS}
+    commands = {name: None for name in _other_subcommands()}
     commands["cuts"] = command_cuts
     return build_parser("graph", commands).parse_args(["--workspace", str(space.root), *words])
 
