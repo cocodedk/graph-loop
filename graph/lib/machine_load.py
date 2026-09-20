@@ -39,6 +39,10 @@ class Load(NamedTuple):
     psi_mem_max: float | None = None
     psi_io_max: float | None = None
     samples: int = 0
+    # Whether a reading failed part way: the samples that were taken are still
+    # evidence for a CUT, but a turn nobody could finish watching is never
+    # evidence that the machine can take another lane.
+    broke: bool = False
 
 
 def pressure(kind: str) -> float | None:
@@ -89,13 +93,13 @@ def _least(values: list) -> int | None:
     return min(seen) if seen else None
 
 
-def gather(samples: list[Sample]) -> Load:
+def gather(samples: list[Sample], broke: bool = False) -> Load:
     """The aggregate the decision reads. Growth is measured from the FIRST
     sample — the turn's baseline, taken with no lane running — because an
     absolute number says nothing: swap already in use from yesterday is not
     this turn's doing."""
     if not samples:
-        return Load()
+        return Load(broke=broke)
     first = samples[0]
     swap = _most([one.swap_used_kb for one in samples])
     return Load(baseline=first,
@@ -106,7 +110,7 @@ def gather(samples: list[Sample]) -> Load:
                 psi_cpu_max=_most([one.psi_cpu for one in samples]),
                 psi_mem_max=_most([one.psi_mem for one in samples]),
                 psi_io_max=_most([one.psi_io for one in samples]),
-                samples=len(samples))
+                samples=len(samples), broke=broke)
 
 
 class Watch:
@@ -122,11 +126,14 @@ class Watch:
     def __init__(self, every: float = EVERY, reader=read):
         self.every, self.reader = every, reader
         self.samples: list[Sample] = []
+        self.broke = False
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
+        self.broke = False
         self.samples = self._one()
+        self.broke = not self.samples
         self._stop.clear()
         self._thread = threading.Thread(target=self._run, name="machine-load", daemon=True)
         self._thread.start()
@@ -143,7 +150,10 @@ class Watch:
         while not self._stop.wait(self.every):
             one = self._one()
             if not one:
-                return          # it will not start working again inside this turn
+                # It will not start working again inside this turn, and the
+                # turn must not read as a quiet one for want of a reading.
+                self.broke = True
+                return
             self.samples += one
 
     def stop(self) -> Load:
@@ -152,4 +162,4 @@ class Watch:
         if self._thread is not None:
             self._thread.join(timeout=self.every + 1.0)
             self._thread = None
-        return gather(self.samples)
+        return gather(self.samples, self.broke)

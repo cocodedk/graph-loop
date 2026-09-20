@@ -27,7 +27,7 @@ import tmp_root  # noqa: F401 — every temp file of this process under one root
 from lanes_auto import GB, MB, cut_reason, decide, lane_cost
 from machine_load import Load, Sample
 
-EXPECTED_TESTS = 17
+EXPECTED_TESTS = 18
 
 # The three rungs, first sample as the baseline, aggregated as the rig did.
 ONE = Load(baseline=Sample(13230344, 16903492, 0.0, 0.0, 88.88),
@@ -132,6 +132,14 @@ class ThinTest(unittest.TestCase):
         out = decide(width=3, allow=1, ran=1, load=thin, lane_cost_kb=2.6 * GB)
         self.assertEqual("hold", out.move)
         self.assertIn("reserve", out.why)
+
+    def test_a_turn_measured_only_at_its_baseline_is_not_a_clean_turn(self):
+        # One sample is the baseline, taken with no lane running. Nothing was
+        # read while the lanes ran, so nothing says the machine took them well.
+        baseline_only = ONE._replace(mem_avail_min_kb=13230344, psi_cpu_max=0.0,
+                                     samples=1)
+        out = decide(width=3, allow=1, ran=1, load=baseline_only)
+        self.assertEqual(("hold", 1), (out.move, out.allow))
 
     def test_a_machine_that_says_nothing_never_adds_a_lane(self):
         for load in (None, Load(), Load(baseline=Sample(), samples=3)):

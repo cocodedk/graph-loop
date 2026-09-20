@@ -23,7 +23,7 @@ from lanes_auto import GATE_CUT, cut_reason
 from throttle import Throttle
 from workspace import Workspace
 
-EXPECTED_TESTS = 4
+EXPECTED_TESTS = 6
 ALONE, AT_THREE, SLOW = 22.3, 38.5, 60.0
 
 
@@ -33,8 +33,10 @@ def hand() -> Throttle:
                                                 dry_run=False))
 
 
-def gate(throttle: Throttle, turn: str, task: str, seconds: float) -> None:
-    throttle.space.event("step", task=task, step="gate", seconds=seconds, turn=turn)
+def gate(throttle: Throttle, turn: str, task: str, seconds: float,
+         passed: bool = True) -> None:
+    throttle.space.event("step", task=task, step="gate", seconds=seconds, turn=turn,
+                         passed=passed, code=0 if passed else 1)
 
 
 class RatioTest(unittest.TestCase):
@@ -66,6 +68,31 @@ class RatioTest(unittest.TestCase):
         one._gate_ratio("turn-0-1", 1)
         gate(one, "turn-1-1", "T1", ALONE * GATE_CUT * 2)
         self.assertIsNone(one._gate_ratio("turn-2-1", 3))   # a turn that ran no gate
+
+
+class FailedGateTest(unittest.TestCase):
+    """A gate that FAILED is not a time to measure anything against.
+
+    Red-first and a first round leave short failures in the record — a gate
+    that fails in a tenth of a second because the work is not there yet. Taken
+    as a lone time, the same gate passing in ten seconds once the work lands
+    reads as a hundredfold slowdown, and the loop halves its lanes over it.
+    """
+
+    def test_a_failed_gate_never_becomes_a_lone_time(self):
+        one = hand()
+        gate(one, "turn-0-1", "T1", 0.1, passed=False)
+        self.assertIsNone(one._gate_ratio("turn-0-1", 1))
+        self.assertEqual({}, one.state["gate_alone"])
+        gate(one, "turn-1-1", "T1", 10.0)
+        self.assertIsNone(one._gate_ratio("turn-1-1", 3))
+
+    def test_a_failed_gate_in_a_busy_turn_is_not_measured_either(self):
+        one = hand()
+        gate(one, "turn-0-1", "T1", ALONE)
+        one._gate_ratio("turn-0-1", 1)
+        gate(one, "turn-1-1", "T1", ALONE * 100, passed=False)
+        self.assertIsNone(one._gate_ratio("turn-1-1", 3))
 
 
 class CountTest(unittest.TestCase):

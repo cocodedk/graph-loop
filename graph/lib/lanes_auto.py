@@ -36,6 +36,7 @@ GATE_CUT = 2.5                     # a gate this much slower than its time alone
 RESERVE_KB = 3 * GB                # memory the loop leaves to the machine
 LANE_COST_KB = 2.5 * GB            # one lane's cost, until a turn measures it
 HOLD_TURNS = 2                     # no increase for this many turns after a cut
+MEASURED = 2                       # a baseline alone is not a measurement of a turn
 
 
 class Decision(NamedTuple):
@@ -82,14 +83,32 @@ def _clean(load: Load | None, gate_ratio: float | None) -> bool:
 
     Nothing complained, AND swap barely moved: the rung that moved 414 MB was
     one below the rung that had to be halved, so a machine already reaching for
-    disk is not one to ask more of. A turn that measured nothing at all is not
-    clean either — a lane is never added on no evidence.
+    disk is not one to ask more of.
+
+    A turn nobody could measure is never clean — a lane is added on evidence or
+    not at all. That takes two readings: the first is the baseline, taken with
+    no lane running, and a turn with only that one says nothing about what the
+    lanes did. A reading that broke part way says no more (`Load.broke`),
+    however many samples it managed before it stopped.
     """
     if cut_reason(load, gate_ratio):
         return False
     if load is None or load.swap_growth_kb is None:
         return False
+    if load.broke or load.samples < MEASURED:
+        return False
     return load.swap_growth_kb <= SWAP_QUIET_KB
+
+
+def _why_not(load: Load | None) -> str:
+    """What was wrong with the last turn, for the line a person reads."""
+    if load is None or load.swap_growth_kb is None:
+        return ""
+    if load.broke:
+        return " (the machine stopped answering part way)"
+    if load.samples < MEASURED:
+        return " (nothing was read while the lanes ran)"
+    return f" (swap moved {_mb(load.swap_growth_kb)})"
 
 
 def decide(*, width: int, ceiling: int = 0, most: int = MOST_LANES, allow: int = 0,
@@ -127,8 +146,7 @@ def decide(*, width: int, ceiling: int = 0, most: int = MOST_LANES, allow: int =
         return Decision(min(allow, room), allow,
                         f"already at the ceiling of {allow}", "same")
     if not _clean(load, gate_ratio):
-        moved = "" if load is None or load.swap_growth_kb is None else \
-            f" (swap moved {_mb(load.swap_growth_kb)})"
+        moved = _why_not(load)
         return Decision(min(allow, room), allow,
                         f"not a clean turn{moved}: staying at {allow}", "hold")
     if ran and ran < allow:

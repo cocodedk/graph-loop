@@ -17,17 +17,12 @@ This is only the part that reads a machine, keeps the state and writes it down.
 
 from __future__ import annotations
 
-import json
-
-import durable
 import lanes_auto
+import throttle_state
 from lanes_auto import AUTO, LANE_COST_KB
 from machine_load import Watch
+from throttle_state import STATE
 from turn_plan import MOST_LANES
-
-STATE = "lanes.json"
-FRESH = {"allow": 0, "hold": 0, "ran": 0, "lane_cost_kb": 0.0,
-         "gate_ratio": None, "gate_alone": {}}
 
 
 class Throttle:
@@ -46,10 +41,14 @@ class Throttle:
         self.ceiling = max(0, int(getattr(args, "lanes_max", 0) or 0))
         self.watch = watch or Watch()
         self.load = None
-        self.state = dict(FRESH)
+        self.state = dict(throttle_state.FRESH)
         if not self.on:
             return
         self._quiet("reading its state", self._load)
+        # The last turn's reading was made by a process that may be gone: the
+        # cut it earned is only applied if this driver can still see it.
+        self.load = self._quiet("reading the last turn back",
+                                lambda: throttle_state.load_of(self.state.get("load")))
         if self.ceiling > MOST_LANES:
             # Said once, out loud: three is the keeper's own limit — it gives
             # up after three rebuilds of a branch that moved under it — so a
@@ -68,10 +67,19 @@ class Throttle:
             self._quiet("starting to read the machine", self.watch.start)
 
     def lanes(self, width: int) -> int:
-        """How many lanes this turn, or 0 when nothing asked for `auto`."""
+        """How many lanes this turn, or 0 when nothing asked for `auto`.
+
+        The fallback is worked out INSIDE a guard of its own: computed as an
+        argument it ran outside the one around the decision, and a state file
+        holding `{"allow": "bad"}` then killed the driver on every restart.
+        """
         if not self.on:
             return 0
-        return self._quiet("deciding", lambda: self._decide(width), self._safe(width))
+        chosen = self._quiet("deciding", lambda: self._decide(width))
+        if isinstance(chosen, int) and chosen > 0:
+            return chosen
+        return self._quiet("falling back on the last safe value",
+                           lambda: self._safe(width), 1) or 1
 
     def closes(self, turn_id: str = "", ran: int = 0) -> None:
         """Read what the turn did to the machine, and keep it for the next."""
@@ -95,8 +103,8 @@ class Throttle:
                         "lanes_decided", width=width, lanes=out.lanes,
                         allow=out.allow, lanes_max=self.ceiling, most=MOST_LANES,
                         move=out.move, why=out.why,
-                        baseline=_fields(getattr(self.load, "baseline", None)),
-                        signals=_fields(self.load),
+                        baseline=throttle_state.fields(getattr(self.load, "baseline", None)),
+                        signals=throttle_state.fields(self.load),
                         gate_ratio=self.state.get("gate_ratio"),
                         lane_cost_kb=self.state.get("lane_cost_kb") or None))
         print(f"  lanes: {out.lanes} — {out.why}")
@@ -109,6 +117,10 @@ class Throttle:
             # machine was already judged to take, and says here that it did.
             self._fault("reading the machine", "nothing could be read this turn")
         self.state["ran"] = ran
+        # Kept in the file, not only in this process: a driver that is killed
+        # between a heavy turn and the next decision would otherwise start
+        # again on the allowance that turn had just disproved.
+        self.state["load"] = throttle_state.as_row(self.load)
         self.state["gate_ratio"] = self._gate_ratio(turn_id, ran)
         if not self.state.get("lane_cost_kb"):
             # The first turn that actually shows a drop, and only it: later the
@@ -132,6 +144,13 @@ class Throttle:
                 continue
             if turn_id and row.get("turn") != turn_id:
                 continue
+            if row.get("passed") is not True:
+                # A gate that FAILED says nothing about how long the work takes.
+                # Red-first and a first round leave tenth-of-a-second failures
+                # in the record, and one of those taken as a lone time makes the
+                # same gate passing in ten seconds read as a hundredfold
+                # slowdown (`loop_judge.judge` records `passed` on every one).
+                continue
             task, seconds = str(row.get("task") or ""), float(row.get("seconds") or 0)
             if seconds <= 0:
                 continue
@@ -149,16 +168,18 @@ class Throttle:
         return self.space.root / STATE
 
     def _load(self) -> None:
-        if self.path.exists():
-            self.state = {**FRESH, **json.loads(self.path.read_text("utf-8"))}
+        self.state = throttle_state.read(self.path)
 
     def _save(self) -> None:
-        durable.replace(self.path, json.dumps(self.state, sort_keys=True))
+        throttle_state.write(self.path, self.state)
 
     def _safe(self, width: int) -> int:
-        """The last value known to be safe: what the machine was already
-        judged to take, never more than there are cards."""
-        return max(1, min(int(self.state.get("allow") or 1), MOST_LANES, max(1, width)))
+        """The last value known to be safe: what the machine was already judged
+        to take, under every ceiling that stands NOW — an allowance of three
+        read back from the file is no reason to ignore a `--lanes-max` the
+        owner lowered since."""
+        return max(1, min(int(self.state.get("allow") or 1), MOST_LANES,
+                          self.ceiling or MOST_LANES, max(1, width)))
 
     def _quiet(self, what: str, run, fallback=None):
         try:
@@ -173,10 +194,3 @@ class Throttle:
             self.space.event("throttle_fault", what=what, why=why)
         except Exception:   # noqa: BLE001, S110 — a record nobody can write is not a dead turn either
             pass
-
-
-def _fields(row) -> dict:
-    """A reading as plain fields the log can hold, or nothing."""
-    return {} if row is None else {
-        name: value for name, value in row._asdict().items()
-        if value is not None and not hasattr(value, "_asdict")}

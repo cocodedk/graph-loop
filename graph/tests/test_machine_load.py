@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import pathlib
 import sys
+import time
 import unittest
 import unittest.mock
 
@@ -18,9 +19,10 @@ HERE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE / "lib"))
 import machine_load
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
+from lanes_auto import decide
 from machine_load import Sample, Watch, gather
 
-EXPECTED_TESTS = 7
+EXPECTED_TESTS = 8
 
 # t=0, 2, 12, 16 and 38 seconds of the three-lane rung.
 RUNG = [Sample(11830676, 17323412, 0.47, 0.22, 67.80),
@@ -77,6 +79,27 @@ class WatchTest(unittest.TestCase):
         watch = Watch(0.01, angry)
         watch.start()                       # no exception reaches the driver
         self.assertEqual(0, watch.stop().samples)
+
+
+class BrokenTest(unittest.TestCase):
+    def test_a_reader_that_dies_under_load_is_not_a_clean_turn(self):
+        # The baseline was read, then the machine stopped answering. Swap
+        # "grew" nothing and pressure "stayed" flat because nobody looked, and
+        # that must not earn another lane.
+        first = [Sample(13230344, 16903492, 0.0, 0.0, 88.88)]
+
+        def dies() -> Sample:
+            if first:
+                return first.pop()
+            raise OSError("the machine stopped answering")
+
+        watch = Watch(0.01, dies)
+        watch.start()
+        while not watch.broke:
+            time.sleep(0.01)
+        load = watch.stop()
+        self.assertTrue(load.broke)
+        self.assertEqual("hold", decide(width=3, allow=1, ran=1, load=load).move)
 
 
 class ReadTest(unittest.TestCase):

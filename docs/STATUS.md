@@ -17,13 +17,15 @@ The runtime is here. This file says what is proven, what is not, and what is sti
   `/proc` every two seconds and decides each turn's lanes from a rise over that
   turn's own baseline. Its numbers come from a ladder of one, two and three
   lanes measured on one real machine; the criterion that fired there was swap,
-  at three lanes. It never raises into the loop, and `--lanes N` is untouched.
+  at three lanes. It never raises into the loop — a corrupt state file included
+  — it adds a lane only on a turn it actually measured, and what it learned
+  survives the restarts the driver takes routinely. `--lanes N` is untouched.
 - The frontier is visible: `plan` and `status` print the waves the backlog would run in,
   each turn records that width against its lane cap, and `report` names the turns where
   the graph was wider than the loop. The projection is a snapshot — the next plan phase
   re-slices the backlog — and it is labelled as one wherever it is printed.
 
-Both suites run here: the slicer's 211 tests are green and the driver's suite is 1623
+Both suites run here: the slicer's 211 tests are green and the driver's suite is 1644
 tests. Six of them need a machine this one is not — a non-root user, a sandbox that can
 take a variable out of a gate's environment, and a real session launcher — so how many
 pass is a fact about the machine, not about the loop. `ruff check .` is clean.
