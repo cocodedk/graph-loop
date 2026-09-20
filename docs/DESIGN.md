@@ -95,6 +95,39 @@ Gate rules: every path relative to the worktree; every stage in its own subshell
 `(cd … && …)`; `set -o pipefail`; the verdict is the exit code; it must fail today for the
 reason the task exists.
 
+## Relatives: memory and learning around a card
+
+A card is never edited to remember something. What is decided, tried or learned about a
+node — a molecule, an atom, a root-level note — goes in a **relative**: a separate note
+that links to the node instead. Obsidian then shows the relative as the node's neighbour in
+its graph and its backlinks, while the node stays byte for byte what it was, which is what
+keeps a card safe to have open while the loop runs.
+
+Three kinds, told apart by the first word of the file name:
+
+| kind | file name | how many | holds |
+|---|---|---|---|
+| memory | `memory-<node>.md` | one per node, append-only, dated sections | what was decided, tried and measured — it **points to the evidence and never copies it**, so the log stays the one home of the raw record and "nothing is written down twice" stays true |
+| learning | `learning-<node>-<slug>.md` | one per learning | front matter `status: open\|adopted\|rejected`, `applies_to`, `basis: measured\|source\|design` |
+| evaluation | `evaluation-<scope>.md` | one, written when the project is done | every open learning, read against the logs and marked adopted or rejected; an adopted one becomes a change to the method |
+
+Relatives live in a `relatives/` folder: `<vault>/<Molecule>/relatives/` for a molecule and
+its atoms, `<vault>/relatives/` for a root-level note. Never pre-create a molecule folder
+to hold one — the slicer renames a finished molecule into place and refuses a name that
+already exists.
+
+And never put a relative **beside a card**. `molecule.ordered` reads every `.md` file in a
+molecule's folder as an atom except `molecule.md` itself, and a name it cannot read as
+`NN-stem.md` stops the whole read — one stray note beside the atoms breaks every card the
+picker was about to offer, not just its own. A sub-folder is skipped rather than read as an
+atom, which is why relatives live in one.
+
+A relative has a card's shape — front matter, then `## ` sections — so the loop can read it
+later without learning a second format.
+
+The loop does not write or read relatives yet. A card's `status` stays in the card's own
+front matter, where the loop writes it today.
+
 ## Two phases that never mix
 
 Planning and building are separate commands. `graph-goal.py plan` slices until the backlog
