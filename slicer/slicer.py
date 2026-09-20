@@ -14,12 +14,16 @@ sys.path.insert(0, str(GRAPH_LIB))
 
 from asking import prompt
 from backlog import Backlog  # type: ignore[import-not-found]
+from cut_hook import make_checker
+from cut_record import recording
+from decisions import ask as decide
 from intelligence import ask
 from repair import AGAIN, REPAIRABLE
 from slicer_answer import run_answer  # this file stays the one door for it
 from slicer_law import assert_wall
 from slicer_state import covered, digest, forget, inside, record, trace
 from tree import CardMoved, recover
+from workspace import Workspace  # type: ignore[import-not-found]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -108,6 +112,14 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as error:
         print(f"planning_refused: {error}")
         return 2
+    checker = None
+    if args.campaign:
+        # The checker's space is the repository. The recording wrapper writes
+        # through the campaign's workspace, which holds `artifact` and `event`;
+        # the repository path has neither.
+        campaign = pathlib.Path(args.campaign)
+        checker = make_checker(campaign, repo, recording(Workspace(campaign), decide),
+                               wall=target)
     if args.goal:
         question = f"The campaign's goal: {args.goal}\n\n" + question
     trace(backlog, "prompt_built", chars=len(question), tasks_shown=len(rows))
@@ -131,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             state, detail = run_answer(answer, repo=repo, backlog=backlog,
                                        sources=sources, target_id=args.target,
-                                       started=target)
+                                       started=target, checker=checker)
         except CardMoved as moved:
             # A person decided while this planned: the molecule was planned
             # against the older card. Nothing is written and nothing is
