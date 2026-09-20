@@ -25,7 +25,7 @@ The runtime is here. This file says what is proven, what is not, and what is sti
   the graph was wider than the loop. The projection is a snapshot — the next plan phase
   re-slices the backlog — and it is labelled as one wherever it is printed.
 
-Both suites run here: the slicer's 211 tests are green and the driver's suite is 1674
+Both suites run here: the slicer's 211 tests are green and the driver's suite is 1682
 tests. Six of them need a machine this one is not — a non-root user, a sandbox that can
 take a variable out of a gate's environment, and a real session launcher — so how many
 pass is a fact about the machine, not about the loop. `ruff check .` is clean.

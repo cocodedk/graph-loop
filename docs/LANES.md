@@ -33,13 +33,14 @@ ordinary branch movement into a lane failure. `--lanes N` lowers it and never ra
 to a throttler instead: lanes in a turn are the smallest of the frontier's width, the
 owner's ceiling, the keeper's three, and what the machine will take.
 
-**It never raises, and that is a shape rather than a promise.** Every method the driver
-calls goes through one door that catches everything, and the answer it falls back to is
-arithmetic over numbers already in memory: no file, no `/proc`, no log — because that is
-the only path left once everything else has failed. Saying that a fault happened is a
-boundary like any other and is wrapped the same way; the line that said so once printed
-outside the guard around it, which made a closed stdout the thing that killed the driver.
-A throttler that kills a turn is worse than no throttler.
+**One fault means one lane.** Any exception anywhere in the throttle — making it,
+reading its state, measuring, stopping the watch, deciding, recording, persisting,
+printing — and any state it cannot read or believe makes the next lane count ONE and the
+turn it happened in not fresh, so the turn after cannot earn an increase from it either.
+One wrapper at the four doors the driver uses is the whole of that rule: there is nothing
+to work out and no count to be sure of, a throttler that is not sure runs one lane, and it
+climbs again the moment a whole turn goes well. `--lanes N` is untouched by all of it and
+never raises either.
 
 **A lane is added only on positive proof, and doubt resolves downward.** One law, in one
 place (`machine_load.fresh`): no fresh evidence, no increase. A turn earns another lane
@@ -48,11 +49,10 @@ half-read `/proc` is a broken reading, not a reading), taken by a reader that st
 stayed alive and came back on its own. A thread that never started, one that died on any
 exception at all, one that stalled past its turn, a buffer left from a turn before, a
 reading read back from a file: none of it counts, and the decision holds where it is.
-Holding costs nothing, so an INCREASE is the last thing that happens: the candidate is
-worked out, then the log entry and the state file are written, and only if every one of
-those worked is the raised number handed back — a full disk, an unwritable log or a gate
-history nobody can read all leave the count where it was, said once. A CUT is the other
-way round, adopted at once with the writing after it, for the same reason. The
+An INCREASE is the last thing that happens: the candidate is worked out, then the log
+entry and the state file are written, and only then is the raised number adopted, so
+nothing that failed can leave a raised count behind. A CUT is the other way round,
+adopted at once with the writing after it — nothing may keep a cut from landing. The
 buffer is cleared at the start of every turn before anything else can fail, and the
 baseline is taken by the sampling thread with a bounded wait, so a `/proc` read that never
 returns costs one turn's evidence rather than the driver. A cut needs none of this: what a

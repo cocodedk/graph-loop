@@ -1,19 +1,30 @@
-"""One door, and nothing passes back out of it.
+"""One rule, at the edge, in place of a rule per path.
 
-Split from `throttle.py` at the 200-line cap. "The throttler never raises" is a
-SHAPE, not a promise kept call site by call site: every method the driver calls
-goes through `_guard`, and so does everything inside it that touches the world
-— including the saying of a fault, which is a boundary like any other. The line
-that SAID a fault had happened once printed outside the guard around it, which
-made a closed stdout the thing that killed the driver.
+Any fault at all inside the throttle — making the thing, reading its state,
+measuring, stopping the watch, deciding, recording, persisting, printing —
+makes the next lane count ONE and the turn it happened in not fresh, so the
+turn after it cannot earn an increase from it either.
 
-The host supplies `space` (for the log) and `allow` and `ceiling` (the numbers
-the fallback is made of). Nothing here reads a file, a clock or `/proc`.
+That replaced "hold at the count you have". Holding needs a count that is
+reliably known, and every round of review found another way for the throttle to
+believe a number it had not earned; each fix was a new path, and each new path
+was a new way to be wrong. There is nothing to work out here: a throttler that
+is not sure runs one lane, and climbs again the moment a whole turn goes well.
+
+`BaseException`, because it is the exceptions nobody expects that this is for.
+Saying so is a boundary like any other and cannot raise either: the line that
+SAID a fault had happened once printed outside the guard around it.
+
+The host supplies `space` (for the log), and takes `allow` and `load` back from
+here when a fault lands on it.
 """
 
 from __future__ import annotations
 
-from turn_plan import MOST_LANES
+from machine_load import Load
+
+ONE = 1                    # what a throttler that is not sure runs
+SPOILT = Load(broke=True)  # and what it then knows about the turn: nothing
 
 
 def _short(broken) -> str:
@@ -24,26 +35,20 @@ def _short(broken) -> str:
 
 
 class Guarded:
-    """The door, for a host that has `space`, `allow` and `ceiling`."""
+    """The door, for a host that has `space`, `allow` and `load`."""
 
-    def _guard(self, what: str, run, fallback=None):
+    def _outer(self, what: str, run):
         """Everything the driver calls passes here, and nothing passes back out.
 
-        The fallback is a callable, worked out INSIDE this frame: computed as
-        an argument it ran outside the guard, and a state file holding
-        `{"allow": "bad"}` then killed the driver on every restart.
+        A fault leaves the throttle knowing nothing: one lane next, and a turn
+        that cannot be used as evidence for a second.
         """
         try:
             return run()
-        except BaseException as broken:   # noqa: BLE001 — a dead turn is worse than a dumb throttler
-            why = _short(broken)
-        self._said(what, why)
-        if fallback is None:
+        except BaseException as broken:   # noqa: BLE001 — the whole point of this file
+            self.allow, self.load = ONE, SPOILT
+            self._said(what, _short(broken))
             return None
-        try:
-            return fallback()
-        except BaseException:   # noqa: BLE001 — `_floor` cannot fail; if it did, one lane
-            return 1
 
     def _said(self, what: str, why: str) -> None:
         """Say it wherever anything will listen, and never mind what will not."""
@@ -56,13 +61,3 @@ class Guarded:
             say()
         except BaseException:   # noqa: BLE001 — a fault nobody can record is not a dead turn
             return
-
-    def _floor(self, width) -> int:
-        """The last value known to be safe. Arithmetic over numbers already in
-        memory: no file, no `/proc`, no log, nothing that can fail — because
-        this is the only path to an answer once everything else has."""
-        try:
-            return max(1, min(int(self.allow) or 1, int(self.ceiling) or MOST_LANES,
-                              MOST_LANES, max(1, int(width))))
-        except BaseException:   # noqa: BLE001 — a number this cannot make is one lane
-            return 1

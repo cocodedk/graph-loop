@@ -63,14 +63,14 @@ class FaultTest(unittest.TestCase):
         self.assertEqual(3, hand.lanes(5))       # and again, on no evidence at all
         self.assertTrue(faults(here))
 
-    def test_a_decision_that_raises_falls_back_to_the_last_safe_value(self):
+    def test_a_decision_that_raises_comes_back_as_one_lane(self):
         here = space()
         hand = Throttle(here, args(lanes_max=2))
         self.assertEqual(2, hand.lanes(5))
         with unittest.mock.patch.object(lanes_auto, "decide",
                                         side_effect=ValueError("no")):
-            self.assertEqual(2, hand.lanes(5))
-            self.assertEqual(1, hand.lanes(1))   # never more than there are cards
+            self.assertEqual(1, hand.lanes(5))
+            self.assertEqual(1, hand.lanes(1))
         self.assertIn("deciding this turn's lanes",
                       [row["what"] for row in faults(here)])
 
@@ -82,17 +82,16 @@ class FaultTest(unittest.TestCase):
         self.assertIn("making itself ready", [row["what"] for row in faults(here)])
 
     def test_a_state_file_that_cannot_be_written_still_gives_a_number(self):
-        # One lane, not the ceiling: opening AT the ceiling is an increase like
-        # any other, and an increase nobody could write down is not granted
-        # (`test_an_increase_is_the_last_thing_that_happens`). The next turn,
-        # on a disk that came back, opens at three.
+        # One lane, not the ceiling: a fault leaves the throttle knowing
+        # nothing, so the turn it happened in is not evidence either and the
+        # one after it holds rather than opening at three.
         here = space()
         hand = Throttle(here, args(lanes_max=3))
         with unittest.mock.patch.object(durable, "replace",
                                         side_effect=OSError("full disk")):
             self.assertEqual(1, hand.lanes(5))
         self.assertIn("deciding this turn's lanes", [row["what"] for row in faults(here)])
-        self.assertEqual(3, hand.lanes(5))
+        self.assertEqual(1, hand.lanes(5))
 
     def test_a_log_that_cannot_be_written_is_not_the_end_of_the_turn(self):
         # The last line of defence: the recorder itself is the thing that fails.
@@ -109,7 +108,8 @@ class FaultTest(unittest.TestCase):
         hand.watch = unittest.mock.Mock()
         hand.watch.stop.side_effect = RuntimeError("the thread is gone")
         hand.closes("turn-0-1", 3)
-        self.assertIn("reading the machine", [row["what"] for row in faults(here)])
+        self.assertIn("reading what the turn cost",
+                      [row["what"] for row in faults(here)])
 
 
 class QuietTest(unittest.TestCase):

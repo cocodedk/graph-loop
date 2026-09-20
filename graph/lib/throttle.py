@@ -1,20 +1,17 @@
-"""`--lanes auto` wired to a campaign, and the one rule it keeps: it never
-raises into the loop.
+"""`--lanes auto` wired to a campaign, under one rule at its edge.
 
-That rule is a SHAPE here, not a promise made call site by call site. Every
-method the driver calls goes through one door, `_guard`, which catches
-everything — a `/proc` that is not there, a state file a crash cut in half, a
-log nobody can write, a stdout that is closed — and answers from `_floor`,
-which is arithmetic over numbers already in memory and touches nothing at all.
-Saying that a fault happened is a boundary like any other and is wrapped the
-same way: the line that SAID so used to print outside the guard around it, so a
-broken stdout made every recorded fault the thing that killed the driver.
+Any fault anywhere in here makes the next lane count ONE and the turn it
+happened in not fresh — `throttle_guard` is that rule, and the four things the
+driver calls are the only doors into this. There is no second rule and no
+per-path recovery: a throttler that is not sure runs one lane, and climbs again
+the moment a whole turn goes well.
 
-The second rule is that a lane is ADDED only on positive proof, and doubt
-always resolves downward. What comes back from the state file may carry a
-pending cut and the learned cost of a lane; it is never evidence that this
-machine will take another one, because the turn that measured it was run by a
-process that is gone.
+Everything else it does is ordered so that doubt resolves downward. A CUT is
+adopted before it is written down, so nothing can keep it from landing. An
+INCREASE is the last thing that happens, after the log entry and the state file
+are on the platter, so nothing that failed can leave a raised count behind. And
+what comes back from that file may carry a cut forward but never a reason to
+climb, because the turn that measured it was run by a process that is gone.
 
 The decision itself is `lanes_auto.decide`, which is pure and takes numbers.
 What it carries between turns is `throttle_state`, and the one signal read from
@@ -27,8 +24,8 @@ import lanes_auto
 import throttle_gates
 import throttle_state
 from lanes_auto import AUTO, LANE_COST_KB
-from machine_load import Load, Watch
-from throttle_guard import Guarded
+from machine_load import Watch
+from throttle_guard import ONE, Guarded
 from throttle_state import STATE  # the campaign file both of them name
 from turn_plan import MOST_LANES
 
@@ -39,24 +36,45 @@ class Throttle(Guarded):
     `opens` before the lanes, `lanes` to ask how many, `closes` once they are
     done. With anything but `--lanes auto` — and in a dry run, which writes
     nothing — every one of them does nothing at all: no reading, no file, no
-    event, so a campaign that never asked for this cannot be changed by it.
+    event, so a campaign that never asked for this cannot be changed by it, and
+    a fault in here cannot reach it either.
     """
 
     def __init__(self, space, args, watch=None):
-        # Nothing before the guard may fail. Reading the arguments, making the
-        # watch and reading the state file all can — a Watch that cannot be
+        # Nothing before the rule may fail. Reading the arguments, making the
+        # watch and reading the state file all can — a Watch that could not be
         # built used to escape `Throttle(...)` even in numeric mode — so they
-        # happen inside it, and a construction that fails leaves a throttler
-        # that holds rather than a driver that never started.
+        # happen behind it, and `on` stays False until they have.
         self.space = space
         self.on = False
         self.ceiling = 0
         self.watch = watch
-        self.watching = False     # whether THIS turn's readings were ever begun
-        self.load: Load | None = None
+        self.load = None
         self.state = dict(throttle_state.FRESH)
-        self.allow = 0            # the last safe number, in memory, always an int
-        self._guard("making itself ready", lambda: self._ready(args))
+        self.allow = 0
+        self._outer("making itself ready", lambda: self._ready(args))
+
+    # ------------------------------------------------------------- the driver
+
+    def opens(self) -> None:
+        """Start reading the machine, with no lane running: this first sample
+        is the baseline every judgement is a rise over."""
+        if self.on:
+            self._outer("starting to read the machine", self.watch.start)
+
+    def lanes(self, width: int) -> int:
+        """How many lanes this turn, or 0 when nothing asked for `auto`."""
+        if not self.on:
+            return 0
+        chosen = self._outer("deciding this turn's lanes", lambda: self._decide(width))
+        return chosen if isinstance(chosen, int) and chosen >= ONE else ONE
+
+    def closes(self, turn_id: str = "", ran: int = 0) -> None:
+        """Read what the turn did to the machine, and keep it for the next."""
+        if self.on:
+            self._outer("reading what the turn cost", lambda: self._close(turn_id, ran))
+
+    # --------------------------------------------------------------- the work
 
     def _ready(self, args) -> None:
         self.on = (getattr(args, "lanes", None) == AUTO
@@ -64,38 +82,8 @@ class Throttle(Guarded):
         self.ceiling = max(0, int(getattr(args, "lanes_max", 0) or 0))
         if self.watch is None:
             self.watch = Watch()
-        if self.on:
-            self._open()
-
-    # ------------------------------------------------------------- the driver
-
-    def opens(self) -> None:
-        """Start reading the machine, with no lane running: this first sample
-        is the baseline every judgement is a rise over."""
         if not self.on:
             return
-        self.watching = False     # nothing is being watched until a start returns
-        self._guard("starting to read the machine", self._from_here)
-
-    def _from_here(self) -> None:
-        self.watch.start()
-        self.watching = True      # only a start that came back counts as watching
-
-    def lanes(self, width: int) -> int:
-        """How many lanes this turn, or 0 when nothing asked for `auto`."""
-        if not self.on:
-            return 0
-        return self._guard("deciding this turn's lanes",
-                           lambda: self._decide(width), lambda: self._floor(width))
-
-    def closes(self, turn_id: str = "", ran: int = 0) -> None:
-        """Read what the turn did to the machine, and keep it for the next."""
-        if self.on:
-            self._guard("reading what the turn cost", lambda: self._close(turn_id, ran))
-
-    # --------------------------------------------------------------- the work
-
-    def _open(self) -> None:
         self.state = throttle_state.read(self.path)
         self.allow = max(0, int(self.state.get("allow") or 0))
         kept = throttle_state.load_of(self.state.get("load"))
@@ -116,13 +104,12 @@ class Throttle(Guarded):
         """The candidate decision, and then — for an INCREASE, and only for an
         increase — every step of granting it, before it is granted.
 
-        Holding costs nothing: no disk, no log, no history. Raising the count
-        does, because the next driver runs on what was written down. So the
-        raised number is the last thing that happens here and nothing in its
-        path is guarded: a full disk or a log nobody can write falls out to
-        `lanes`, whose fallback is the count this driver already holds, and is
-        said there, once. A CUT is the other way round — adopted at once, with
-        the writing after it and best effort — because doubt resolves downward.
+        Holding costs nothing. Raising the count does, because the next driver
+        runs on what was written down, so the raised number is adopted last,
+        after the log entry and the state file are on the platter. A CUT is the
+        other way round: adopted at once, written afterwards. Either way a
+        failure anywhere in here is one fault like any other, and the rule at
+        the edge answers it with one lane.
         """
         out = lanes_auto.decide(
             width=int(width), ceiling=self.ceiling, most=MOST_LANES, allow=self.allow,
@@ -137,9 +124,9 @@ class Throttle(Guarded):
             self.allow, self.state = out.allow, raised
         else:
             self.allow, self.state = out.allow, raised
-            self._guard("writing the decision down", lambda: self._record(width, out))
-            self._guard("keeping its state", self._save)
-        self._guard("saying so", lambda: print(f"  lanes: {out.lanes} — {out.why}"))
+            self._record(width, out)
+            self._save()
+        print(f"  lanes: {out.lanes} — {out.why}")
         return out.lanes
 
     def _record(self, width: int, out) -> None:
@@ -152,13 +139,7 @@ class Throttle(Guarded):
             lane_cost_kb=self.state.get("lane_cost_kb") or None)
 
     def _close(self, turn_id: str, ran: int) -> None:
-        self.load = self._guard("reading the machine", self.watch.stop,
-                                lambda: Load(broke=True))
-        if not self.watching or not isinstance(self.load, Load):
-            # This turn was never watched, or the watch could not say what it
-            # saw: whatever is lying about, it is not this turn's evidence.
-            self.load = Load(broke=True)
-        self.watching = False
+        self.load = self.watch.stop()
         if not self.load.samples:
             self._said("reading the machine", "nothing could be read this turn")
         self.state["ran"] = max(0, int(ran))
@@ -171,18 +152,9 @@ class Throttle(Guarded):
         # The machine's reading goes on the platter BEFORE anything else that
         # can fail: it is the only reason the next driver can cut, and the gate
         # timing below is a nicety that once took it down with it.
-        self._guard("keeping its state", self._save)
-        read, ratio = self._guard(
-            "timing this turn's gates",
-            lambda: (True, self._gate_ratio(turn_id, ran)), lambda: (False, None))
-        self.state["gate_ratio"] = ratio
-        if not read:
-            # Part of this turn could not be read, so the turn is not evidence
-            # for another lane — the same law a dead reader answers to. It may
-            # still cut on what the machine did say.
-            self.load = self.load._replace(broke=True)
-            self.state["load"] = throttle_state.as_row(self.load)
-        self._guard("keeping its state", self._save)
+        self._save()
+        self.state["gate_ratio"] = self._gate_ratio(turn_id, ran)
+        self._save()
 
     def _gate_ratio(self, turn_id: str, ran: int) -> float | None:
         """This turn's worst gate against its own lone time (`throttle_gates`)."""

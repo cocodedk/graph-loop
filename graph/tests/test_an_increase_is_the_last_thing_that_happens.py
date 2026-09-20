@@ -69,11 +69,17 @@ class IncreaseTest(unittest.TestCase):
             self.assertEqual(1, hand.lanes(3))
         self.assertEqual(1, hand.allow)         # and nothing adopted it either
 
-    def test_a_disk_that_comes_back_lets_the_next_turn_raise_it(self):
-        hand = self._after_a_clean_turn(space())
+    def test_a_disk_that_comes_back_lets_a_later_turn_raise_it(self):
+        # A fault leaves the throttle knowing nothing, so the turn it happened
+        # in is not evidence either. One whole turn later it climbs again.
+        here = space()
+        hand = self._after_a_clean_turn(here)
         with unittest.mock.patch.object(durable, "replace", side_effect=FULL):
-            hand.lanes(3)
-        self.assertEqual(2, hand.lanes(3))      # held, not given up on
+            self.assertEqual(1, hand.lanes(3))
+        self.assertEqual(1, hand.lanes(3))
+        hand.opens()
+        hand.closes("turn-1-1", 1)              # a whole turn, nothing wrong
+        self.assertEqual(2, hand.lanes(3))
 
     def test_a_gate_history_nobody_can_read_holds_it_too(self):
         here = space()
