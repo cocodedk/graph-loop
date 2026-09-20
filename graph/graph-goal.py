@@ -10,6 +10,7 @@
     graph-goal.py remember
     graph-goal.py doctor
     graph-goal.py stop [--now]
+    graph-goal.py cuts [--state off|observe|act --by <name>]
 
 `plan` and `run` are the two phases, and they never overlap: `plan` writes every
 card the slicer can cut and builds nothing; `run` builds the cards and writes
@@ -33,6 +34,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "lib"))
 from backlog import Backlog
 from campaign_of import branch_of
 from cli_args import build_parser
+from cuts_command import command_cuts
 from driver_turn import after_lanes, before_turn
 from finishing import stand_down
 from loop import Loop
@@ -150,7 +152,7 @@ def main(argv=None) -> int:
         "init": command_init, "sources": command_sources,
         "approve": command_approve, "status": command_status,
         "report": command_report, "doctor": command_doctor,
-        "remember": command_remember,
+        "remember": command_remember, "cuts": command_cuts,
         "plan": command_plan, "run": command_run, "stop": command_stop})
     args = parser.parse_args(argv)
     return args.run(args)

@@ -63,4 +63,12 @@ def build_parser(description: str, commands: dict) -> argparse.ArgumentParser:
 
     halt = sub.add_parser("stop"); halt.add_argument("--now", action="store_true")
     halt.set_defaults(run=commands["stop"])
+
+    cuts = sub.add_parser("cuts")
+    cuts.add_argument("--state", choices=("off", "observe", "act"), default=None,
+                      help="switch the cut review to this state; leave out to show it")
+    cuts.add_argument("--by", default="", help="who is switching it; required with --state")
+    # ponytail: .get only because one test hand-writes its own commands dict;
+    # add "cuts" there and index strictly like the rest.
+    cuts.set_defaults(run=commands.get("cuts"))
     return parser

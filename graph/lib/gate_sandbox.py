@@ -44,7 +44,7 @@ BWRAP = shutil.which("bwrap")
 # Names that carry a credential or point at one. Dropped whole, by prefix.
 SECRET_PREFIXES = ("CLAUDE", "ANTHROPIC", "GRAPH_", "OPENAI", "GH_", "GITHUB",
                    "AWS_", "AZURE", "GOOGLE", "SSH_", "GPG_", "NPM_TOKEN",
-                   "DOCKER_", "CODEX")
+                   "DOCKER_", "CODEX", "OPENROUTER")
 # Paths that are authority in themselves. Read-only is not enough for any of
 # them: reading a credential is spending it, and a socket answers whoever asks.
 MASKED = (os.path.expanduser("~"), "/run/docker.sock", "/var/run/docker.sock",
