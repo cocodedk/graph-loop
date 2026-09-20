@@ -80,8 +80,10 @@ def _checked(answer: dict, checker, backlog: pathlib.Path, args: dict) -> dict:
         # a copy: a checker that edits in place and then fails, or returns the
         # molecule it edited, must not alter or hide a change from the original
         checked = checker(copy.deepcopy(answer["molecule"]))
-    except Exception:
-        return answer  # a checker that fails is not a reason to refuse the plan
+    except Exception as error:
+        # a checker that fails is not a reason to refuse the plan, but say so
+        trace(backlog, "cut_check_failed", error=type(error).__name__, reason=str(error))
+        return answer
     changed = checked.molecule != answer["molecule"]
     trace(backlog, "cut_checked", findings=len(checked.findings), changed=changed)
     if checked.findings:
