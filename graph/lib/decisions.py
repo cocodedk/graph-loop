@@ -78,7 +78,10 @@ def _choice(qid: str, one, criteria: dict[str, str]) -> dict:
     chosen = one.get("choice")
     if not isinstance(chosen, str) or chosen not in criteria:
         raise _Refused(f"{qid}: the choice is not one of its own criteria")
-    return {"choice": chosen, "confidence": provider_jev._number(one.get("confidence"))}
+    sure = provider_jev._number(one.get("confidence"))
+    if sure is not None and not 0 <= sure <= 1:   # false for NaN and both infinities too
+        raise _Refused(f"{qid}: the confidence is not a number from 0 to 1")
+    return {"choice": chosen, "confidence": sure}
 
 
 def _post(body: str) -> str:
