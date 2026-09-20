@@ -9,6 +9,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
+from cut_questions import _cut_id
 from cut_verdicts import apply_merges, findings, merges, read
 
 EXPECTED_TESTS = 10
@@ -33,13 +34,13 @@ def answer(ok=True, **given):
     return types.SimpleNamespace(ok=ok, answers=rows)
 
 
-def cut(choice, confidence, ident="alpha|beta"):
+def cut(choice, confidence, ident=_cut_id("alpha", "beta")):
     return read(asked(ident, "cut"), answer(cut=(choice, confidence)))
 
 
 class CutVerdicts(unittest.TestCase):
     def test_a_verdict_below_the_gate_is_not_usable_and_does_nothing(self):
-        low = cut("keep_together", 0.59) + read(asked("alpha", "one_job"), answer(one_job=("fail", 0.3)))
+        low = cut("keep_together", 0.59) + read(asked("atom:alpha", "one_job"), answer(one_job=("fail", 0.3)))
         self.assertFalse(any(v.usable for v in low))
         self.assertEqual(merges(MOLECULE, low), [])
         self.assertEqual(findings(MOLECULE, low), [])
@@ -52,18 +53,18 @@ class CutVerdicts(unittest.TestCase):
         self.assertEqual(merges(MOLECULE, cut("keep_together", 0.6)), [("alpha", "beta")])
 
     def test_atoms_that_share_no_file_are_not_merged(self):
-        self.assertEqual(merges(MOLECULE, cut("keep_together", 0.9, "beta|gamma")), [])
+        self.assertEqual(merges(MOLECULE, cut("keep_together", 0.9, _cut_id("beta", "gamma"))), [])
 
     def test_atoms_that_are_not_adjacent_are_not_merged(self):
-        self.assertEqual(merges(MOLECULE, cut("keep_together", 0.9, "alpha|gamma")), [])
+        self.assertEqual(merges(MOLECULE, cut("keep_together", 0.9, _cut_id("alpha", "gamma"))), [])
 
     def test_a_split_or_another_question_does_not_merge(self):
         self.assertEqual(merges(MOLECULE, cut("split", 0.9)), [])
-        other = read(asked("alpha|beta", "one_job"), answer(one_job=("keep_together", 0.9)))
+        other = read(asked(_cut_id("alpha", "beta"), "one_job"), answer(one_job=("keep_together", 0.9)))
         self.assertEqual(merges(MOLECULE, other), [])
 
     def test_a_usable_fail_names_the_atom_and_the_question(self):
-        got = read(asked("beta", "one_job"), answer(one_job=("fail", 0.8)))
+        got = read(asked("atom:beta", "one_job"), answer(one_job=("fail", 0.8)))
         self.assertEqual(len(findings(MOLECULE, got)), 1)
         text = findings(MOLECULE, got)[0]
         self.assertIn("beta", text)
@@ -91,7 +92,7 @@ class CutVerdicts(unittest.TestCase):
         self.assertEqual(only["done_when"], "done alpha\ndone beta\ndone gamma\ndone delta")
 
     def test_an_answer_that_is_not_ok_gives_no_verdicts_and_nothing_raises(self):
-        self.assertEqual(read(asked("alpha|beta", "cut"), answer(ok=False, cut=("keep_together", 1))), [])
+        self.assertEqual(read(asked(_cut_id("alpha", "beta"), "cut"), answer(ok=False, cut=("keep_together", 1))), [])
         self.assertEqual(read(object(), object()), [])
         self.assertEqual(merges(None, []), [])
         self.assertEqual(findings({}, []), [])

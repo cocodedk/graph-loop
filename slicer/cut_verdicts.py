@@ -5,6 +5,8 @@ from __future__ import annotations
 import copy
 from typing import NamedTuple
 
+import cut_questions
+
 
 class Verdict(NamedTuple):
     id: str
@@ -57,21 +59,21 @@ def merges(molecule: object, verdicts: list[Verdict]) -> list[tuple[str, str]]:
         one, two = first.get("name"), second.get("name")
         if not (isinstance(one, str) and isinstance(two, str) and one and two):
             continue
-        if any(one in i and two in i for i in keep) and _files(first) & _files(second):
+        if cut_questions._cut_id(one, two) in keep and _files(first) & _files(second):
             pairs.append((one, two))
     return pairs
 
 
 def findings(molecule: object, verdicts: list[Verdict]) -> list[str]:
-    """One sentence per usable `fail`, naming the atom whose name is in the verdict id."""
+    """One sentence per usable `fail`, naming the atom whose id, `atom:<name>`, is the verdict id."""
     names = [a["name"] for a in _atoms(molecule) if isinstance(a.get("name"), str) and a["name"]]
     out = []
     for v in verdicts:
         if not (v.usable and v.choice == "fail"):
             continue
-        named = [n for n in names if n in v.id]
+        named = [n for n in names if v.id == f"atom:{n}"]
         if named:
-            out.append(f"Atom {max(named, key=len)} fails the question {v.question}.")
+            out.append(f"Atom {named[0]} fails the question {v.question}.")
     return out
 
 
