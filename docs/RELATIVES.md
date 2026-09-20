@@ -69,77 +69,36 @@ even its front matter, and after it `backlog_tree.read` returns what it returned
 An event it cannot make sense of is counted and stepped over — the counts are printed —
 because a memory note is worth less than the campaign it describes.
 
-**The command owns two things in a memory note, and nothing else in the file.** The first
-is the sections it marks: every heading it writes ends with ` — from the log`. Everything
-else comes back byte for byte — the text before the first heading, whatever somebody put
-under `## Node` besides the link line, and every unmarked section, each at the place in
-the file they put it (its index among the sections, which holds because the log only ever
-grows at the end). The one thing to know before writing in one by hand: do not end your
-own heading with that phrase, or the next run will take the section over as its own.
+**A note is the command's, whole, or it is not the command's at all.** There is no reading
+of a person's Markdown, and nothing decides which parts of a file to keep. Four rounds of
+review each found another spelling a section scanner read wrong — a heading after a tab, a
+heading hidden behind an inline pair of backticks — and each time somebody's text was
+deleted. Parsing Markdown by hand to decide what to delete was the defect; a better scanner
+was never the fix.
 
-The second is the front matter of a note **it makes itself**, which gets `kind` and
-`node`. That is the whole of it.
+So the note carries a digest of its own body in its own front matter, beside `kind` and
+`node`, and a file is the command's to rewrite only when it is byte for byte what the
+command last wrote. One edit of any kind, anywhere — a heading, a trailing space, a key of
+somebody's own, an emptied file, one byte — and it is a person's: it is kept exactly as it
+is and the run reports `kept: edited by hand`. A file that was never the command's, and one
+that is not UTF-8 or has no front matter, answer the same question the same way.
 
-**Front matter that is already there is never edited. At all.** Not a line added, not a
-key completed. YAML has more valid spellings than a text edit can know about — flow
-mappings, blocks indented two spaces, an explicit `...` terminator, anchors, comments —
-and three separate attempts to add a missing key safely each broke a valid note in front
-of a reviewer. Reading it into a mapping and writing it back is no better: it loses the
-order, the quoting and the comments somebody chose, which for a vault that carries a
-property set on every note and queries it across the vault is the whole point of the set.
-So an existing note's front matter comes back byte for byte, and if it has no `kind` or no
-`node` the summary says so and nothing is added.
+Writing beside a card is still a person's to do — in a relative of their own. This one is a
+projection of the log and holds nothing that is not in the log, so nothing is lost by its
+being rebuilt from scratch every time.
 
-**Whose note it is, is asked once and conservatively.** A note is this card's to refresh
-only when its front matter has no `node` at all — then it is this card's by where it sits
-— or when `node` is a string and exactly this card's link. Anything else is somebody
-else's: another card's link, a list holding one, a number, front matter that will not
-parse. Then **nothing is written at all** and the summary says why. Rebuilding the history
-of a note that says it is about a different card is the one mistake no counter makes up
-for, and a guard that only looked at strings once let a list straight through.
-
-**When in doubt, it does not write.** Three rounds of review each found a file spelled a
-little differently from what the command expected, written anyway, and something lost. So
-a note is refreshed only when every line of a short list is true of its raw bytes, and
-anything else is left exactly as it is, counted, and named in the summary:
-
-- valid UTF-8, and no byte-order mark;
-- LF line endings only, nowhere a carriage return;
-- front matter between plain `---` lines — **an existing file is never given any**,
-  because without it nothing says whose note it is, and that is how a foreign note was
-  once claimed;
-- front matter that parses (every way the parser can fail, not only `YAMLError`: an
-  impossible date and a bad tag raise `ValueError`), and names this card by the rule
-  above;
-- every fenced block closed by the fence rule — the closing fence is the same character,
-  at least as long, with nothing after it but spaces or tabs. A non-breaking space does
-  not close a fence, and a note whose fences are not all closed is not understood.
-
-A `## ` line inside a fenced block is an example, not a heading — not for ownership, not
-for splitting sections, not for finding the link under `## Node`. One scanner knows where
-code is and everything asks it. A heading may carry up to three spaces before the hashes,
-as CommonMark has it; four make it an indented code block.
-
-A note that IS written is assembled from the pieces that were already there — the front
-matter's own bytes, the text before the first heading, each kept section — plus the
-sections the command owns. Nothing is re-spelled on the way through. The one thing it
-normalises is the blank line between two pieces, because without that a section moving
-from the end of a file to the middle grows a blank line on every run.
-
-**Nothing is written through a symlink**: not the note, not the `relatives/` folder, not
-the temporary sibling the durable write puts beside it — a symlink left at that name once
-truncated a card.
+**Nothing is written outside the vault, and nothing through a symlink.** Every path is
+resolved, which answers for every ancestor at once — a molecule folder that is itself a
+link took both its notes out of the vault before that was asked — and must lie inside the
+resolved vault root. A link is refused even when it resolves back inside, because one
+pointing at a card would land the write there. That covers the note, its folder and the
+`.<name>.tmp` sibling the durable write renames into place.
 
 **Nothing in a log can stop the export.** Every line of every part, rotated ones included,
 is read inside its own guard: a line that is not a usable JSON object is counted and
 stepped over, and the backlog is the first init event that actually names one. No usable
 init at all is an answer, printed, not a traceback. Turning one event into a section, and
-writing one note, are each guarded the same way. Four reviews found four different things
-that took a whole export down before the guards moved to where they belong.
-
-The summary is the command's account of itself: how many notes it wrote, how many already
-said it, how many it did not write, and one line per card it could not treat as its own.
-It never claims to have left something alone while changing it.
+writing one note, are each guarded the same way.
 
 The loop still does not *read* relatives, and no builder's or reviewer's prompt is fed one.
 A card's `status` stays in the card's own front matter, where the loop writes it today.

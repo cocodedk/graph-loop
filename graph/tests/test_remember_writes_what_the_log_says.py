@@ -90,12 +90,16 @@ class TheNoteIsWhereTheConventionSaysItIs(unittest.TestCase):
             sorted(path.name for path in (self.root / "T30" / "relatives").iterdir()))
         self.assertTrue((self.root / "T31" / "relatives" / "memory-molecule.md").exists())
 
-    def test_the_front_matter_names_the_kind_and_links_the_node(self):
+    def test_the_front_matter_names_the_kind_the_node_and_the_digest(self):
         """Read as front matter, not through `cardfile.parse`: the documented
         shape carries a `node:` field AND a `## Node` section, and the parser
-        folds both into one key, the section last."""
+        folds both into one key, the section last. The digest is what makes
+        the note's own bytes answerable for later."""
         front = yaml.safe_load(cardfile.FRONT.match(written(self.root))["front"])
-        self.assertEqual({"kind": "memory", "node": "[[T30/01-schema]]"}, front)
+        self.assertEqual(["kind", "node", "digest"], list(front))
+        self.assertEqual("memory", front["kind"])
+        self.assertEqual("[[T30/01-schema]]", front["node"])
+        self.assertTrue(front["digest"].startswith("sha256:"))
 
     def test_the_node_section_holds_the_link_the_vault_resolves(self):
         self.assertIn("## Node\n\n- [[T30/01-schema]]\n", written(self.root))

@@ -67,9 +67,9 @@ Rules it enforces, each bought with a failure:
 path: run by hand after a driver stops, it projects the campaign log onto each card's
 memory relative in `<Molecule>/relatives/`. It points at the log's numbered artifacts and
 never copies them, it never touches a card, and a second run on the same log writes
-nothing. It owns the sections whose heading ends with ` — from the log`, and `kind` and
-`node` in the front matter only while they are absent; every other section and every other
-front-matter line is a person's and is kept exactly as they left it. See `docs/RELATIVES.md`.
+nothing. A note is its own, whole, or not at all: it carries a digest of its own body, and
+a file edited by hand in any way is kept exactly as it is and reported. Nothing is written
+outside the vault or through a symlink. See `docs/RELATIVES.md`.
 
 Keep machinery repairs and simulation feature work in separate task contracts.
 A small fixture delivery proves the loop's controls; live mitigation still needs

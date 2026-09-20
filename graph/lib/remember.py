@@ -31,12 +31,12 @@ import durable
 import remember_log
 import where
 from remember_events import dated
-from remember_note import refresh
-from remember_read import understood
+from remember_note import ours, render
 from workspace import Workspace
 
 FOLDER = "relatives"
 PREFIX = "memory-"
+HAND = "kept: edited by hand"
 
 
 def command_remember(args) -> int:
@@ -74,12 +74,13 @@ def write_memory(root: pathlib.Path, rows: list) -> dict:
     memory, counts = dated(rows)
     paths = backlog_tree.read(root)[backlog_tree.PATHS]
     link = cardfile.linker(root)
+    inside = root.resolve()
     counts.update(written=0, unchanged=0, untouched=0, said={}, events=len(rows),
                   not_a_card=sum(len(sections) for node, sections in memory.items()
                                  if node not in paths))
     for task_id, card in sorted(paths.items()):
         try:
-            concern = _one(card, link(task_id), memory.get(task_id) or [], counts)
+            concern = _one(inside, card, link(task_id), memory.get(task_id) or [], counts)
         except Exception as raised:  # noqa: BLE001 — one note never costs the rest
             counts["untouched"] += 1
             concern = f"writing it raised {type(raised).__name__}; nothing was changed"
@@ -88,49 +89,62 @@ def write_memory(root: pathlib.Path, rows: list) -> dict:
     return counts
 
 
-def _one(card: pathlib.Path, target: str, sections: list, counts: dict) -> str:
+def _one(inside: pathlib.Path, card: pathlib.Path, target: str, sections: list,
+         counts: dict) -> str:
     """One card's memory refreshed, and what could not be done to it."""
     folder = card.parent / FOLDER
     note = folder / f"{PREFIX}{card.stem}{cardfile.SUFFIX}"
-    unsafe = _unsafe(card, folder, note)
+    unsafe = _unsafe(inside, folder, note)
     if unsafe:
         counts["untouched"] += 1
         return unsafe
-    raw = note.read_bytes() if note.exists() else b""
-    was, why = understood(raw) if raw else ("", "")
-    if raw and not was:
-        counts["untouched"] += 1
-        return f"{why}; nothing here was changed"
-    text, concern = refresh(target, sections, was)
-    if text is None:
-        counts["untouched"] += 1
-        return concern
+    text = render(target, sections)
+    raw = note.read_bytes() if note.exists() else None
+    if raw is None:                       # nothing there: the command's to make
+        durable.replace(note, text)
+        counts["written"] += 1
+        return ""
     if raw == text.encode("utf-8"):
         counts["unchanged"] += 1
-        return concern
+        return ""
+    if not ours(raw, target):             # the one door, and it opens one way
+        counts["untouched"] += 1
+        return HAND
     durable.replace(note, text)
     counts["written"] += 1
-    return concern
+    return ""
 
 
-def _unsafe(card: pathlib.Path, folder: pathlib.Path, note: pathlib.Path) -> str:
-    """Why this note must not be written: anything on the way to it that is a
-    symlink, or a name the durable write would follow out of this folder.
+def _unsafe(inside: pathlib.Path, folder: pathlib.Path, note: pathlib.Path) -> str:
+    """Why this note must not be written.
 
-    `durable.replace` writes `.<name>.tmp` beside the note and renames it into
-    place. A symlink left at that name sent the write through it and truncated
-    a card (an independent review), so a sibling that already exists is reason
-    enough not to write.
+    Two questions, because either alone lets a write escape. Where does the
+    path REALLY lead — asked of the filesystem, of every ancestor at once, so a
+    molecule folder that is itself a link cannot take its notes out of the
+    vault. And is anything on the last stretch a link at all — because one
+    pointing back INSIDE the vault resolves happily and would still land the
+    write on a card. `durable.replace` writes `.<name>.tmp` beside the note and
+    renames it into place, so that name is a target as much as the note is.
     """
     beside = folder / f".{note.name}.tmp"
     for path in (folder, note, beside):
         if path.is_symlink():
             return f"{path.name} is a symlink, and nothing here is written through one"
+        if not _within(inside, path):
+            return f"{path.name} resolves outside the vault; nothing there was written"
     if folder.exists() and not folder.is_dir():
         return f"{folder.name} is not a folder; nothing here was changed"
     if beside.exists():
         return (f"{beside.name} is already there, and the durable write would replace "
                 "it; nothing here was changed")
-    if folder.exists() and folder.resolve().parent != card.parent.resolve():
-        return f"{folder.name} does not resolve inside this molecule; nothing was changed"
     return ""
+
+
+def _within(inside: pathlib.Path, path: pathlib.Path) -> bool:
+    """Whether this path really lies in the vault. `resolve` answers for every
+    ancestor, and for a path that is not there yet it answers for the part
+    that is."""
+    try:
+        return path.resolve().is_relative_to(inside)
+    except OSError:
+        return False
