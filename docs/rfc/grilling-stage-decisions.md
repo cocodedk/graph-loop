@@ -1,6 +1,6 @@
 # Grilling stage — decisions the RFC left open
 
-Status: **proposed, revision 2 — not confirmed.** Nothing may be sliced or built from these
+Status: **proposed, revision 3 — not confirmed.** Nothing may be sliced or built from these
 until the owner confirms this revision. A decisions model's confidence does not authorise a
 decision, and "overturn them or they stand" is not a confirmation.
 
@@ -8,8 +8,8 @@ decision, and "overturn them or they stand" is not a confirmation.
 points where two competent builders could have built different behaviour. Each was found
 by an independent reviewer refusing a specification that had filled the gap with a rule of
 its own, or by a reader of the specifications. They carry stable identifiers so that
-specifications can name the decisions they implement. Revision 2 corrects D1, D3 and D5
-after review and adds D6 and the retained task T1.
+specifications can name the decisions they implement. Revision 2 corrected D1, D3 and D5
+after review and added D6 and the retained task T1. Revision 3 tightens D1, D3 and D6.
 
 ## D1 — Rules first, then the recorded order; the chooser only where judgment is needed
 
@@ -19,8 +19,10 @@ downstream work" and never say how that is determined.
 *Decision:* selection has three steps, in this order.
 
 1. **A deterministic follow-up rule decides, when one applies** — a picked choice or a
-   classified answer whose prepared follow-up names it. No model is called. Switching the
-   chooser on never overrides such a rule.
+   classified answer whose prepared follow-up names it. No model is called **for question
+   selection**; interpreting the answer that triggered the rule may still have needed a
+   request, which D6 counts on its own. Switching the chooser on never overrides such a
+   rule.
 2. **Otherwise the recorded asking order is the default.** The opening analysis records an
    explicit order with a stated reason for each question's position; among the eligible
    questions the interview asks the earliest. No counting rule stands in for that judgment.
@@ -60,6 +62,11 @@ separately for interpreting answers and for choosing the next question.
   because it sends the interview's content to the decisions service and costs calls, but it
   needs no evaluation report. This is how evidence is gathered from live interviews.
 - **act** — per kind of answer, and for the chooser, under D2.
+
+A classification of a kind that is not switched to *act* — because the state is *observe*,
+or because *act* is on for other kinds only — goes to the text model, and **cannot resolve
+the question by itself**: whatever the model returned, the turn is handled as if it had not
+classified, and its result stays a record for comparison.
 
 Evidence for a report therefore comes from two places that need no *act* switch: replaying
 recorded interviews, and the records observe mode leaves. Either becomes a *reviewed
@@ -107,8 +114,12 @@ requests for **interpreting the answer**, and decisions-model requests for **cho
 next question**. "No selection call" — a rule or the recorded order chose — says nothing
 about the other two. A routine turn is one with **zero text-model calls**; it may hold one
 interpretation request, in which independent checks about that answer share the request,
-and separately at most one selection request. A check that depends on an earlier result is
-a later request, counted under its own purpose.
+and separately at most one selection request. A check that depends on an earlier result
+**may** need a further request; it is made after the result it depends on and counted under
+its own purpose, so a turn can hold more than one interpretation request and still be
+routine as long as no text model is called. **Every request actually made is counted** —
+a retry, a request that failed, timed out or came back invalid included — each with its
+purpose, its outcome and its timing, so the counts are what was spent, not what succeeded.
 
 ## T1 — Retained task: the planning layer keeps no log of its reviewers
 
