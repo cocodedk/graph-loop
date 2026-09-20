@@ -32,12 +32,26 @@ def ready(rows: list[dict]) -> list[dict]:
     return out
 
 
+def first_of(rows: list[dict], task_id: str) -> dict:
+    """The row a task id stands for: the FIRST of that id, which is what
+    `Backlog.task` answers and therefore what every part of the loop that
+    RUNS a card reads — the lane, the keeper, the scope check.
+
+    A backlog can hold an id twice; `startable` already guards against
+    offering both. Reading the last one here reserved one row's paths while a
+    lane edited another's, and offered a card already running a second lane.
+    """
+    for row in rows:
+        if row.get("id") == task_id:
+            return row
+    return {}
+
+
 def startable(rows: list[dict], running: list[str] | None = None) -> list[dict]:
     """Ready, not held for a human, and not reaching a path another card holds."""
-    by_id = {row.get("id"): row for row in rows}
     held = set()
     for task_id in running or []:
-        held |= reach(by_id.get(task_id) or {})
+        held |= reach(first_of(rows, task_id))
     out, taken = [], set()
     for row in ready(rows):
         if row.get("blocked_by_human"):

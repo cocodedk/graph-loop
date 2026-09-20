@@ -15,29 +15,34 @@ hold is a person's decision and the loop does not schedule around it.
 
 from __future__ import annotations
 
-from backlog_status import settled
+from backlog_status import runs_alone, settled
 from frontier import startable
 from turn_plan import MOST_LANES
 
 
-def project(rows: list[dict], running: list[str] | None = None) -> list[list[str]]:
-    """The ids of each wave, in the order the loop would reach them.
+def project(rows: list[dict], running: list[str] | None = None) -> list[list[dict]]:
+    """The cards of each wave, in the order the loop would reach them.
 
-    `running` is what another agent holds right now, so the first wave agrees
-    with what the driver would actually be offered this moment.
+    Copies, so a projection writes nothing back through them. `running` is what
+    another agent holds right now, so the first wave agrees with what the
+    driver would actually be offered this moment.
     """
     left = [dict(row) for row in rows]      # a projection writes nothing back
-    waves: list[list[str]] = []
+    waves: list[list[dict]] = []
     while True:
-        wave = [str(row.get("id")) for row in startable(left, running)]
+        wave = startable(left, running)
         if not wave:
             return waves
-        waves.append(wave)
-        taken = set(wave)
+        waves.append([dict(row) for row in wave])   # before they are marked done
+        taken = {str(row.get("id")) for row in wave}
         for row in left:
             if str(row.get("id")) in taken:
                 row["status"] = "done"      # treat it as done, and ask again
         running = None                      # whoever is running now has finished by then
+
+
+def ids(wave: list[dict]) -> list[str]:
+    return [str(row.get("id")) for row in wave]
 
 
 def held(rows: list[dict]) -> list[str]:
@@ -48,9 +53,23 @@ def held(rows: list[dict]) -> list[str]:
             if row.get("blocked_by_human") and row.get("id") not in finished]
 
 
-def turns_for(width: int, cap: int) -> int:
-    """How many turns a wave that wide takes at that cap."""
-    return -(-width // cap) if cap > 0 else 0
+def alone_in(wave: list[dict]) -> int:
+    """How many of these cards the driver runs by themselves: a live card acts
+    on the one shared stack, and a no-files evidence card has no edit for a
+    lane to build (`backlog_status.runs_alone`)."""
+    return sum(1 for row in wave if runs_alone(row))
+
+
+def turns_for(wave: list[dict], cap: int) -> int:
+    """How many turns this wave costs the loop.
+
+    One turn each for the cards that run alone, and the rest packed into
+    lanes. Dividing the whole wave by the cap said four independent live cards
+    were two turns; the driver needs four.
+    """
+    alone = alone_in(wave)
+    together = len(wave) - alone
+    return alone + (-(-together // cap) if together and cap > 0 else 0)
 
 
 def as_text(rows: list[dict], running: list[str] | None = None,
@@ -62,9 +81,13 @@ def as_text(rows: list[dict], running: list[str] | None = None,
     if not waves:
         lines.append("    nothing can start from this backlog as it stands")
     for number, wave in enumerate(waves, 1):
-        wider = (f" — {len(wave)} wide, cap {cap}, "
-                 f"{turns_for(len(wave), cap)} turns" if len(wave) > cap else "")
-        lines.append(f"    wave {number}: {', '.join(wave)}{wider}")
+        turns, alone = turns_for(wave, cap), alone_in(wave)
+        # Said whenever the wave costs more than one turn, not only when it is
+        # wider than the cap: two cards that each run alone are two turns at
+        # any cap at all.
+        cost = (f" — {len(wave)} wide, cap {cap}, {turns} turns"
+                + (f" ({alone} run alone)" if alone else "") if turns > 1 else "")
+        lines.append(f"    wave {number}: {', '.join(ids(wave))}{cost}")
     holds = held(rows)
     if holds:
         lines.append(f"    held on the card, never scheduled: {', '.join(holds)}")

@@ -34,7 +34,7 @@ assert _spec is not None and _spec.loader is not None
 graph_goal = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(graph_goal)
 
-EXPECTED_TESTS = 11
+EXPECTED_TESTS = 12
 
 
 def card(task_id: str, **fields) -> dict:
@@ -87,6 +87,17 @@ class RecordTest(unittest.TestCase):
         width_against_lanes(here, ready, taking, args(), "turn-2-1")
         row = [one for one in here.events() if one["kind"] == "turn_lanes"][-1]
         self.assertEqual((2, 3, 2), (row["width"], row["cap"], row["lanes"]))
+
+    def test_evidence_cards_are_not_counted_as_width(self):
+        # Three no-files evidence cards behind one code card: the turn can only
+        # put the code card in a lane, so a width of four would report a
+        # lane-cap bottleneck that does not exist.
+        here = space()
+        ready = [card("T1")] + [card(f"E{n}", files=[]) for n in range(1, 4)]
+        taking = taking_now(ready, args())
+        width_against_lanes(here, ready, taking, args(), "turn-4-1")
+        row = [one for one in here.events() if one["kind"] == "turn_lanes"][-1]
+        self.assertEqual((1, 3, 1), (row["width"], row["cap"], row["lanes"]))
 
     def test_the_cap_in_the_record_is_the_cap_the_picker_used(self):
         # One reading, not two: a record that recomputed the cap could disagree

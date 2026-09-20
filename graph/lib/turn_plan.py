@@ -8,7 +8,7 @@ and a turn only builds — so what is left here is the one choice of cards.
 
 from __future__ import annotations
 
-from backlog_status import is_live, runs_alone
+from backlog_status import runs_alone
 
 # Three at most, whatever anybody asks for: the keeper rebuilds a commit whose
 # branch moved under it three times before it gives up, so a fourth lane would
@@ -18,15 +18,23 @@ MOST_LANES = 3
 
 
 def code_first(ready: list[dict]) -> list[dict]:
-    """What a code turn is really choosing among.
+    """What this turn is really choosing among — the picker's own pool.
 
-    A live card reserves nothing in a code turn: it runs alone anyway, and its
-    files would otherwise keep a safe lane empty. The picker and the recorder
-    both start here, or the record describes a turn that did not happen.
+    A card at the head that runs alone IS the turn: a live card acts on the one
+    shared stack, and a no-files evidence card has no edit for a lane to build,
+    so either one runs by itself. Behind a code card the pool is the code
+    cards: a live card reserves nothing there, and an evidence card cannot
+    take a lane either, so counting them as width reported a lane-cap
+    bottleneck on a turn that ran everything it could.
+
+    The picker and the recorder both start here, or the record describes a
+    turn that did not happen.
     """
-    if ready and not is_live(ready[0]):
-        return [row for row in ready if not is_live(row)] or ready
-    return ready
+    if not ready:
+        return []
+    if runs_alone(ready[0]):
+        return ready[:1]
+    return [row for row in ready if not runs_alone(row)]
 
 
 def lane_cap(ready: list[dict], args) -> int:

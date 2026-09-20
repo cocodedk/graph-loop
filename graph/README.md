@@ -34,8 +34,9 @@ Rules it enforces, each bought with a failure:
 - The frontier is visible. `plan` and `status` print the waves the backlog would
   run in — what could start together, then what that releases — labelled as of
   that moment, because the next plan phase re-slices it. A held card is listed
-  as held and never scheduled. A wave wider than the cap says so in the same
-  line: how wide, the cap, how many turns it takes. Each turn records that
+  as held and never scheduled. A wave that costs more than one turn says so in
+  the same line: how wide, the cap, how many turns — one turn each for the
+  cards that run alone, the rest packed into lanes. Each turn records that
   width, the cap and the lanes it ran, and `report` names the turns where the
   graph was wider than the loop.
 - Reviews try a fresh `codex exec --model gpt-6-astra` first (gpt-5.6-sol behind it), once on the task
