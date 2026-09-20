@@ -19,7 +19,7 @@ import cardfile
 import remember
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 
-EXPECTED_TESTS = 3
+EXPECTED_TESTS = 4
 
 
 def vault() -> pathlib.Path:
@@ -86,6 +86,22 @@ class ARejectionIsOnlyWhatTheLogSays(unittest.TestCase):
     def test_it_points_at_the_log_rather_than_at_a_reviewers_file(self):
         self.assertNotIn("calls/", self.section)
         self.assertIn("2026-09-20T07:40:00Z", self.section)
+
+
+class ARefusalNamesWhoActuallyMadeIt(unittest.TestCase):
+    def test_a_scope_refusal_is_the_loops_own_check_not_a_reviewer(self):
+        """`Loop.run_task` refuses a card whose gate reaches outside its files
+        before any reviewer is called. Calling that a review is provenance the
+        log does not carry."""
+        root = vault()
+        remember.write_memory(root, [
+            {"at": "2026-09-20T06:58:20Z", "kind": "planned", "task": "the plan",
+             "added": ["T30", "T30.schema"]},
+            {"at": "2026-09-20T07:01:06Z", "kind": "refused", "task": "T30.schema",
+             "step": "scope_of_gate", "why": "the gate reaches outside this card"}])
+        section = written(root).split("refused at scope_of_gate")[1]
+        self.assertNotIn("review", section.lower())
+        self.assertIn("loop", section.lower())
 
 
 class TheCountIsAsserted(unittest.TestCase):

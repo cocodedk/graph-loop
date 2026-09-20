@@ -109,7 +109,13 @@ def _attempt(row: dict) -> tuple[str, str]:
 
 
 def _refused(row: dict) -> tuple[str, str]:
-    return f"refused at {row.get('step') or 'a review'}", "a review sent it back."
+    """Who refused it, from the step and never from an assumption. Only the
+    contract step asks a reviewer: the scope of a gate, the names a card uses
+    and the red-first proof are the loop's own checks, made before any
+    reviewer is called (`loop.py`, `loop_evidence.py`)."""
+    step = row.get("step") or "a step"
+    who = "the contract review" if step == "contract" else "the loop's own check"
+    return f"refused at {step}", f"{who} sent it back."
 
 
 def _rejected(row: dict) -> tuple[str, str]:

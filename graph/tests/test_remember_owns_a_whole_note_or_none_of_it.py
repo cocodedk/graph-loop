@@ -20,13 +20,15 @@ import pathlib
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import cardfile
+import durable
 import remember
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 
-EXPECTED_TESTS = 6
+EXPECTED_TESTS = 7
 
 
 def vault() -> pathlib.Path:
@@ -102,6 +104,28 @@ class AHandEditedNoteIsNeverRewritten(unittest.TestCase):
         counts = remember.write_memory(root, log())
         self.assertEqual(b"", note(root).read_bytes())
         self.assertEqual(1, counts["untouched"])
+
+
+class AnEditThatLandsWhileTheWriteRunsIsNotLost(unittest.TestCase):
+    def test_a_save_between_the_ownership_check_and_the_rename_is_kept(self):
+        """Ownership is decided on bytes read a moment earlier. Somebody saving
+        in Obsidian inside that moment had their edit renamed over."""
+        root = vault()
+        remember.write_memory(root, log())
+        path = note(root)
+        edited = path.read_text("utf-8") + "\n## mine\n\nkeep me.\n"
+        real = durable.replace
+
+        def racing(target, data, **rest):
+            if pathlib.Path(target) == path:
+                path.write_text(edited, "utf-8")      # a person saves, right now
+            return real(target, data, **rest)
+
+        with mock.patch.object(durable, "replace", racing):
+            counts = remember.write_memory(root, grown())
+        self.assertEqual(edited, path.read_text("utf-8"))
+        self.assertEqual(1, counts["untouched"])
+        self.assertEqual("kept: edited by hand", counts["said"]["T30.schema"])
 
 
 class ANoteItWroteItselfStaysItsOwn(unittest.TestCase):

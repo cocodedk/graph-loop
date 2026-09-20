@@ -75,7 +75,9 @@ def _body(target: str, written: list) -> str:
     """The `## Node` list, then one dated section per thing that happened."""
     pieces = [f"## {NODE}\n\n- [[{target}]]"]
     pieces += [f"## {heading}{MARK}\n\n{said}" for heading, said in written]
-    return "\n\n".join(pieces) + "\n"
+    # The leading blank line is the body's own, so the digest covers it and a
+    # note reads back exactly as it was written.
+    return "\n" + "\n\n".join(pieces) + "\n"
 
 
 def _digest(body: str) -> str:

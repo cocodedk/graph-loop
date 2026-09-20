@@ -75,12 +75,14 @@ def write_memory(root: pathlib.Path, rows: list) -> dict:
     paths = backlog_tree.read(root)[backlog_tree.PATHS]
     link = cardfile.linker(root)
     inside = root.resolve()
+    done: set = set()
     counts.update(written=0, unchanged=0, untouched=0, said={}, events=len(rows),
                   not_a_card=sum(len(sections) for node, sections in memory.items()
                                  if node not in paths))
     for task_id, card in sorted(paths.items()):
         try:
-            concern = _one(inside, card, link(task_id), memory.get(task_id) or [], counts)
+            concern = _one(inside, done, card, link(task_id),
+                           memory.get(task_id) or [], counts)
         except Exception as raised:  # noqa: BLE001 — one note never costs the rest
             counts["untouched"] += 1
             concern = f"writing it raised {type(raised).__name__}; nothing was changed"
@@ -89,33 +91,41 @@ def write_memory(root: pathlib.Path, rows: list) -> dict:
     return counts
 
 
-def _one(inside: pathlib.Path, card: pathlib.Path, target: str, sections: list,
-         counts: dict) -> str:
+def _one(inside: pathlib.Path, done: set, card: pathlib.Path, target: str,
+         sections: list, counts: dict) -> str:
     """One card's memory refreshed, and what could not be done to it."""
     folder = card.parent / FOLDER
     note = folder / f"{PREFIX}{card.stem}{cardfile.SUFFIX}"
-    unsafe = _unsafe(inside, folder, note)
+    unsafe = _unsafe(inside, done, card, folder, note)
     if unsafe:
         counts["untouched"] += 1
         return unsafe
     text = render(target, sections)
     raw = note.read_bytes() if note.exists() else None
-    if raw is None:                       # nothing there: the command's to make
-        durable.replace(note, text)
-        counts["written"] += 1
-        return ""
-    if raw == text.encode("utf-8"):
+    if raw is not None and raw == text.encode("utf-8"):
         counts["unchanged"] += 1
         return ""
-    if not ours(raw, target):             # the one door, and it opens one way
+    if raw is not None and not ours(raw, target):   # the one door, and it opens one way
         counts["untouched"] += 1
         return HAND
-    durable.replace(note, text)
+    # The same question again, with the new bytes already on the platter and
+    # the rename one step away: what was read above is stale by now, and
+    # somebody saving inside that moment had their edit renamed over.
+    if durable.replace(note, text, guard=lambda: _still(note, raw)) is None:
+        counts["untouched"] += 1
+        return HAND
     counts["written"] += 1
     return ""
 
 
-def _unsafe(inside: pathlib.Path, folder: pathlib.Path, note: pathlib.Path) -> str:
+def _still(note: pathlib.Path, raw: bytes | None) -> bool:
+    """Whether the file is still what the ownership check above saw: the same
+    bytes, or still not there at all."""
+    return (note.read_bytes() if note.exists() else None) == raw
+
+
+def _unsafe(inside: pathlib.Path, done: set, card: pathlib.Path,
+            folder: pathlib.Path, note: pathlib.Path) -> str:
     """Why this note must not be written.
 
     Two questions, because either alone lets a write escape. Where does the
@@ -126,6 +136,19 @@ def _unsafe(inside: pathlib.Path, folder: pathlib.Path, note: pathlib.Path) -> s
     write on a card. `durable.replace` writes `.<name>.tmp` beside the note and
     renames it into place, so that name is a target as much as the note is.
     """
+    piece = card.parent
+    if piece.is_symlink():
+        # It may resolve inside the vault or out of it, and neither is a
+        # reason to write: under this name the notes would carry this name's
+        # backlinks into another molecule's folder, and the molecule that
+        # really lives there would then find a note that is not its own and
+        # keep it — losing its history to a link somebody made.
+        return (f"{piece.name} is a symlink to another folder, so nothing is exported "
+                "under this name")
+    real = note.resolve()
+    if real in done:
+        return f"{piece.name} holds the note another name in this backlog already wrote"
+    done.add(real)
     beside = folder / f".{note.name}.tmp"
     for path in (folder, note, beside):
         if path.is_symlink():
