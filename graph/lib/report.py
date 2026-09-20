@@ -12,6 +12,8 @@ to look at first.
 
 from __future__ import annotations
 
+from report_cuts import cut_line, cuts
+
 
 def _local_hhmm(at: str) -> str:
     """The log stores UTC; a person reads the clock on the wall."""
@@ -121,6 +123,7 @@ def report(space) -> dict:
                                       ("refused", "rejected", "rebuild_queued", "failed")]),
         "accepts": sum(1 for row in rows if row.get("kind") == "accepted"),
         "artifacts": sum(1 for row in rows if row.get("kind") == "artifact"),
+        "cuts": cuts(space),
     }
 
 
@@ -179,6 +182,7 @@ def as_text(out: dict) -> str:
         if wider:
             lines.append("  wider than the loop: " + ", ".join(wider[:5])
                          + (f" (+{len(wider) - 5} more)" if len(wider) > 5 else ""))
+    lines.append(cut_line(out))
     lines.append(f"everything said and seen is written down: {out['artifacts']} files "
                  "under calls/")
     return "\n".join(lines)
