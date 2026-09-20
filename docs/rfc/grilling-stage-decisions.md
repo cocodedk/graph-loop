@@ -1,8 +1,9 @@
 # Grilling stage — decisions the RFC left open
 
-Status: **proposed, revision 3 — not confirmed.** Nothing may be sliced or built from these
-until the owner confirms this revision. A decisions model's confidence does not authorise a
-decision, and "overturn them or they stand" is not a confirmation.
+Status: **confirmed by the owner, 2026-09-20 — revision 3.** Specifications are written from
+this revision and name the decisions they implement. A change to any decision here needs a
+new revision, a new confirmation, and a review of what was built from the old one. A
+decisions model's confidence never authorised any of these; the owner's confirmation did.
 
 `grilling-stage.md` beside this file is the brief, kept as written. Planning it surfaced
 points where two competent builders could have built different behaviour. Each was found
