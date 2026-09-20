@@ -28,18 +28,12 @@ import throttle_gates
 import throttle_state
 from lanes_auto import AUTO, LANE_COST_KB
 from machine_load import Load, Watch
+from throttle_guard import Guarded
 from throttle_state import STATE  # the campaign file both of them name
 from turn_plan import MOST_LANES
 
 
-def _short(broken) -> str:
-    try:
-        return repr(broken)[:300]
-    except BaseException:   # noqa: BLE001 — even describing it is a boundary
-        return "a fault that could not be described"
-
-
-class Throttle:
+class Throttle(Guarded):
     """The driver holds one of these for the length of a run.
 
     `opens` before the lanes, `lanes` to ask how many, `closes` once they are
@@ -49,24 +43,43 @@ class Throttle:
     """
 
     def __init__(self, space, args, watch=None):
+        # Nothing before the guard may fail. Reading the arguments, making the
+        # watch and reading the state file all can — a Watch that cannot be
+        # built used to escape `Throttle(...)` even in numeric mode — so they
+        # happen inside it, and a construction that fails leaves a throttler
+        # that holds rather than a driver that never started.
         self.space = space
-        self.on = (getattr(args, "lanes", None) == AUTO
-                   and not getattr(args, "dry_run", False))
-        self.ceiling = max(0, int(getattr(args, "lanes_max", 0) or 0))
-        self.watch = watch or Watch()
+        self.on = False
+        self.ceiling = 0
+        self.watch = watch
+        self.watching = False     # whether THIS turn's readings were ever begun
         self.load: Load | None = None
         self.state = dict(throttle_state.FRESH)
         self.allow = 0            # the last safe number, in memory, always an int
+        self._guard("making itself ready", lambda: self._ready(args))
+
+    def _ready(self, args) -> None:
+        self.on = (getattr(args, "lanes", None) == AUTO
+                   and not getattr(args, "dry_run", False))
+        self.ceiling = max(0, int(getattr(args, "lanes_max", 0) or 0))
+        if self.watch is None:
+            self.watch = Watch()
         if self.on:
-            self._guard("reading its state", self._open)
+            self._open()
 
     # ------------------------------------------------------------- the driver
 
     def opens(self) -> None:
         """Start reading the machine, with no lane running: this first sample
         is the baseline every judgement is a rise over."""
-        if self.on:
-            self._guard("starting to read the machine", self.watch.start)
+        if not self.on:
+            return
+        self.watching = False     # nothing is being watched until a start returns
+        self._guard("starting to read the machine", self._from_here)
+
+    def _from_here(self) -> None:
+        self.watch.start()
+        self.watching = True      # only a start that came back counts as watching
 
     def lanes(self, width: int) -> int:
         """How many lanes this turn, or 0 when nothing asked for `auto`."""
@@ -79,49 +92,6 @@ class Throttle:
         """Read what the turn did to the machine, and keep it for the next."""
         if self.on:
             self._guard("reading what the turn cost", lambda: self._close(turn_id, ran))
-
-    # -------------------------------------------------------------- the door
-
-    def _guard(self, what: str, run, fallback=None):
-        """Everything the driver calls passes here, and nothing passes back out.
-
-        The fallback is a callable, worked out INSIDE this frame: computed as
-        an argument it ran outside the guard, and a state file holding
-        `{"allow": "bad"}` then killed the driver on every restart.
-        """
-        try:
-            return run()
-        except BaseException as broken:   # noqa: BLE001 — a dead turn is worse than a dumb throttler
-            why = _short(broken)
-        self._said(what, why)
-        if fallback is None:
-            return None
-        try:
-            return fallback()
-        except BaseException:   # noqa: BLE001 — `_floor` cannot fail; if it did, one lane
-            return 1
-
-    def _said(self, what: str, why: str) -> None:
-        """Say it wherever anything will listen, and never mind what will not."""
-        self._tried(lambda: print(f"  the throttler could not manage {what}: {why}"))
-        self._tried(lambda: self.space.event("throttle_fault", what=what, why=why))
-
-    @staticmethod
-    def _tried(say) -> None:
-        try:
-            say()
-        except BaseException:   # noqa: BLE001 — a fault nobody can record is not a dead turn
-            return
-
-    def _floor(self, width) -> int:
-        """The last value known to be safe. Arithmetic over numbers already in
-        memory: no file, no `/proc`, no log, nothing that can fail — because
-        this is the only path to an answer once everything else has."""
-        try:
-            return max(1, min(int(self.allow) or 1, int(self.ceiling) or MOST_LANES,
-                              MOST_LANES, max(1, int(width))))
-        except BaseException:   # noqa: BLE001 — a number this cannot make is one lane
-            return 1
 
     # --------------------------------------------------------------- the work
 
@@ -168,6 +138,11 @@ class Throttle:
     def _close(self, turn_id: str, ran: int) -> None:
         self.load = self._guard("reading the machine", self.watch.stop,
                                 lambda: Load(broke=True))
+        if not self.watching or not isinstance(self.load, Load):
+            # This turn was never watched, or the watch could not say what it
+            # saw: whatever is lying about, it is not this turn's evidence.
+            self.load = Load(broke=True)
+        self.watching = False
         if not self.load.samples:
             self._said("reading the machine", "nothing could be read this turn")
         self.state["ran"] = max(0, int(ran))

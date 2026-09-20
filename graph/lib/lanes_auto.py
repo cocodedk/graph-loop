@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from machine_load import Load
+from machine_load import Load, fresh
 from turn_plan import MOST_LANES
 
 AUTO = "auto"                      # what `--lanes auto` passes through argparse
@@ -36,7 +36,6 @@ GATE_CUT = 2.5                     # a gate this much slower than its time alone
 RESERVE_KB = 3 * GB                # memory the loop leaves to the machine
 LANE_COST_KB = 2.5 * GB            # one lane's cost, until a turn measures it
 HOLD_TURNS = 2                     # no increase for this many turns after a cut
-MEASURED = 2                       # a baseline alone is not a measurement of a turn
 
 
 class Decision(NamedTuple):
@@ -85,19 +84,13 @@ def _clean(load: Load | None, gate_ratio: float | None) -> bool:
     one below the rung that had to be halved, so a machine already reaching for
     disk is not one to ask more of.
 
-    A turn nobody could measure is never clean — a lane is added on evidence or
-    not at all, and doubt resolves downward. That takes two readings taken by
-    THIS process in THIS turn: the first is the baseline, with no lane running,
-    and a turn with only that one says nothing about what the lanes did. A
-    reading that broke part way says no more (`Load.broke`), however many
-    samples it managed; nor does one read back from a file (`Load.carried`),
-    because the turn that made it was run by a process that is gone.
+    A turn nobody could measure is never clean: `machine_load.fresh` is the one
+    home of that law — no fresh evidence, no increase — and it is asked here
+    rather than repeated.
     """
     if cut_reason(load, gate_ratio):
         return False
-    if load is None or load.swap_growth_kb is None:
-        return False
-    if load.broke or load.carried or load.samples < MEASURED:
+    if not fresh(load) or load.swap_growth_kb is None:
         return False
     return load.swap_growth_kb <= SWAP_QUIET_KB
 
@@ -110,7 +103,7 @@ def _why_not(load: Load | None) -> str:
         return " (the machine stopped answering part way)"
     if load.carried:
         return " (the last reading is another driver's, so it cannot add)"
-    if load.samples < MEASURED:
+    if not fresh(load):
         return " (nothing was read while the lanes ran)"
     return f" (swap moved {_mb(load.swap_growth_kb)})"
 

@@ -41,11 +41,23 @@ boundary like any other and is wrapped the same way; the line that said so once 
 outside the guard around it, which made a closed stdout the thing that killed the driver.
 A throttler that kills a turn is worse than no throttler.
 
-**A lane is added only on positive proof, and doubt resolves downward.** A turn earns
-another lane only when THIS driver measured it in THIS turn: two whole readings at least
-— an empty or half-read `/proc` is a broken reading, not a reading — the sampling thread
-back in time, and nothing flagged. Everything else holds where it is. A cut needs no such
-proof: what a reading saw, it saw, even if it stopped early.
+**A lane is added only on positive proof, and doubt resolves downward.** One law, in one
+place (`machine_load.fresh`): no fresh evidence, no increase. A turn earns another lane
+only when THIS driver measured it in THIS turn — two whole readings at least (an empty or
+half-read `/proc` is a broken reading, not a reading), taken by a reader that started,
+stayed alive and came back on its own. A thread that never started, one that died on any
+exception at all, one that stalled past its turn, a buffer left from a turn before, a
+reading read back from a file: none of it counts, and the decision holds where it is. The
+buffer is cleared at the start of every turn before anything else can fail, and the
+baseline is taken by the sampling thread with a bounded wait, so a `/proc` read that never
+returns costs one turn's evidence rather than the driver. A cut needs none of this: what a
+reading saw, it saw, however it ended.
+
+**One clock.** Every duration is `time.monotonic` — the turn's own length, and the gate
+times `workspace.step` records. The wall clock is for log timestamps and nothing else: a
+backward adjustment inside a ten-second gate taught the throttler a one-second lone time,
+and the same gate running normally next time read as ten times slower and halved the
+lanes.
 
 It starts at the ceiling when one is given, because starting at one lane would
 serialise cards the graph has just said are independent. With no ceiling it starts at

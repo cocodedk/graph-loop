@@ -79,7 +79,7 @@ class FaultTest(unittest.TestCase):
         (here.root / throttle_mod.STATE).write_text('{"allow": 2, "ho', "utf-8")
         hand = Throttle(here, args())
         self.assertEqual(1, hand.lanes(5))       # fresh: no ceiling, one lane
-        self.assertIn("reading its state", [row["what"] for row in faults(here)])
+        self.assertIn("making itself ready", [row["what"] for row in faults(here)])
 
     def test_a_state_file_that_cannot_be_written_still_gives_a_number(self):
         here = space()

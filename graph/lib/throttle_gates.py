@@ -22,6 +22,10 @@ def ratio(space, state: dict, turn_id: str, ran: int) -> float | None:
     time made the same gate passing in ten seconds read as a hundredfold
     slowdown (`loop_judge.judge` records `passed` on every gate it runs).
 
+    Every duration it reads is the loop's one clock — `workspace.step` times a
+    step with `time.monotonic`, so a wall clock stepping backwards cannot teach
+    a gate a lone time shorter than it really took.
+
     `state["gate_alone"]` is grown here and kept by the caller.
     """
     alone = dict(state.get("gate_alone") or {})

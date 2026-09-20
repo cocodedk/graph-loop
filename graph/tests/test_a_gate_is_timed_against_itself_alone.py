@@ -13,8 +13,10 @@ from __future__ import annotations
 import pathlib
 import sys
 import tempfile
+import time
 import types
 import unittest
+import unittest.mock
 
 HERE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE / "lib"))
@@ -23,7 +25,7 @@ from lanes_auto import GATE_CUT, cut_reason
 from throttle import Throttle
 from workspace import Workspace
 
-EXPECTED_TESTS = 6
+EXPECTED_TESTS = 8
 ALONE, AT_THREE, SLOW = 22.3, 38.5, 60.0
 
 
@@ -93,6 +95,38 @@ class FailedGateTest(unittest.TestCase):
         one._gate_ratio("turn-0-1", 1)
         gate(one, "turn-1-1", "T1", ALONE * 100, passed=False)
         self.assertIsNone(one._gate_ratio("turn-1-1", 3))
+
+
+class ClockTest(unittest.TestCase):
+    """One clock. A duration is monotonic or it is not a duration.
+
+    A gate that spans a backward wall-clock adjustment used to teach a lone
+    time shorter than it really took, and the same gate running normally next
+    time read as many times slower — and halved the lanes over it.
+    """
+
+    def test_a_step_is_timed_by_the_one_clock(self):
+        one = hand()
+        with unittest.mock.patch.object(time, "monotonic",
+                                        side_effect=[100.0, 110.0]), \
+             one.space.step("T1", "gate") as note:
+            note(passed=True)
+        row = [r for r in one.space.events() if r["kind"] == "step"][-1]
+        self.assertEqual(10.0, row["seconds"])
+
+    def test_a_backward_wall_clock_cannot_teach_a_short_lone_time(self):
+        one = hand()
+        with unittest.mock.patch.object(time, "monotonic",
+                                        side_effect=[100.0, 110.0]), \
+             unittest.mock.patch.object(time, "time", side_effect=[100.0, 91.0]), \
+             one.space.step("T1", "gate") as note:
+            note(passed=True)
+        one._gate_ratio("", 1)
+        self.assertEqual({"T1": 10.0}, one.state["gate_alone"])   # not 1.0
+        gate(one, "turn-1-1", "T1", 10.0)
+        # The same gate, the same time: one times its own, and nothing is cut.
+        self.assertEqual(1.0, one._gate_ratio("turn-1-1", 3))
+        self.assertEqual("", cut_reason(None, one._gate_ratio("turn-1-1", 3)))
 
 
 class CountTest(unittest.TestCase):
