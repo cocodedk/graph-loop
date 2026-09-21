@@ -1,4 +1,5 @@
-"""The driver's commands other than `run`, and the two real providers.
+"""The driver's commands other than `run`. The two real providers, routed by
+`model_router.choose` (docs/ROUTER.md), live in `real_calls.py`.
 
 `graph-goal.py` keeps `run` — the loop that works the backlog — and the command
 line; everything a person calls once (init, approve, status, doctor, report,
@@ -7,7 +8,6 @@ stop) lives here, with the constants both files share.
 
 from __future__ import annotations
 
-import os
 import pathlib
 import sys
 
@@ -21,7 +21,7 @@ from doctor import as_text as doctor_text
 from doctor import diagnose
 from keep_branch import campaign_branch
 from plan_phase import command_plan  # noqa: F401 — the plan phase's door stays here
-from providers import claude, codex
+from real_calls import _real_build, _real_review  # noqa: F401 — the door stays here
 from report import as_text, report
 from turn import (  # noqa: F401 — the door stays here
     plan_with_claude,
@@ -35,8 +35,6 @@ from workspace import Workspace
 
 REPO = where.repo()
 DEFAULT_WORKSPACE = where.campaign()
-CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
-CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
 # What a builder may run lives in lib/tools.py: a code task gets a shell, a
 # live task gets only the helper. BUILDER_TOOLS is the code task's list.
 from tools import builder_tools
@@ -46,35 +44,6 @@ BUILDER_TOOLS = builder_tools({})
 
 def _space(args) -> Workspace:
     return Workspace(args.workspace or DEFAULT_WORKSPACE)
-
-
-def _real_build(prompt, *, account, cwd, files, tools, denies, guard, effort="", resume="",
-                model=""):
-    """One builder call, in the task's own worktree, with the tools the task
-    allows (lib/tools.py): a live task's builder has no shell, only the helper.
-    `resume` continues the previous round's session — the same work, so what it
-    already read is not paid for twice."""
-    return claude(CLAUDE_BIN, prompt, account=account, model=model, cwd=cwd, effort=effort,
-                  resume=resume,
-                  allowed_tools=tools, disallowed_tools=denies, guard=guard,
-                  guard_files="\n".join(str(pathlib.Path(cwd) / f) for f in files) if guard else "")
-
-
-def _real_review(prompt, *, cwd="", effort="", space=None, task_id=""):
-    # `cwd` is the worktree the diff or contract belongs to — never the
-    # driver's own checkout, or the reviewer reads the wrong tree.
-    # `space`/`task_id` default to nothing so a caller that only wants a
-    # verdict (a test, a one-off check) is not made to fake a workspace. The
-    # loop's two call sites (loop_contract.py, loop_judge.py) pass both, so
-    # every belt member codex() asks — refusals included, the same as a
-    # build's per-account record (lib/loop_steps.py) — lands in the campaign
-    # ledger under the task this review belongs to, tagged purpose="review"
-    # so report.py can tell review spend apart from a build's.
-    def record(kind, account, cost, tokens, text):
-        space.attempt(task_id, account=account, kind=kind, cost=cost, tokens=tokens,
-                      purpose="review")
-    return codex(CODEX_BIN, prompt, effort=effort, cwd=cwd,
-                attempt=record if space is not None and task_id else None)
 
 
 def command_init(args) -> int:

@@ -21,19 +21,23 @@ Rules it enforces, each bought with a failure:
 
 - The backlog is the only task source. The planner selects and may slice; it
   never invents a task.
-- Up to three code cards build side by side; `--lanes` may lower that ceiling. The
-  first choice for a build is `claude-opus-5` on the work account or the
-  personal one (cap), at effort high climbing to xhigh as the task's weight or a
-  lost round demands — never below high, never above xhigh (`effort.py`). A refusal
-  before reading skips the unavailable account or model and tries the next
-  configured pair; the default belt includes Opus and Sonnet (`resources.py`,
-  `accounts.py`, `models.py`). A gate that fails twice the same way re-slices the
-  task.
-- Reviews try a fresh `codex exec --model gpt-6-astra` first (gpt-5.6-sol behind it), once on the task
-  contract before any edit and once on the diff, at effort medium climbing to
-  high for a heavier task or a round that already failed — never below medium,
-  never above high (`effort.py`); only when Codex refuses before reading does a
-  read-only Claude review follow (`review.py`).
+- Up to three code cards build side by side; `--lanes` may lower that ceiling. A
+  Jev decision (`model_router.py`, `docs/ROUTER.md`) picks the configured model
+  and effort for each build and review from the resource belt it is actually
+  offered — never a free-form name. Every first attempt runs at medium; a
+  builder climbs to high only from a recorded medium build on this same
+  contract that then failed its gate, never from a round counter alone. A
+  refusal before reading skips the unavailable account or model and tries the
+  next configured one; the default belt includes Opus and Sonnet
+  (`resources.py`, `accounts.py`, `models.py`). A gate that fails twice the
+  same way re-slices the task.
+- Reviews are routed the same way, always independent of the builder's own
+  family: no eligible reviewer left means no accepted review, never a
+  self-review. A low or malformed decision, an unlisted choice, or the
+  decision service being unavailable all fall back to the first eligible
+  independent resource at medium effort — the same fallback `GRAPH_ROUTER=off`
+  gives explicitly, offline. `review.py` walks the routed belt, Codex reviewers
+  first (`gpt-6-astra`, then `gpt-5.6-sol`).
 - Every gate is proved red for the expected reason before a builder starts, and
   no builder can write a gate or a task contract. A no-files, non-live card has
   no builder to protect: it skips red-first, the build and the diff review, and

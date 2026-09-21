@@ -39,7 +39,7 @@ def choose(task: dict, job: str, *, space=None, builder_model: str = "") -> Choi
     Raises `LookupError` when no candidate is eligible at all — a review with
     no independent reviewer left, never a self-review.
     """
-    belt = _filtered_belt(job, builder_model)
+    belt = candidates(job, builder_model)
     if not belt:
         raise LookupError(f"no eligible resource for job {job!r}")
     if os.environ.get("GRAPH_ROUTER", "jev") == "off":
@@ -57,8 +57,11 @@ def choose(task: dict, job: str, *, space=None, builder_model: str = "") -> Choi
     return _record(space, task, job, resource, effort, "fallback", why, out.cost, out.tokens)
 
 
-def _filtered_belt(job: str, builder_model: str) -> list[resources.Resource]:
+def candidates(job: str, builder_model: str) -> list[resources.Resource]:
     """The job's belt, minus the builder's own family for an independent review.
+
+    Public so a review call site can walk the SAME filtered belt `choose`
+    offered, in the order to fall back through, once it has the routed pick.
 
     Every builder runs on agent `claude` (`resources.belt('build')`), whatever
     alias a caller configures for it (`sonnet`, `opus`, ...), so the family a

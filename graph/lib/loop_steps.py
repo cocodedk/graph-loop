@@ -9,11 +9,11 @@ from __future__ import annotations
 import resources
 from backlog_status import is_live
 from distress import read_result, tail
-from effort import build_effort
 from loop_judge_retry import moved_first, scope_fault
 from loop_peers import hold_live_peers, open_why
 from loop_resume import resuming
 from loop_steps_live import live_call_lost
+from loop_steps_route import note_builder, routed_build
 from loop_types import TaskOutcome
 from prompts import build_prompt
 from tools import builder_denies, builder_guard, builder_tools, write_gate_script
@@ -45,13 +45,12 @@ def build(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOutco
         return None
     prompt = build_prompt(task, in_place)
     loop.space.artifact(task_id, "build-prompt", prompt)
-    # A live builder is called ONCE, with one exception. A call that hit a limit or
-    # crashed may already have run a helper command, and a second account would
-    # repeat a live action with no proof the first did nothing. A refused session is
-    # different: the call never reached the model, so no tool ran and there is
-    # nothing to repeat. Without that exception one expired account quarantined
-    # every live card in the campaign, turn after turn.
-    belt = resources.belt("build")
+    # A live builder is called ONCE, with one exception: a refused session, which
+    # never reached the model, so no tool ran and there is nothing to repeat. A call
+    # that hit a limit or crashed may already have run a helper command, and a second
+    # account would repeat a live action with no proof the first did nothing —
+    # without the exception, one expired account quarantined every live card, ever.
+    effort, belt = routed_build(loop, task)
     spent = resources.Exhausted()
     # What the tree held before any call this turn: a refusal whose figures are
     # missing is judged by the edits it left behind, not by inference (B4 r4).
@@ -83,7 +82,7 @@ def build(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOutco
             built = loop.build(prompt, account=account, model=resource.model, cwd=tree.path,
                                files=task.get("files") or [], tools=builder_tools(task, tree.path),
                                denies=builder_denies(task), guard=builder_guard(task),
-                               effort=build_effort(task),
+                               effort=effort,
                                # a rebuild round continues the SAME work: resume it rather
                                # than pay to read every file again
                                # a session lives in ONE account's configuration: resume it
@@ -91,7 +90,7 @@ def build(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOutco
                                resume=(str(task.get("session") or "")
                                        if in_place and task.get("session_account") == account else ""))
             note(account=account, on=str(resource), outcome=built.kind,
-                 cost=built.cost, effort=build_effort(task))
+                 cost=built.cost, effort=effort)
         loop.space.artifact(task_id, f"build-answer-{account}",
                             built.raw or built.text)
         loop.space.attempt(task_id, account=account, kind=built.kind,
@@ -130,7 +129,9 @@ def build(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOutco
         # that reached the model may already have run a helper verb.
         if is_live(task) and not built.unstarted:
             break
-    if built.kind != "ok" and is_live(task):
+    if built.kind == "ok":
+        note_builder(loop, task_id, resource)
+    elif is_live(task):
         return live_call_lost(loop, task_id, tree, built, in_place)
     if timed_out and built.kind != "ok":
         # A call ran out of time, not of ideas — whichever account's, and

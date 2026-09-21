@@ -23,16 +23,19 @@ from review_read import (  # noqa: F401 — this module is the front door
 
 
 def codex(binary: str, prompt: str, *, cwd: str = "", effort: str = "",
-          timeout: int = 1800, attempt=None) -> Outcome:
+          timeout: int = 1800, attempt=None, belt: list | None = None) -> Outcome:
     """A review, from the first reviewer that answers.
 
-    `effort` is the rung lib/effort.py chose for the task; `max` is on no
-    ladder — it cost twelve minutes a review (the owner, 2026-08-30).
+    `effort` is the rung `model_router.choose` picked for the task (see
+    docs/ROUTER.md); `max` is on no ladder — it cost twelve minutes a review
+    (the owner, 2026-08-30).
 
-    Every reviewer on the belt is tried in turn until one answers.
-    A model at capacity refuses before reading anything, so the next one may
-    answer the same question; one model name compiled in here is why three
-    reviews came back empty on 2026-08-31 and their changes went in unreviewed.
+    `belt` is the order to try, the router's own pick first so the call that
+    answers is the one it named; `None` walks every configured reviewer, for
+    a caller with no routing decision of its own. A model at capacity refuses
+    before reading anything, so the next one may answer the same question;
+    one model name compiled in here is why three reviews came back empty on
+    2026-08-31 and their changes went in unreviewed.
 
     `cwd` is the worktree this review judges — never the driver's own
     checkout, or a reviewer that reads beyond the pasted diff reads the
@@ -40,7 +43,7 @@ def codex(binary: str, prompt: str, *, cwd: str = "", effort: str = "",
     """
     out = Outcome("harness", text="the review belt is empty: no reviewer is configured")
     spent = resources.Exhausted()
-    for resource in resources.belt("review"):
+    for resource in (resources.belt("review") if belt is None else belt):
         if spent.skip(resource):
             continue
         out = (_one_review(binary, prompt, resource.model, cwd, effort, timeout)
