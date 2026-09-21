@@ -29,20 +29,20 @@ def _ls_tree_z(tree: str, *args: str) -> list[str]:
     return _git(tree, "ls-tree", "-z", *args).split("\0")[:-1]
 
 
-def _status_z(tree: str) -> list[tuple[str, str]]:
-    """(code, path) pairs from `git status --porcelain -z`: NUL-terminated
-    like `_ls_tree_z`, so a path with a space, tab or quote parses correctly
-    instead of being C-quoted. A rename or copy record carries a SECOND
-    NUL-terminated field, the new path first then the original -- folded
-    back here into the "old -> new" text every status code below already
-    treats as one opaque path."""
+def _status_z(tree: str) -> list[tuple[str, str, str | None]]:
+    """(code, path, source) triples from `git status --porcelain -z`:
+    NUL-terminated like `_ls_tree_z`, so a path with a space, tab or quote
+    parses correctly instead of being C-quoted. A rename or copy record
+    carries a SECOND NUL-terminated field, the new path first then the
+    original -- kept here as its OWN field, `source`, rather than folded
+    into a single joined string: a filename that itself contains " -> "
+    would otherwise make the join ambiguous to split back apart."""
     tokens = iter(_git(tree, "status", "--porcelain", "-uall", "-z").split("\0")[:-1])
     out = []
     for token in tokens:
         code, path = token[:2], token[3:]
-        if code[0] in "RC" or code[1] in "RC":
-            path = f"{next(tokens)} -> {path}"
-        out.append((code, path))
+        source = next(tokens) if code[0] in "RC" or code[1] in "RC" else None
+        out.append((code, path, source))
     return out
 
 
@@ -77,35 +77,45 @@ def _siblings(tree: str, allowed: set) -> set:
     return {str(pathlib.PurePosixPath(path).parent) for path in files}
 
 
+def _owned(path: str, allowed_set: set, in_head: set) -> bool:
+    """An owned FILE owns nothing beneath it: replaced by a directory of the same
+    name it would carry its children in. An owned directory still does."""
+    return any(path == ok or (path.startswith(ok + "/") and ok not in in_head)
+               for ok in allowed_set)
+
+
+def _is_artefact(path: str) -> bool:
+    return any(part in ARTEFACTS for part in path.rstrip("/").split("/")) or path.endswith(".pyc")
+
+
 def changed_outside(tree: str, allowed: list[str], may_add: bool = False) -> list[str]:
     """Every path this tree touched that its task was not given.
 
     Read from git rather than from a list somebody keeps by hand, so a builder
     that creates a file nobody expected is caught as surely as one that edits it.
     `may_add` also allows NEW FILES beside the task's own — the one thing a file
-    list cannot express, the 200-line split.
+    list cannot express, the 200-line split. A rename or copy carries two real
+    paths, kept apart by `_status_z`; each endpoint is judged on its own —
+    owned, or noise — so a grant or a build artefact at one end can never
+    smuggle an ordinary ungranted change at the other past the check.
     """
     allowed_set = {path.rstrip("/") for path in allowed}
     in_head = _head_files(tree)
     gitlinks = _gitlinks(tree)
     beside = _siblings(tree, allowed_set) if may_add else set()
     out = []
-    for code, path in _status_z(tree):
+    for code, path, source in _status_z(tree):
         if not path:
             continue
-        # An owned FILE owns nothing beneath it: replaced by a directory of the same
-        # name it would carry its children in. An owned directory still does.
-        if any(path == ok or (path.startswith(ok + "/") and ok not in in_head)
-               for ok in allowed_set):
+        endpoints = (source, path) if source is not None else (path,)
+        if all(_owned(endpoint, allowed_set, in_head) or _is_artefact(endpoint)
+               for endpoint in endpoints):
             continue
         if (code in ("??", "A ", " A", "AM") and not path.endswith("/")
                 and path not in gitlinks
                 and str(pathlib.PurePosixPath(path).parent) in beside):
             continue   # a new FILE beside the task's own; a directory or nested repo never
-        parts = path.rstrip("/").split("/")
-        if any(part in ARTEFACTS for part in parts) or path.endswith(".pyc"):
-            continue
-        out.append(path)
+        out.append(f"{source} -> {path}" if source is not None else path)
     return sorted(out)
 
 
@@ -116,10 +126,10 @@ def added_beside(tree: str, allowed: list[str]) -> list[str]:
     beside = _siblings(tree, owned)
     gitlinks = _gitlinks(tree)
     out = []
-    for code, path in _status_z(tree):
+    for code, path, _source in _status_z(tree):
         if (not path or path.endswith("/") or path in gitlinks or code not in ("??", "A ", " A", "AM")):
             continue
-        if any(part in ARTEFACTS for part in path.split("/")) or path.endswith(".pyc"):
+        if _is_artefact(path):
             continue
         if str(pathlib.PurePosixPath(path).parent) in beside and path not in owned:
             out.append(path)
