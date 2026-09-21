@@ -49,6 +49,10 @@ class RebuildTest(unittest.TestCase):
         self.assertEqual(out.worktree, again.worktree)      # same worktree
         self.assertIn("wrong line", prompts[0])             # findings in the prompt
         self.assertIn("already in this worktree", prompts[0])  # and it is, in place
+        self.assertIn("historical findings", prompts[0])
+        self.assertIn("recheck each against the CURRENT files and gates", prompts[0])
+        self.assertIn("keep unresolved diff-review findings", prompts[0])
+        self.assertNotIn("Act on exactly these recorded reasons", prompts[0])
         # one build and ONE review (the diff): no contract review this round
         self.assertEqual(["build:work", "review"], fakes.calls[len(calls_before):])
         self.assertEqual("done", book.task("T1")["status"])

@@ -14,6 +14,11 @@ from keep_gate import GateMutatedTree
 from loop_types import TaskOutcome
 
 
+def _kept_gate(row: dict) -> str:
+    key = "gate_when_kept" if row.get("gate_until_kept") is True else "gate"
+    return str(row.get(key) or "").strip()
+
+
 def _gates_on_the_branch(loop, task: dict) -> list[str]:
     """This card's gate and completed cards whose files this card affects.
 
@@ -26,14 +31,14 @@ def _gates_on_the_branch(loop, task: dict) -> list[str]:
         return []
     kept = [row for row in loop.backlog.tasks()
             if row.get("status") == "done" and not is_live(row)
-            and str(row.get("gate") or "").strip()]
+            and _kept_gate(row)]
     kept.sort(key=lambda row: str(row.get("kept_at") or ""))     # keep order, not backlog order
     my_files = {str(path).rstrip("/") for path in (task.get("files") or [])}
     gates, seen = [], set()
     for row in kept:
         if not overlap(reach(row), my_files):
             continue
-        gate = str(row["gate"]).strip()
+        gate = _kept_gate(row)
         if gate not in seen:
             seen.add(gate); gates.append(gate)
     mine = str(task.get("gate") or "").strip()
@@ -55,7 +60,7 @@ def _gate_owner(loop, task: dict, gate: str) -> str:
         return ""
     for row in loop.backlog.tasks():
         if str(row.get("id")) != str(task.get("id")) \
-                and str(row.get("gate") or "").strip() == gate:
+                and _kept_gate(row) == gate:
             return str(row.get("id"))
     return ""
 
@@ -87,6 +92,15 @@ def _send_to_its_owner(loop, task: dict, tree, owner: str, clash) -> TaskOutcome
     watchdog's quarantine. What bounds the wait is the owner's own round cap: an
     owner that spends it ends `rejected`, never settles, and a person is the
     next actor for both cards, which the doctor's starved check says out loud.
+
+    A `done` owner is the one exception: accepted work never reopens for new
+    work's sake. Reopening it would spend this card's rounds retrying into the
+    same red gate for ever, since the owner would settle `done` again the
+    instant the repair lands and nothing would tell the two apart. So a `done`
+    owner is left exactly as it was, and this card is parked with
+    `blocked_by_human` for a person to make the new decision the defect calls
+    for — not offered again, and not the owner's `needs` to wait on, since a
+    `done` id is already "finished" to every reader that checks `needs`.
     """
     task_id = task["id"]
     # One phrase, on the event and on the owner's card: a repair sent off with
@@ -101,16 +115,10 @@ def _send_to_its_owner(loop, task: dict, tree, owner: str, clash) -> TaskOutcome
     with loop.backlog.only_writer():
         owned = loop.backlog.task(owner) or {}
         if owned.get("status") == "done":
-            # Its hold is passed back explicitly: any write of `todo` pops
-            # `blocked_by_human` (`Backlog._apply`), and a person's hold on the
-            # owner is not this failure's to lift. The dependent waits either way.
-            loop.backlog.set_status(
-                owner, "todo", blocked_by_human=owned.get("blocked_by_human") or None,
-                gate_reviewed_first=True, rebuild_round=None, rebuild_from=None,
-                gate_rounds=None, gate_rounds_refunded=None,
-                refused_why=f"its own gate {defect}, so the gate is the "
-                            f"defect: {clash}"[:400])
-        needs = list(dict.fromkeys([*(task.get("needs") or []), owner]))
-        loop.backlog.set_status(task_id, "todo", rebuild_from=tree.path,
-                                needs=needs, refused_why=None)
+            loop.backlog.set_status(task_id, "todo", blocked_by_human=True,
+                                    rebuild_from=tree.path, refused_why=why[:400])
+        else:
+            needs = list(dict.fromkeys([*(task.get("needs") or []), owner]))
+            loop.backlog.set_status(task_id, "todo", rebuild_from=tree.path,
+                                    needs=needs, refused_why=None)
     return TaskOutcome("rejected", why, tree.path)

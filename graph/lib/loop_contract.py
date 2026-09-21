@@ -9,7 +9,6 @@ from __future__ import annotations
 import resources
 from accepted_contract import criteria
 from contract import frozen_requirement
-from effort import review_effort
 from loop_judge_retry import moved_first
 from loop_types import TaskOutcome
 from prompts import contract_digest, contract_prompt
@@ -35,8 +34,7 @@ def contract(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOu
     prompt = contract_prompt(task)
     loop.space.artifact(task_id, "contract-prompt", prompt)
     with loop.space.step(task_id, "contract") as note:
-        verdict = loop.review(prompt, effort=review_effort(task), cwd=tree.path,
-                              space=loop.space, task_id=task_id)
+        verdict = loop.review(prompt, cwd=tree.path, space=loop.space, task_id=task_id)
         note(verdict=verdict.verdict, outcome=verdict.kind)
     loop.space.artifact(task_id, "contract-answer", verdict.raw or verdict.text)
     if not verdict.ok:

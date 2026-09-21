@@ -61,7 +61,10 @@ class Keeper:
         staged = staged_names(worktree)
         if not staged:
             return None
-        subject = f"{task_id}: {message}".strip()[:100]
+        # Callers pass a free-text goal, never a Conventional Commits type, so
+        # `chore` is the generic type; the card id stays in the scope, where
+        # the repository's own commit hook and this test both expect it.
+        subject = f"chore({task_id}): {message}".strip()[:100]
         # The commit is built on the branch's CURRENT tip, never on the
         # worktree's base: a task keeps building while others are kept, and a
         # commit parented on its stale base would silently discard every keep

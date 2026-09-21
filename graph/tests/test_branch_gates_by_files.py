@@ -13,8 +13,9 @@ import loop_judge
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 import yaml  # type: ignore[import-untyped]  # no stubs in this environment
 from backlog import Backlog
+from doctor import check_backlog
 
-EXPECTED_TESTS = 2
+EXPECTED_TESTS = 4
 
 
 def _loop(rows: list[dict]):
@@ -29,6 +30,32 @@ def _loop(rows: list[dict]):
 
 
 class TouchedFilesTest(unittest.TestCase):
+    def test_kept_one_shot_gates_use_only_the_explicit_lasting_form(self):
+        lasting = "grep -q implemented a.py"
+        judge = {"id": "J", "status": "done", "files": ["a.py"],
+                 "gate": "! grep -q implemented a.py", "gate_until_kept": True,
+                 "gate_when_kept": lasting}
+        current = {"id": "C", "status": "todo", "files": ["a.py"],
+                   "gate": "test -f a.py", "gate_until_kept": True,
+                   "gate_when_kept": "false"}
+        loop = _loop([judge, current])
+        self.assertEqual([], check_backlog(loop.backlog))
+        self.assertEqual([lasting, current["gate"]],
+                         loop_judge._gates_on_the_branch(loop, current))
+        self.assertEqual("J", loop_judge._gate_owner(loop, current, lasting))
+
+    def test_one_shot_cards_without_a_lasting_gate_draw_one_named_complaint(self):
+        for status in ("todo", "done", "dropped", "sliced", "rejected"):
+            for fields in ({}, {"gate_when_kept": None}, {"gate_when_kept": ""},
+                           {"gate_when_kept": " \t\n"}):
+                with self.subTest(status=status, fields=fields):
+                    judge = {"id": "J", "status": status, "files": ["a.py"],
+                             "gate": "test -f a.py", "gate_until_kept": True, **fields}
+                    complaints = check_backlog(_loop([judge]).backlog)
+                    self.assertEqual(1, len(complaints))
+                    self.assertEqual("J", complaints[0].about)
+                    self.assertIn("gate_when_kept", complaints[0].do)
+
     def test_only_affected_cards_are_gated_regardless_of_age(self):
         rows: list[dict] = [
             {"id": f"K{n}", "goal": "g", "status": "done", "gate": f"test -f k{n}",

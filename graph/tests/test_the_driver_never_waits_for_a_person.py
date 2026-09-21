@@ -17,6 +17,7 @@ another agent holds a claim, and what it finishes can release a dependency.
 
 from __future__ import annotations
 
+import collections
 import importlib.util
 import os
 import pathlib
@@ -64,9 +65,9 @@ def campaign(root: pathlib.Path, task: dict) -> types.SimpleNamespace:
 
 class TheFlagIsGone(unittest.TestCase):
     def test_run_no_longer_takes_keep_going(self):
-        parser = build_parser("graph", {name: None for name in
-                                        ("init", "sources", "approve", "status", "report",
-                                         "doctor", "plan", "run", "stop")})
+        # Every subcommand answers None, so a command added beside `run`
+        # never has to be listed here for this to go on saying what it says.
+        parser = build_parser("graph", collections.defaultdict(lambda: None))
         with self.assertRaises(SystemExit):
             parser.parse_args(["run", "--keep-going"])
         self.assertEqual(3, parser.parse_args(["run"]).lanes)   # the rest of `run` still parses

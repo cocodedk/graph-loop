@@ -22,6 +22,8 @@ only where a task says so, and the loop says out loud when it needs one.
 | part | one job |
 |---|---|
 | backlog | which task may start: dependencies met, files disjoint, humans respected |
+| waves | the same question asked forward: what would run together, wave after wave |
+| throttle | `--lanes auto`: how many lanes this machine will take, turn by turn |
 | providers | call a model and read the answer honestly; a limit or a denial is never an attempt |
 | gates | run a gate; the exit code decides; prove it red before anyone builds |
 | workspace | the campaign's memory: rotating events, timed steps, artifacts, claims, alerts, the stop flag |
@@ -40,6 +42,13 @@ only where a task says so, and the loop says out loud when it needs one.
 | driver | init → approve → plan → run; status, report, doctor; stop and stop now |
 | supervisor | restart a dead driver, back off on a crash loop, hourly report snapshots |
 | window | clear, print the view, sleep |
+
+## The frontier, and the lanes that follow it
+
+The purpose of the graph is to assign a new agent each time it branches out, as many as
+there are branches. The loop already does the running; the view of it, the record of what
+the cap costs, the projection into waves and `--lanes auto` — the throttler that reads
+this machine and never raises into the loop — are `LANES.md`, beside this file.
 
 ## The card
 
@@ -94,6 +103,19 @@ holds what was written for a person, and the loop never touches it.
 Gate rules: every path relative to the worktree; every stage in its own subshell
 `(cd … && …)`; `set -o pipefail`; the verdict is the exit code; it must fail today for the
 reason the task exists.
+
+## Relatives: memory and learning around a card
+
+A card is never edited to remember something. What is decided, tried or learned about a
+node goes in a **relative** — a separate note that links to the node — so Obsidian shows it
+as the node's neighbour while the node stays byte for byte what it was. Three kinds
+(`memory-`, `learning-`, `evaluation-`), each in a `relatives/` sub-folder, never beside a
+card: `molecule.ordered` reads every other `.md` in a molecule as an atom, and one it
+cannot number stops the whole backlog read. `graph-goal.py remember` writes a node's memory
+from the campaign log, by hand after a driver stops; the loop itself still neither writes
+nor reads a relative.
+
+**The convention, and what that command owns, is in `docs/RELATIVES.md`.**
 
 ## Two phases that never mix
 

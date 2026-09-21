@@ -105,7 +105,7 @@ def check(space, *, attempt_ceiling: int = ATTEMPT_LIMIT,
 
 def _is_progress(row: dict) -> bool:
     """One event that means the campaign actually moved: work accepted, a
-    queued rebuild, a task's own gate going green, or cards planned. That last
+    charged rebuild, a task's own gate going green, or cards planned. That last
     is here for the same reason `PLANNING` is: the plan phase runs before the
     build in the same campaign directory, and without it a plan phase that ran
     longer than the hours ceiling handed the build a window that was already
@@ -118,7 +118,7 @@ def _is_progress(row: dict) -> bool:
     ceiling all read, so they agree on what "since progress" means."""
     kind = row.get("kind")
     if kind in ("accepted", "rebuild_queued", "planned"):
-        return True
+        return kind != "rebuild_queued" or row.get("charged") is not False
     return kind == "step" and row.get("step") == "gate" and bool(row.get("passed"))
 
 

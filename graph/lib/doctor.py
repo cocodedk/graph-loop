@@ -18,6 +18,7 @@ import time
 import where
 from backlog_status import is_live
 from doctor_auth import check_auth
+from doctor_slices import check_orphan_slices
 from doctor_spend import check_costly_silence
 from doctor_starved import check_starved
 from doctor_types import Complaint
@@ -113,6 +114,11 @@ def check_backlog(backlog) -> list[Complaint]:
         if not gate.strip() and task.get("status") == "todo":
             out.append(Complaint(name, "it has no gate, so nothing can prove it done",
                                  "give it a gate that fails today"))
+        lasting = task.get("gate_when_kept")
+        if task.get("gate_until_kept") is True and (not isinstance(lasting, str) or not lasting.strip()):
+            out.append(Complaint(
+                name, "its one-shot gate has no lasting check, so regression protection ends at keep",
+                "give gate_until_kept a non-empty gate_when_kept"))
         judges = gate_files(task)
         if judges and not task.get("gate_files_are_the_work"):
             out.append(Complaint(
@@ -175,7 +181,8 @@ def diagnose(backlog, space, rows: list[dict] | None = None) -> list[Complaint]:
     claimed = space.claimed_now()
     return (check_backlog(backlog) + check_campaign(space, rows, claimed)
             + check_costly_silence(space, sliced, rows, claimed)
-            + check_starved(tasks, len(claimed)) + check_auth())
+            + check_starved(tasks, len(claimed)) + check_auth()
+            + check_orphan_slices(tasks, parents))
 
 
 def as_text(complaints: list[Complaint]) -> str:

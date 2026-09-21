@@ -1,7 +1,7 @@
-"""Which builder gets the tool that creates a file.
+"""Every code builder gets both writing tools; file scope bounds the edits.
 
 Split from `test_loop_live` at the 200-line cap; it was never about live
-tasks. Edit changes what exists; only Write makes a file.
+tasks. Tool choice does not grant extra files.
 """
 
 from __future__ import annotations
@@ -21,12 +21,9 @@ EXPECTED_TESTS = 1
 
 
 class MayAddToolsTest(unittest.TestCase):
-    def test_only_a_creator_gets_the_tool_that_creates(self):
-        # Edit changes what exists; a split needs Write (T26.v3 could not split),
-        # and so does a card whose listed file is not made yet (T26.observed).
-        # A card whose files all exist gets no Write.
-        self.assertNotIn("Write", builder_tools(task(files=["README.md"]), str(where.loop())))
-        self.assertIn(",Write,", builder_tools(task(may_add_files=True)))
+    def test_every_code_builder_gets_edit_and_write(self):
+        self.assertIn(",Edit,Write,", builder_tools(task(files=["README.md"]), str(where.loop())))
+        self.assertIn(",Edit,Write,", builder_tools(task(may_add_files=True)))
         self.assertNotIn("Write", builder_tools(task(gate_has_side_effects=True, may_add_files=True,
                                                      files=["state/x.txt"], helper_verbs=["journal"])))
 

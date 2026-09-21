@@ -12,6 +12,8 @@ to look at first.
 
 from __future__ import annotations
 
+from report_cuts import cut_line, cuts
+
 
 def _local_hhmm(at: str) -> str:
     """The log stores UTC; a person reads the clock on the wall."""
@@ -32,6 +34,19 @@ def _since_accept(rows: list[dict]) -> list[dict]:
 
 WORK_STEPS = ("build", "gate")
 JUDGE_STEPS = ("red_first", "contract", "diff_review")
+
+
+def turns(rows: list[dict]) -> list[dict]:
+    """Each turn's frontier width against the lanes it could run, in order.
+
+    Read from the one record the turn wrote (`turn_plan.width_against_lanes`),
+    never recomputed here: a second reading of the graph days later is a
+    different graph, because the backlog is re-sliced between runs.
+    """
+    return [{"turn": str(row.get("turn") or "?"), "at": str(row.get("at") or ""),
+             "width": int(row.get("width") or 0), "cap": int(row.get("cap") or 0),
+             "lanes": int(row.get("lanes") or 0)}
+            for row in rows if row.get("kind") == "turn_lanes"]
 
 
 def report(space) -> dict:
@@ -59,10 +74,21 @@ def report(space) -> dict:
         by_task[row.get("task", "?")] = by_task.get(row.get("task", "?"), 0.0) + \
             float(row.get("seconds") or 0)
 
+    per_turn = turns(rows)
     counted = [row for row in attempts if row.get("counted")]
     reviews = [row for row in attempts if row.get("purpose") == "review"]
     decisions = [row for row in attempts if row.get("purpose") == "decide"]
+    # A router decision is a "routed" event, not an "attempt" — it never
+    # consumes a build attempt — but its measured fee is spend all the same,
+    # a paid decision that fell back included, an offline route (no figure)
+    # never turned into an invented zero-cost charge.
+    routed = [row for row in rows if row.get("kind") == "routed"]
     return {
+        "turns": per_turn,
+        # The turns where the graph branched out further than the loop could
+        # follow: the frontier the owner's rule is about, and the one number
+        # that says whether the cap is costing anything.
+        "turns_wider": [row["turn"] for row in per_turn if row["width"] > row["cap"]],
         "tasks": len(by_task),
         "seconds": round(total, 1),
         "by_step": by_step,
@@ -74,7 +100,8 @@ def report(space) -> dict:
                                      if name in WORK_STEPS), 1),
         "seconds_on_judging": round(sum(entry["seconds"] for name, entry in by_step.items()
                                         if name in JUDGE_STEPS), 1),
-        "spend_known": round(sum(row.get("cost") or 0 for row in attempts), 4),
+        "spend_known": round(sum(row.get("cost") or 0 for row in attempts) +
+                             sum(row.get("cost") or 0 for row in routed), 4),
         # Codex has no account of its own and Claude shares builder accounts,
         # so a review call is told apart only by `purpose="review"`
         # (workspace.py `attempt`). A review with no cost figure is counted,
@@ -102,6 +129,7 @@ def report(space) -> dict:
                                       ("refused", "rejected", "rebuild_queued", "failed")]),
         "accepts": sum(1 for row in rows if row.get("kind") == "accepted"),
         "artifacts": sum(1 for row in rows if row.get("kind") == "artifact"),
+        "cuts": cuts(space),
     }
 
 
@@ -148,6 +176,19 @@ def as_text(out: dict) -> str:
             lines.append(f"  - {wrapped[0]}")
             lines.extend(f"    {line}" for line in wrapped[1:])
         lines.append("  (every refusal in full: calls/<task>/*-contract-answer.txt)")
+    if out["turns"]:
+        wider = out["turns_wider"]
+        lines.append(f"frontier against lanes: {len(out['turns'])} turn(s) recorded, "
+                     f"{len(wider)} where the graph was wider than the loop")
+        for turn in out["turns"][-5:]:
+            lines.append(f"  {_local_hhmm(turn['at'])}  {turn['turn']}  "
+                         f"width {turn['width']}  cap {turn['cap']}  "
+                         f"lanes {turn['lanes']}"
+                         + ("  — wider than the loop" if turn["width"] > turn["cap"] else ""))
+        if wider:
+            lines.append("  wider than the loop: " + ", ".join(wider[:5])
+                         + (f" (+{len(wider) - 5} more)" if len(wider) > 5 else ""))
+    lines.append(cut_line(out))
     lines.append(f"everything said and seen is written down: {out['artifacts']} files "
                  "under calls/")
     return "\n".join(lines)

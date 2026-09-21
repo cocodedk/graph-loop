@@ -39,13 +39,12 @@ def answer(text: str) -> Outcome:
     return Outcome("ok", text=text)
 
 
-# A rewrite narrows the goal, the files and the done-when; it never touches the gate
-# (red-first runs it, so a rewritten gate would execute planner text unreviewed).
-GOOD = """goal: make greet in a.py return two for any input
+# Rewording preserves the behaviour; a changed gate is reviewed before it runs.
+GOOD = """goal: have a.py say two
 files:
   - a.py
 gate: grep -q two a.py
-done_when: a.two() returns 2, proved by a test that fails today
+done_when: a.py says two
 """
 
 
@@ -68,6 +67,13 @@ class ReplanTest(unittest.TestCase):
         self.assertIn("goal, files, done_when, gate", seen["prompt"])
         self.assertIn("its first line, alone, is exactly `set -e -o pipefail`", seen["prompt"])
         self.assertIn("Never pin EXPECTED to a literal, to len(...), or to a value read from HEAD", seen["prompt"])
+        self.assertIn("strengthen the gate or remove an unprovable sentence", seen["prompt"])
+        self.assertIn("NEVER add a new claim to the goal or done-when", seen["prompt"])
+        self.assertIn("must not narrow the recorded requirement", seen["prompt"])
+        self.assertIn("Recorded requirement: {'goal': 'make a.py say two'", seen["prompt"])
+        self.assertNotIn("Narrow the goal", seen["prompt"])
+        self.assertIn("no quiet flags that drop compiler errors, no deleting the log it greps", seen["prompt"])
+        self.assertIn("compilation/interface availability, never continued non-implementation", seen["prompt"])
 
     def test_the_reviewer_findings_reach_the_planner(self):
         book = book_with()

@@ -52,18 +52,16 @@ def gate_left_its_lane(loop, task: dict, tree) -> TaskOutcome | None:
 
 
 def back_in_place(loop, task: dict, tree, state: str, said: str, note: str,
-                  *, review_kind: str = "", finished: dict | None = None) -> TaskOutcome:
+                  *, review_kind: str = "", build_kind: str = "",
+                  finished: dict | None = None) -> TaskOutcome:
     """A harness fault after paid work — a timeout, a crash, a review that did
     not happen: the card continues in the SAME kept tree as a counted round,
     never a fresh tree that re-pays the build, and at the cap a person looks.
 
-    `review_kind` is the review's own `Outcome.kind`, passed only by a review
-    call site — never a builder fault. When the belt would also skip it
-    (`resources.refused_before_reading`: capacity, a usage limit, an expired
-    session) the reviewer itself was never reached before it could answer:
-    not a finding about the work, so no round is spent, and the card goes
-    back to todo in the same worktree for the next turn to retry. A review
-    that answered — malformed or otherwise — still spends a round, as today.
+    `review_kind` and `build_kind` carry the provider's outcome. Capacity,
+    limits and auth failures spend no round, even after paid builder work:
+    the card goes back to todo in the same worktree. Other faults, including
+    crashes and malformed answers, still spend a bounded round.
 
     `finished` is the phase this round DID finish (`loop_resume`), passed only
     by a site that ran it: the next attempt re-runs what is missing and no
@@ -79,10 +77,10 @@ def back_in_place(loop, task: dict, tree, state: str, said: str, note: str,
             return ended
         task_id = task["id"]
         tree.keep(f"{said}; the work is here")
-        if review_kind and resources.refused_before_reading(review_kind):
+        if resources.refused_before_reading(review_kind or build_kind):
             loop.space.event("rebuild_queued", task=task_id,
                              round=int(task.get("rebuild_round") or 0), charged=False,
-                             why=f"{said}; the reviewer was unreachable, no round spent")
+                             why=f"{said}; the provider was unavailable, no round spent")
             loop.backlog.set_status(task_id, "todo", rebuild_from=tree.path,
                                     rejections=list(task.get("rejections") or []) + [note],
                                     refused_why=None, finished=finished)

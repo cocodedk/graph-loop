@@ -22,6 +22,7 @@ from contract_uses import question as uses_question
 # Shown only when the card carries one, always in this order, so one contract
 # has one digest however the card was written.
 REST = (("waits for", "needs"), ("uses", "uses"), ("creates", "creates"),
+        ("gate_until_kept", "gate_until_kept"), ("gate_when_kept", "gate_when_kept"),
         ("red proof must contain", "expect_red"), ("sliced from", "sliced_from"))
 
 
@@ -45,13 +46,8 @@ def field(label: str, value: object) -> str:
 
 
 def frozen_requirement(task: dict) -> dict:
-    """What the card was granted, as the host records it before any rewrite.
-
-    A rewrite narrows the goal — that is what a rewrite is for — and a reviewer
-    shown only the narrowed one judges "prove A" against "prove A" and never
-    sees that B was dropped (astra round 3, finding 8). The host writes this
-    once and no model ever writes it: an answer is refused for a key it does
-    not name, and the replanner stores goal, files, done_when and gate only.
+    """The host freezes the granted requirement before any rewrite, so both
+    reviewers can see if a rewrite dropped behaviour. No model writes it.
     """
     return {"goal": task.get("goal"), "done_when": task.get("done_when"),
             "sources": [str(one) for one in task.get("source") or []]}
@@ -100,15 +96,20 @@ def contract_prompt(task: dict) -> str:
         "Do not refuse it for being able to edit that file; judge whether the goal "
         "and the done-when say plainly what the test must assert.\n"
         if task.get("gate_files_are_the_work") else
-        "\nThe test its gate runs is not in this task's files: the builder cannot "
-        "touch what judges it.\n")
+        "\nRefuse it if the builder can edit the test its gate runs: the builder "
+        "must not touch what judges it unless gate_files_are_the_work.\n")
     return (
-        "Review this task contract before anyone edits a file. Refuse it if it is "
-        "broader than one idea, if its files do not cover what its gate can fail on, "
-        "if its gate could pass without the work being done, or if it needs authority "
-        "the goal does not grant.\n"
-        + ("Refuse a rewrite that proves less than the requirement recorded below, "
-           "unless its note names the recorded decision that narrowed it.\n"
+        "Review this task contract before anyone edits a file. Can this gate pass without "
+        "the work being done, and do the files cover what the gate can fail on? "
+        "Name a concrete bypass or a blocking file. Refuse those defects, work broader "
+        "than one idea, or authority the goal does not grant. Incidental implementation "
+        "description in Goal/Done-when/Note need not be mechanically asserted by the gate. "
+        "The behavioural requirement stays visible and must not be narrowed. "
+        "Assume an honest builder whose diff is reviewed afterwards: a bypass only a "
+        "deliberately deceptive builder would write (hard-coding the judge's expected values, "
+        "a lookup table keyed on test data) is the diff review's finding, not grounds to "
+        "refuse a contract.\n"
+        + ("Refuse a rewrite that proves less than the requirement recorded below.\n"
            if task.get("requirement") else "")
         + writes_its_test + uses_question(task) + fixture_question(task) + "\n"
         + contract_text(task)

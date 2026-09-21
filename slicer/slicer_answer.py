@@ -6,6 +6,7 @@ re-exports `run_answer`.
 
 from __future__ import annotations
 
+import copy
 import pathlib
 import sys
 
@@ -25,7 +26,7 @@ from tree import CardMoved, publish
 
 def run_answer(text: str, *, repo: pathlib.Path, backlog: pathlib.Path,
                sources: list[pathlib.Path], target_id: str = "",
-               started: dict | None = None, reviewer=None) -> tuple[str, str]:
+               started: dict | None = None, reviewer=None, checker=None) -> tuple[str, str]:
     # every review reads the checkout the planner read (`ask(question, repo)`)
     judge = reviewer or (lambda question: review(question, repo))
     book = Backlog(backlog)
@@ -59,6 +60,9 @@ def run_answer(text: str, *, repo: pathlib.Path, backlog: pathlib.Path,
             return ("review_unavailable" if verdict.down else "coverage_refused"), verdict.why
         close(backlog, sources, verdict.text, repo, rows)
         return "covered", answer["reason"]
+    if checker is not None:
+        answer = _checked(answer, checker, backlog, {"repo": repo, "sources": sources,
+                                                     "rows": rows, "target": target})
     if target:
         trace(backlog, "progress_review_call", target=target_id)
         verdict = judge(asking.progress_prompt(repo, target, answer["molecule"]))
@@ -68,3 +72,30 @@ def run_answer(text: str, *, repo: pathlib.Path, backlog: pathlib.Path,
     name = publish(backlog, answer["molecule"], target_id, started)
     trace(backlog, "published", molecule=str(name), sliced_from=target_id or "(source gap)")
     return "published", name
+
+
+def _checked(answer: dict, checker, backlog: pathlib.Path, args: dict) -> dict:
+    """Findings refuse the answer; a changed molecule is validated again like a planner's."""
+    try:
+        # a copy: a checker that edits in place and then fails, or returns the
+        # molecule it edited, must not alter or hide a change from the original
+        checked = checker(copy.deepcopy(answer["molecule"]))
+    except Exception as error:  # noqa: BLE001 — `checker` is an injected call, may raise anything
+        # a checker that fails is not a reason to refuse the plan, but say so
+        trace(backlog, "cut_checked", molecule=answer["molecule"]["name"], **_counts(None),
+              findings=0, failed=f"{type(error).__name__}: {error}")
+        return answer
+    changed = checked.molecule != answer["molecule"]
+    trace(backlog, "cut_checked", molecule=answer["molecule"]["name"], **_counts(checked),
+          findings=len(checked.findings), changed=changed, failed="")
+    if checked.findings:
+        raise ValueError("; ".join(str(finding) for finding in checked.findings))
+    if changed:
+        return validate({**answer, "molecule": checked.molecule}, **args)
+    return answer
+
+
+def _counts(checked) -> dict:
+    """What the check did, read off its result; a result that carries none of it reads as zero."""
+    return {key: getattr(checked, key, zero) for key, zero in
+            (("mode", ""), ("requests", 0), ("seconds", 0.0), ("usable", 0), ("merges", 0))}

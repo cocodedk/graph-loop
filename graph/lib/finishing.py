@@ -11,6 +11,7 @@ said "covered" while the same campaign was waiting for a person.
 from __future__ import annotations
 
 import pathlib
+import shlex
 import sys
 
 # Appended, never inserted: the graph's own lib keeps first claim on every name.
@@ -100,16 +101,22 @@ def stand_down(space, book) -> int:
     from source_gap import end_on_stopped_gap, end_on_unproved_work, ended
     gaps = ended(space)
     if gaps:
-        return _ended_with(gaps)
+        return _ended_with(gaps, space)
     if declared_sources(space):
         if not covered_since_planning(space):
             gaps = end_on_stopped_gap(space, book)
             if gaps is None:
-                print("not finished: the plan phase has not closed the source gap")
+                latest = next((row for row in reversed(space.events())
+                               if row.get("task") == SOURCE_GAP and row.get("why")), {})
+                print(f"not finished: source gap: {latest.get('why') or 'coverage not reviewed'}; "
+                      f"sources: {', '.join(declared_sources(space))}")
+                _plan_again(space)
                 return 1
-            return _ended_with(gaps)
+            return _ended_with(gaps, space)
         if not accepted(book.path, book.tasks()):
-            print("not finished: no accepted coverage stands for the backlog as it is")
+            print("not finished: no accepted coverage stands for the backlog as it is; "
+                  f"source gap: {', '.join(declared_sources(space))}")
+            _plan_again(space)
             return 1
     # Everything else says the campaign is finished — and work the loop never
     # proved, dropped or still owed, takes the place of that zero and only of
@@ -117,9 +124,19 @@ def stand_down(space, book) -> int:
     # driver and the slicer, which is shown the dropped cards' contracts, plans
     # the gap again (astra's round-3 finding 20, round-4 finding 12).
     gaps = end_on_unproved_work(space, book)
-    return _ended_with(gaps) if gaps else 0
+    return _ended_with(gaps, space) if gaps else 0
 
 
-def _ended_with(gaps: dict) -> int:
+def _ended_with(gaps: dict, space) -> int:
     print(f"ended with gaps: {gaps['gaps'] or gaps['why']}")
+    _plan_again(space)
     return ENDED_WITH_GAPS
+
+
+def _plan_again(space) -> None:
+    sources = declared_sources(space)
+    if sources:
+        command = ["python3", "graph/graph-goal.py", "--workspace", str(space.root)]
+        reopen = command + ["sources"] + [arg for source in sources for arg in ("--source", source)]
+        print("To close this gap, resolve the named claim, then obtain accepted coverage with: "
+              f"{shlex.join(reopen)} && {shlex.join(command + ['plan'])}")

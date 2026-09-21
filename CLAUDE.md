@@ -54,7 +54,7 @@ If it fails, fix the file. Never the check.
 - PyYAML is the only runtime dependency. A second one needs a reason in the pull
   request.
 - Fix a bug at its root: one guard in the shared function, after reading every
-  caller.
+  caller. Graph-Loop must repair its own bugs.
 - A deliberate shortcut carries a `# ponytail: <ceiling>, <upgrade path>`
   comment, so the next reader knows it was chosen rather than missed.
 - Code lints clean before it commits (`ruff check .`).

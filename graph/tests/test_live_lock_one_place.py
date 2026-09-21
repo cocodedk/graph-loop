@@ -22,7 +22,7 @@ import unittest
 import unittest.mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
-import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
+import tmp_root
 import worktree_lock
 from worktree import LiveLock
 
@@ -35,8 +35,11 @@ LIB = str(pathlib.Path(__file__).resolve().parents[1] / "lib")
 # name is the test's own throwaway, so this never reaches `graph-live`.
 DRIVER = f"""
 import sys
+from types import SimpleNamespace
 sys.path.insert(0, {LIB!r})
 import worktree_lock
+# Both processes share one passwd home, independently of their environments.
+worktree_lock.pwd.getpwuid = lambda uid: SimpleNamespace(pw_dir={tmp_root.ROOT!r})
 worktree_lock.LIVE_STACK = sys.argv[1]
 lock = worktree_lock.stack_lock()
 got = lock.take("T1")

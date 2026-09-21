@@ -21,13 +21,17 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
+import cardfile
+import source_gap
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
+import where
 from backlog import Backlog
-from finishing import covered_since_planning
+from finishing import ENDED_WITH_GAPS, covered_since_planning, stand_down
 from slice_outcome import record_outcome
+from slicer_state import close
 from workspace import Workspace
 
-EXPECTED_TESTS = 4
+EXPECTED_TESTS = 5
 
 
 def campaign() -> tuple[Workspace, Backlog]:
@@ -46,6 +50,18 @@ def campaign() -> tuple[Workspace, Backlog]:
 
 
 class ClearedTest(unittest.TestCase):
+    def test_new_coverage_does_not_finish_an_unsettled_backlog(self):
+        space, book = campaign()
+        (book.path / "owed").mkdir()
+        (book.path / "owed" / "molecule.md").write_text(cardfile.dump({
+            "id": "owed", "status": "rejected", "goal": "the source claim",
+            "files": ["a.py"], "gate": "true", "done_when": "proved"}), "utf-8")
+        source_gap.end_with_gaps(space, book, "", {"gap": "the source claim"})
+        close(book.path, [where.loop() / "README.md"], "accepted", where.loop(), book.tasks())
+        record_outcome(book, space, "the sources", None, "covered: reviewed", 0)
+        self.assertEqual(ENDED_WITH_GAPS, stand_down(space, book))
+        self.assertIn("owed", source_gap.ended(space)["gaps"])
+
     def test_a_gap_that_then_asks_for_a_person_clears_the_proof(self):
         space, book = campaign()
         record_outcome(book, space, "the sources", None,
