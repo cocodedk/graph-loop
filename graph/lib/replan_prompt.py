@@ -8,17 +8,21 @@ name every caller and test uses.
 from __future__ import annotations
 
 from backlog_status import is_live
+from contract import frozen_requirement
 
 
 def prompt_for(task: dict) -> str:
     return (
         "A reviewer refused this task's contract. Rewrite the contract so the "
         "objection cannot be made again. Keep the same intent and the same files "
-        "— you may drop a file, never add one — and keep it one idea.\n\n"
+        "— you may drop a file, never add one — and keep it one idea. You may "
+        "strengthen the gate or remove an unprovable sentence, but NEVER add a new claim "
+        "to the goal or done-when and must not narrow the recorded requirement.\n\n"
         f"goal: {task.get('goal')}\n"
         f"files: {task.get('files')}\n"
         f"gate: {task.get('gate')}\n"
         f"done when: {task.get('done_when')}\n\n"
+        f"Recorded requirement: {task.get('requirement') or frozen_requirement(task)}\n\n"
         f"What the reviewer said:\n{task.get('refused_why')}\n\n"
         + ("Earlier reasons this task was refused, oldest first — a rewrite that repeats one is refused again:\n"
            + "\n".join(f"- {why}" for why in task.get("replan_history") or []) + "\n\n"
@@ -37,7 +41,10 @@ def prompt_for(task: dict) -> str:
            "literal, to len(...), or to a value read from HEAD: the runner's EXPECTED counts "
            "test cases and moves as tests land, so assert it only against what the runner "
            "collects (`countTestCases()`/`run_all.EXPECTED`).\n\n")
-        + "Answer with YAML only, these keys and nothing else: goal, files, done_when"
+        + "A gate must never hide or delete the output a builder needs: no quiet flags "
+        "that drop compiler errors, no deleting the log it greps. A stub's acceptance checks "
+        "compilation/interface availability, never continued non-implementation.\n\n"
+        "Answer with YAML only, these keys and nothing else: goal, files, done_when"
         + ("." if is_live(task) else ", gate.")
-        + " Narrow the goal to one idea, name every file the gate can fail on, "
+        + " Keep the goal to one idea, name every file the gate can fail on, "
         "and say plainly what the gate will prove and what it will not.")

@@ -6,7 +6,7 @@ reviewer before the build and by the diff reviewer after it. Neither could see
 that the card had been narrowed at all.
 
 The host freezes the requirement at the FIRST contract review (and the replanner
-freezes it before it narrows anything, because a card refused for its NAMES is
+freezes it before it rewrites anything, because a card refused for its NAMES is
 rewritten before any review). It is host-owned: no model writes it.
 """
 
@@ -60,9 +60,11 @@ class FrozenRequirementTest(unittest.TestCase):
         self.assertIn("two and three", fakes.seen[0])      # the contract review
         self.assertIn("two and three", fakes.seen[1])      # the diff review
         self.assertIn("proves less than the requirement", fakes.seen[0])
+        self.assertNotIn("unless its note", fakes.seen[0])
+        self.assertIn("behavioural requirement stays visible and must not be narrowed", fakes.seen[0])
         self.assertEqual(GRANTED, book.task("T1")["requirement"])
 
-    def test_the_replanner_freezes_it_before_it_narrows_anything(self):
+    def test_the_replanner_freezes_it_before_rewording_anything(self):
         book = book_with()
         out = replan(book, book.task("T1"), lambda prompt: answer(GOOD))
         self.assertTrue(out.rewritten, out.why)

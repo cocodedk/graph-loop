@@ -23,7 +23,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 
 from prompts import already_read, contract_digest, contract_prompt
 
-EXPECTED_TESTS = 6
+EXPECTED_TESTS = 8
 
 # The requirement is on the card because every accepted card carries one: without
 # it `already_read` refuses on that ground alone, and the two edit tests below
@@ -43,6 +43,22 @@ def edited_after_acceptance(**edits: object) -> dict:
 
 
 class ContractFieldsTest(unittest.TestCase):
+    def test_review_targets_real_bypasses_and_blocking_files(self):
+        prompt = contract_prompt(CARD)
+        for rule in ("Can this gate pass without the work being done, and do the files cover what the gate can fail on?",
+                     "Name a concrete bypass or a blocking file", "Assume an honest builder",
+                     "hard-coding the judge's expected values", "a lookup table keyed on test data",
+                     "the diff review's finding, not grounds to refuse a contract",
+                     "Incidental implementation description in Goal/Done-when/Note",
+                     "need not be mechanically asserted by the gate"):
+            self.assertIn(rule, prompt)
+
+    def test_only_a_test_delivery_may_edit_the_test_its_gate_runs(self):
+        self.assertIn("Refuse it if the builder can edit the test its gate runs", contract_prompt(CARD))
+        delivery = contract_prompt(dict(CARD, gate_files_are_the_work=True))
+        self.assertIn("that is the deliverable", delivery)
+        self.assertIn("Do not refuse it for being able to edit that file", delivery)
+
     def test_a_new_wait_is_a_contract_nobody_has_read(self):
         card = edited_after_acceptance(needs=["T0", "T5"])
         self.assertFalse(already_read(card, in_place=True, reviewed_first=False))

@@ -15,8 +15,8 @@ import tempfile
 
 # The shipped default is one account, because only the machine running the
 # loop knows where a second one's configuration lives. The belt that walks to
-# another account when one runs out needs two, so the suite names two.
-os.environ.setdefault("GRAPH_ACCOUNTS", "work,second=/cfg/second")
+# another account when one runs out needs two, independent of the local environment.
+os.environ["GRAPH_ACCOUNTS"] = "work,second=/cfg/second"
 
 ROOT = tempfile.mkdtemp(prefix="graph-tests-")
 tempfile.tempdir = ROOT

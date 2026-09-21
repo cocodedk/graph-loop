@@ -25,7 +25,7 @@ from gate_script import gate_script_path
 from prompts import build_prompt
 from tools import builder_tools
 
-EXPECTED_TESTS = 4
+EXPECTED_TESTS = 5
 
 GATE = 'set -e -o pipefail\nWORK="$(mktemp -d)"\njavac -d "$WORK" src/A.java\njava -cp "$WORK" A\n'
 
@@ -38,6 +38,14 @@ def card(**more: object) -> dict:
 
 
 class TheBuilderCanFindItsGate(unittest.TestCase):
+    def test_running_the_gate_is_optional_even_after_a_denied_command(self):
+        for extra in ({}, {"gate": ""}, {"gate_has_side_effects": True}, {"rejections": ["old failure"]}):
+            said = build_prompt(card(**extra))
+            self.assertIn("You do not need to run the gate yourself", said)
+            self.assertIn("the loop runs it after you finish", said)
+            self.assertIn("if a command is denied, finish the edit and end normally", said)
+            self.assertIn("do not stop as BLOCKED for that", said)
+
     def test_the_prompt_names_the_path_it_was_granted(self):
         said = build_prompt(card())
         self.assertIn(f"bash {gate_script_path(card())}", said)
