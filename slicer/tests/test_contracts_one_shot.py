@@ -2,8 +2,8 @@
 
 import unittest
 
-import test_contracts
 import asking
+import test_contracts
 from backlog import Backlog
 from contract import contract_text
 from tree import publish

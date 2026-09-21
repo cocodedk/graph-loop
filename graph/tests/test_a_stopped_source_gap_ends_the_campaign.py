@@ -13,11 +13,11 @@ Companion to test_unfinished_work_is_not_a_finish.py, which covers the cards.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import pathlib
 import sys
 import unittest
-import contextlib
-import io
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import source_gap

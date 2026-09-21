@@ -21,16 +21,15 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
-import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
-from backlog import Backlog
-from finishing import covered_since_planning
-from slice_outcome import record_outcome
-from workspace import Workspace
-from finishing import ENDED_WITH_GAPS, stand_down
-from slicer_state import close
 import cardfile
 import source_gap
+import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 import where
+from backlog import Backlog
+from finishing import ENDED_WITH_GAPS, covered_since_planning, stand_down
+from slice_outcome import record_outcome
+from slicer_state import close
+from workspace import Workspace
 
 EXPECTED_TESTS = 5
 
