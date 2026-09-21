@@ -16,6 +16,11 @@ from keep_gate import GateMutatedTree
 from loop_types import TaskOutcome
 
 
+def _kept_gate(row: dict) -> str:
+    key = "gate_when_kept" if row.get("gate_until_kept") is True else "gate"
+    return str(row.get(key) or "").strip()
+
+
 def _gates_on_the_branch(loop, task: dict) -> list[str]:
     """This card's gate and completed cards whose files this card affects.
 
@@ -28,14 +33,14 @@ def _gates_on_the_branch(loop, task: dict) -> list[str]:
         return []
     kept = [row for row in loop.backlog.tasks()
             if row.get("status") == "done" and not is_live(row)
-            and str(row.get("gate") or "").strip()]
+            and _kept_gate(row)]
     kept.sort(key=lambda row: str(row.get("kept_at") or ""))     # keep order, not backlog order
     my_files = {str(path).rstrip("/") for path in (task.get("files") or [])}
     gates, seen = [], set()
     for row in kept:
         if not overlap(reach(row), my_files):
             continue
-        gate = str(row["gate"]).strip()
+        gate = _kept_gate(row)
         if gate not in seen:
             seen.add(gate); gates.append(gate)
     mine = str(task.get("gate") or "").strip()
@@ -57,7 +62,7 @@ def _gate_owner(loop, task: dict, gate: str) -> str:
         return ""
     for row in loop.backlog.tasks():
         if str(row.get("id")) != str(task.get("id")) \
-                and str(row.get("gate") or "").strip() == gate:
+                and _kept_gate(row) == gate:
             return str(row.get("id"))
     return ""
 

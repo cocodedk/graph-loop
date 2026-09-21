@@ -19,7 +19,7 @@ import loop_evidence
 from gates import GREEN_ALREADY
 from test_loop import Fakes, loop_for, task
 
-EXPECTED_TESTS = 1
+EXPECTED_TESTS = 2
 
 
 def green_after_a_drop(book):
@@ -33,6 +33,18 @@ def green_after_a_drop(book):
 
 
 class RedFirstCardMovedTest(unittest.TestCase):
+    def test_a_lasting_gate_edited_while_the_gate_ran_is_not_overwritten(self):
+        loop, book, space = loop_for(task(gate_until_kept=True), Fakes())
+
+        def edited(*args):
+            book.note("T1", gate_when_kept="test -f a.py")
+            return False, GREEN_ALREADY
+
+        with mock.patch.object(loop_evidence, "prove_red", edited):
+            loop.run_task(book.task("T1"))
+        self.assertEqual("todo", book.task("T1")["status"])
+        self.assertIn("card_moved", [row.get("kind") for row in space.events()])
+
     def test_a_card_dropped_while_the_gate_ran_stays_dropped(self):
         loop, book, space = loop_for(task(), Fakes())
         with mock.patch.object(loop_evidence, "prove_red", green_after_a_drop(book)):

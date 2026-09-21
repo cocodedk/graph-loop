@@ -31,7 +31,7 @@ sys.path.append(str(HERE.parent / "slicer"))
 
 import where
 from backlog import Backlog
-from finishing import ENDED_WITH_GAPS
+from finishing import ENDED_WITH_GAPS, stand_down
 from keep import Keeper
 from slice_outcome import record_outcome
 from slicer_state import close  # type: ignore[import-not-found]
@@ -42,7 +42,7 @@ assert _spec is not None and _spec.loader is not None
 graph_goal = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(graph_goal)
 
-EXPECTED_TESTS = 3
+EXPECTED_TESTS = 5
 SOURCE = "README.md"          # a real file of the loop's own checkout, read only for its bytes
 
 
@@ -83,6 +83,29 @@ NEEDS_PERSON = ("needs_person: the source asks for a method no gate can observe"
 
 
 class UncoveredTest(unittest.TestCase):
+    def test_a_recorded_gap_closes_after_done_cards_receive_coverage_review(self):
+        import cardfile
+        import source_gap
+        space, backlog = campaign()
+        (backlog / "covered").mkdir()
+        (backlog / "covered" / "molecule.md").write_text(cardfile.dump({
+            "id": "covered", "status": "done", "goal": "the source claim",
+            "files": ["a.py"], "gate": "true", "done_when": "proved"}), "utf-8")
+        self.assertEqual("done", Backlog(backlog).task("covered")["status"])
+        record_outcome(Backlog(backlog), space, "the sources", None, *NEEDS_PERSON)
+        self.assertEqual(ENDED_WITH_GAPS, stand_down(space, Backlog(backlog)))
+        self.assertIsNotNone(source_gap.ended(space))
+        close(backlog, [where.loop() / SOURCE], "accepted", where.loop(), Backlog(backlog).tasks())
+        self.assertEqual(0, run(space, backlog, *COVERED))
+        self.assertIsNone(source_gap.ended(space))
+        self.assertTrue(source_gap.may_try(space))
+
+    def test_a_covered_event_without_matching_review_cannot_finish(self):
+        space, backlog = campaign()
+        record_outcome(Backlog(backlog), space, "the sources", None, *NEEDS_PERSON)
+        self.assertEqual(ENDED_WITH_GAPS, stand_down(space, Backlog(backlog)))
+        self.assertEqual(1, run(space, backlog, *COVERED))
+
     def test_a_source_gap_that_asked_for_a_person_ends_with_that_gap(self):
         # Codex reproduced this: coverage had been accepted once, the gap later
         # needed a person, and the record still matched the backlog — so the

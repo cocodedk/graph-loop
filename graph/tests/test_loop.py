@@ -115,12 +115,14 @@ class HappyPathTest(unittest.TestCase):
         self.assertEqual("done", book.task("T1")["status"])
         self.assertNotIn("triage", book.task("T1"))
 
-    def test_the_gate_is_proved_red_before_the_builder_is_called(self):
+    def test_already_delivered_work_needs_no_builder(self):
         fakes = Fakes()
-        loop, book, _ = loop_for(task(gate="true"), fakes)   # green from the start
+        loop, book, _ = loop_for(task(gate="true"), fakes,
+                                [task(id="T0", status="done")])
         out = loop.run_task(book.task("T1"))
-        self.assertEqual("refused", out.state)
-        self.assertIn("already passes", out.why)
+        self.assertEqual("done", out.state)
+        self.assertIn("already delivered", out.why)
+        self.assertIn("T0", book.task("T1")["done_why"])
         self.assertEqual([], fakes.calls)
 
     def test_a_rejected_contract_never_reaches_a_builder(self):

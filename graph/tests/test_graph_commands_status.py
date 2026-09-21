@@ -23,7 +23,7 @@ sys.path.insert(0, str(HERE))
 import graph_commands
 from workspace import Workspace
 
-EXPECTED_TESTS = 1
+EXPECTED_TESTS = 2
 
 
 def _campaign() -> Workspace:
@@ -41,6 +41,30 @@ class StatusReviewSpendTest(unittest.TestCase):
     """`status` used to sum every attempt's cost itself, folding a review with
     no cost figure in as a silent zero. It must print report(space)'s own
     known/unknown split instead (one home for the numbers: report.py)."""
+
+    def test_status_rolls_up_only_named_nodes_without_writing_notes(self):
+        space = _campaign()
+        path = pathlib.Path(graph_commands._backlog_of(space))
+        rows = [{"id": "T1", "status": "done", "node": "[[N01-read]]"},
+                {"id": "T2", "status": "todo", "node": "[[N01-read]]"},
+                {"id": "T3", "status": "done", "node": "[[N02-write]]"},
+                {"id": "T4", "status": "rejected", "node": "[[N03-check]]"},
+                {"id": "T5", "status": "todo"}]
+        path.write_text(yaml.safe_dump({"tasks": rows}))
+        node = space.root / "N01-read.md"
+        node.write_text("A node note stays as written.\n")
+        before = {p: p.read_bytes() for p in space.root.rglob("*") if p.is_file()}
+        backlog_before = path.read_bytes()
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(0, graph_commands.command_status(
+                types.SimpleNamespace(workspace=str(space.root))))
+        lines = [line.strip() for line in out.getvalue().splitlines() if "node [[" in line]
+        self.assertEqual(["node [[N01-read]]: 1 done / 1 open",
+                          "node [[N02-write]]: 1 done / 0 open — built",
+                          "node [[N03-check]]: 0 done / 1 open"], lines)
+        self.assertEqual(before, {p: p.read_bytes() for p in space.root.rglob("*") if p.is_file()})
+        self.assertEqual(backlog_before, path.read_bytes())
 
     def test_status_shows_known_spend_and_the_unpriced_review_count(self):
         space = _campaign()

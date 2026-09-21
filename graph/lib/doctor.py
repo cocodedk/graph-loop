@@ -114,6 +114,11 @@ def check_backlog(backlog) -> list[Complaint]:
         if not gate.strip() and task.get("status") == "todo":
             out.append(Complaint(name, "it has no gate, so nothing can prove it done",
                                  "give it a gate that fails today"))
+        lasting = task.get("gate_when_kept")
+        if task.get("gate_until_kept") is True and (not isinstance(lasting, str) or not lasting.strip()):
+            out.append(Complaint(
+                name, "its one-shot gate has no lasting check, so regression protection ends at keep",
+                "give gate_until_kept a non-empty gate_when_kept"))
         judges = gate_files(task)
         if judges and not task.get("gate_files_are_the_work"):
             out.append(Complaint(

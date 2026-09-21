@@ -18,10 +18,32 @@ from loop import Loop
 from providers import Outcome
 from test_loop import Fakes, loop_for, repo_with, task
 
-EXPECTED_TESTS = 5
+EXPECTED_TESTS = 7
 
 
 class GateGreenInPlaceTest(unittest.TestCase):
+    def test_fresh_green_work_is_done_when_no_open_card_lists_its_files(self):
+        fakes = Fakes()
+        loop, book, space = loop_for(task(gate="grep -q one a.py"), fakes,
+                                    [task(id="T0", status="done"),
+                                     task(id="T2", files=["other.py"])])
+        out = loop.run_task(book.task("T1"))
+        self.assertEqual("done", out.state, out.why)
+        self.assertEqual("done", book.task("T1")["status"])
+        self.assertIn("already delivered", book.task("T1")["done_why"])
+        self.assertIn("T0", book.task("T1")["done_why"])
+        self.assertEqual([], fakes.calls)
+        self.assertIn("done", [event["kind"] for event in space.events()])
+
+    def test_a_fresh_green_gate_with_an_open_file_owner_still_parks(self):
+        for status in ("todo", "rejected", "blocked"):
+            with self.subTest(status=status):
+                loop, book, _ = loop_for(task(gate="grep -q one a.py"), Fakes(),
+                                        [task(id="T2", status=status)])
+                out = loop.run_task(book.task("T1"))
+                self.assertEqual("refused", out.state)
+                self.assertEqual("green_already", book.task("T1")["status"])
+
     def test_a_green_gate_in_place_with_no_open_finding_still_reaches_the_builder(self):
         # Round 0: the fix lands but round 0's diff review flags the GATE's
         # own wording as too loose, queuing a rebuild round in the SAME

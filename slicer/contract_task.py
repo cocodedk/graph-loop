@@ -85,12 +85,14 @@ def _task(task: dict, repo: pathlib.Path, known: set[str]) -> None:
         values = _strings(task.get(key, []), key)
         if key == "needs" and set(values) - known:
             raise ValueError("an atom needs a task that does not exist")
-    for key in ("gate_files_are_the_work", "gate_has_side_effects", "may_add_files"):
+    for key in ("gate_files_are_the_work", "gate_has_side_effects", "may_add_files", "gate_until_kept"):
         if key in task and not isinstance(task[key], bool):
             raise ValueError(f"{key} must be true or false, not text")
-    for key in ("note", "expect_red"):
+    for key in ("note", "expect_red", "gate_when_kept"):
         if key in task and not isinstance(task[key], str):
             raise ValueError(f"{key} must be text")
+    if task.get("gate_until_kept") is True and not task.get("gate_when_kept", "").strip():
+        raise ValueError("gate_until_kept requires a non-empty gate_when_kept")
     if task.get("helper_verbs"):
         raise ValueError("the standalone slicer cannot author live helper verbs")
     if is_live(task):

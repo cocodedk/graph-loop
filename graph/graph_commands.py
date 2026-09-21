@@ -1,8 +1,6 @@
 """The driver's commands other than `run`, and the two real providers.
 
-`graph-goal.py` keeps `run` — the loop that works the backlog — and the command
-line; everything a person calls once (init, approve, status, doctor, report,
-stop) lives here, with the constants both files share.
+`graph-goal.py` keeps `run` and the command line; one-off commands and shared constants live here.
 """
 
 from __future__ import annotations
@@ -126,7 +124,6 @@ def command_sources(args) -> int:
     return 0
 
 
-
 def command_approve(args) -> int:
     space = _space(args)
     (space.root / "approved").write_text("approved\n", "utf-8")
@@ -136,6 +133,7 @@ def command_approve(args) -> int:
 
 
 def command_status(args) -> int:
+    from node_status import say as say_nodes
     space = _space(args)
     rows = space.events()
     book = Backlog(_backlog_of(space))
@@ -143,6 +141,7 @@ def command_status(args) -> int:
     print(f"campaign {space.root}")
     print(f"  approved: {(space.root / 'approved').exists()}   stopping: {space.stopping()}")
     print(f"  tasks: {len(done)} done of {len(book.tasks())}")
+    say_nodes(book.tasks())
     running = space.running()
     print(f"  running: {', '.join(running) or 'nothing'}")
     held = [row['id'] for row in book.waiting_for_human()]
