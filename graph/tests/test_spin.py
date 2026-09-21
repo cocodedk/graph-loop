@@ -50,7 +50,7 @@ class SpinTest(unittest.TestCase):
         fakes = Fakes()
         loop, book, _ = loop_for(task(gate="true"), fakes)
         loop.run_task(book.task("T1"))
-        self.assertEqual("green_already", book.task("T1")["status"])
+        self.assertEqual("done", book.task("T1")["status"])
         self.assertEqual([], book.startable())
 
     def test_one_failed_gate_leaves_the_task_open_for_a_second_try(self):

@@ -14,7 +14,7 @@ import tmp_root  # noqa: F401 — every temp file of this process under one root
 import yaml  # type: ignore[import-untyped]  # no stubs in this environment
 from backlog import Backlog
 
-EXPECTED_TESTS = 2
+EXPECTED_TESTS = 3
 
 
 def _loop(rows: list[dict]):
@@ -29,6 +29,21 @@ def _loop(rows: list[dict]):
 
 
 class TouchedFilesTest(unittest.TestCase):
+    def test_kept_one_shot_gates_use_only_the_explicit_lasting_form(self):
+        for lasting in (None, "grep -q implemented a.py"):
+            with self.subTest(lasting=lasting):
+                judge = {"id": "J", "status": "done", "files": ["a.py"],
+                         "gate": "! grep -q implemented a.py", "gate_until_kept": True,
+                         "gate_when_kept": lasting}
+                current = {"id": "C", "status": "todo", "files": ["a.py"],
+                           "gate": "test -f a.py", "gate_until_kept": True,
+                           "gate_when_kept": "false"}
+                gates = loop_judge._gates_on_the_branch(_loop([judge, current]), current)
+                self.assertEqual(([lasting] if lasting else []) + [current["gate"]], gates)
+                if lasting:
+                    self.assertEqual("J", loop_judge._gate_owner(
+                        _loop([judge, current]), current, lasting))
+
     def test_only_affected_cards_are_gated_regardless_of_age(self):
         rows: list[dict] = [
             {"id": f"K{n}", "goal": "g", "status": "done", "gate": f"test -f k{n}",

@@ -26,6 +26,7 @@ TOP = {"result", "reason", "molecule"}
 BASE = {"name", "source", "goal", "why", "needs", "atoms"}
 REQUIRED = {"goal", "files", "gate", "done_when"}
 OPTIONAL = {"note", "needs", "uses", "creates", "gate_files_are_the_work",
+            "gate_until_kept", "gate_when_kept",
             "gate_has_side_effects", "helper_verbs", "may_add_files", "expect_red"}
 ATOM = REQUIRED | OPTIONAL | {"name", "stage"}
 SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")

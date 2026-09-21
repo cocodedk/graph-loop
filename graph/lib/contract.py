@@ -22,6 +22,7 @@ from contract_uses import question as uses_question
 # Shown only when the card carries one, always in this order, so one contract
 # has one digest however the card was written.
 REST = (("waits for", "needs"), ("uses", "uses"), ("creates", "creates"),
+        ("gate_until_kept", "gate_until_kept"), ("gate_when_kept", "gate_when_kept"),
         ("red proof must contain", "expect_red"), ("sliced from", "sliced_from"))
 
 
