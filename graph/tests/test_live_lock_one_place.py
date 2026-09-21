@@ -22,7 +22,7 @@ import unittest
 import unittest.mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
-import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
+import tmp_root
 import worktree_lock
 from worktree import LiveLock
 
