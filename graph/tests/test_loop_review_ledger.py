@@ -27,7 +27,7 @@ from test_loop import Fakes, repo_with, task
 EXPECTED_TESTS = 2
 
 
-def fake_codex(binary, prompt, *, cwd="", effort="", attempt=None, belt=None):
+def fake_codex(binary, prompt, *, cwd="", effort="", attempt=None, **_settings):
     """Stands in at the subprocess boundary, the way
     `test_graph_commands.RealReviewLedgerTest` does — one accepted call,
     reported through whichever ledger callback `_real_review` bound."""

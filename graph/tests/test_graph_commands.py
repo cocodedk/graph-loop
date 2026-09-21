@@ -134,7 +134,7 @@ class RealReviewLedgerTest(unittest.TestCase):
     def test_a_review_leaves_one_ledger_row_under_its_account_and_task(self):
         space = Workspace(tempfile.mkdtemp()).init(goal="g", backlog=str(book(status="todo").path))
 
-        def fake_codex(binary, prompt, *, cwd="", effort="", attempt=None, belt=None):
+        def fake_codex(binary, prompt, *, cwd="", effort="", attempt=None, **_settings):
             if attempt:
                 attempt("ok", "second", 0.4, 900, "fine")
             return Outcome("ok", verdict="ACCEPT", text="fine")

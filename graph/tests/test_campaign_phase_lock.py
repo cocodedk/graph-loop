@@ -12,6 +12,7 @@ import yaml
 
 HERE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE / "lib"))
+import tmp_root  # noqa: F401 — isolate temporary files even in focused runs
 from workspace import Workspace
 
 EXPECTED_TESTS = 4

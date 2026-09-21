@@ -19,7 +19,7 @@ from router_probe import CATALOG, Decisions
 from test_loop import Fakes, repo_with, task
 from worktree import Worktree
 
-EXPECTED_TESTS = 6
+EXPECTED_TESTS = 7
 
 
 class RouterCallsTest(unittest.TestCase):
@@ -88,6 +88,18 @@ class RouterCallsTest(unittest.TestCase):
         self.assertNotEqual("ACCEPT", result.verdict)
         self.assertEqual(2, codex_call.call_count)
         claude_call.assert_not_called()
+
+    def test_review_fallback_records_each_actual_model_and_effort(self):
+        root, _, space = repo_with(task(builder_model="claude-sonnet-5", builder_agent="claude"))
+        answers = [Outcome("capacity"), Outcome("ok", verdict="ACCEPT", text="fine")]
+        with patch.dict("os.environ", CATALOG), \
+             patch("urllib.request.urlopen", side_effect=Decisions(model="gpt-5.6-sol")), \
+             patch("review._one_review", side_effect=answers):
+            result = graph_commands._real_review("Review this card", cwd=root, space=space, task_id="T1")
+        self.assertEqual("ACCEPT", result.verdict)
+        actual = [(row["model"], row["effort"]) for row in space.events()
+                  if row["kind"] != "routed" and row.get("purpose") == "review" and row.get("model")]
+        self.assertEqual([("gpt-5.6-sol", "medium"), ("gpt-6-astra", "medium")], actual)
 
     def test_count(self):
         self.assertEqual(EXPECTED_TESTS, unittest.defaultTestLoader.loadTestsFromModule(
