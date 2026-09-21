@@ -16,6 +16,8 @@ from __future__ import annotations
 import pathlib
 import sys
 import unittest
+import contextlib
+import io
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import source_gap
@@ -44,7 +46,12 @@ class StoppedGapTest(unittest.TestCase):
     def test_it_ends_with_the_gap_the_slicer_named(self):
         book, space = stopped_campaign()
 
-        self.assertEqual(ENDED_WITH_GAPS, stand_down(space, book))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(ENDED_WITH_GAPS, stand_down(space, book))
+        self.assertIn(REFUSED, out.getvalue())
+        self.assertIn("sources --source docs/goal.md", out.getvalue())
+        self.assertIn(" plan", out.getvalue())
         gaps = source_gap.ended(space)
         assert gaps is not None
         self.assertIn("no source here declares that page's format", gaps["gaps"])
@@ -54,7 +61,11 @@ class StoppedGapTest(unittest.TestCase):
         space.event("sources_declared", sources=["docs/goal.md"])
         space.event("plan_started")
 
-        self.assertEqual(1, stand_down(space, book))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(1, stand_down(space, book))
+        self.assertIn("docs/goal.md", out.getvalue())
+        self.assertIn(" plan", out.getvalue())
         self.assertIsNone(source_gap.ended(space))
 
 

@@ -98,9 +98,9 @@ def _why(space, row: dict) -> str:
 
 
 def ended(space) -> dict | None:
-    """What this campaign ended with, or None. A declaration made since is a new
-    question: the sources moved, so what was recorded is not this campaign's
-    ending any more.
+    """What this campaign ended with, or None. A new declaration or a later
+    coverage verdict retires this receipt. `stand_down` still checks that the
+    accepted review matches today's backlog and that no work remains.
 
     "Since" is where the log stood when the receipt was written, never where the
     ending's own event sits: the receipt goes down before that event, so a death
@@ -120,7 +120,9 @@ def ended(space) -> dict | None:
     after, at = row.get("after"), str(row.get("at") or "")
     since = space.events()[int(after):] if after is not None else [
         one for one in space.events() if str(one.get("at") or "") > at]
-    if any(one.get("kind") == "sources_declared" for one in since):
+    if any(one.get("kind") == "sources_declared"
+           or (one.get("kind") == "slice_finished" and one.get("task") == SOURCE_GAP
+               and one.get("rc") == 0 and one.get("state") == "covered") for one in since):
         return None
     return row
 
@@ -129,5 +131,4 @@ def _digest(rows: list[dict]) -> str:
     return hashlib.sha256(json.dumps(
         sorted((str(row.get("id")), str(row.get("status"))) for row in rows),
         default=str).encode("utf-8")).hexdigest()[:16]
-
 
