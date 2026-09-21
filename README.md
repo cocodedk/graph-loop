@@ -12,6 +12,11 @@ and the diary of building and running it.
 builds and one that reviews. That is not incidental. The whole design rests on the reviewer
 having blind spots the builder does not, so a single-provider setup is a different tool.
 
+## Website
+
+- [English](https://graph-loop.cocode.dk/)
+- [فارسی (Persian)](https://graph-loop.cocode.dk/fa/)
+
 ## The idea
 
 Two models that never trust each other. A reviewer refuses any task whose gate could pass
