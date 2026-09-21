@@ -48,6 +48,7 @@ class Outcome:
     denials: int = 0
     session: str = ""    # the call's own session id, so a rebuild round can resume it
     raw: str = ""
+    confidence: float | None = None   # a decisions answer's own probability, not a boolean
 
     @property
     def ok(self) -> bool:
