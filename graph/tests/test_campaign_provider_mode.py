@@ -21,6 +21,7 @@ class ProviderModeTest(unittest.TestCase):
                              allowed_tools="Read,Edit", disallowed_tools="Bash(git push *)")
         argv = call.call_args.args[0]
         self.assertEqual("dontAsk", argv[argv.index("--permission-mode") + 1])
+        self.assertIn("--strict-mcp-config", argv)
         self.assertEqual("Read,Edit", argv[argv.index("--allowedTools") + 1])
         self.assertIn("Bash(git push *)", argv[argv.index("--disallowedTools") + 1])
         self.assertEqual("medium", argv[argv.index("--effort") + 1])
