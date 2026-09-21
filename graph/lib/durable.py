@@ -18,7 +18,8 @@ import os
 import pathlib
 
 
-def replace(path: pathlib.Path, data: str | bytes) -> pathlib.Path:
+def replace(path: pathlib.Path, data: str | bytes, guard=None,
+            exclusive: bool = False) -> pathlib.Path | None:
     """Write `data` to `path`, and return only once the file and every
     directory entry that has to name it are on the platter.
 
@@ -26,14 +27,32 @@ def replace(path: pathlib.Path, data: str | bytes) -> pathlib.Path:
     mid-write leaves the previous content whole. The sibling's leading dot is
     what keeps it out of every reader's glob (`molecule.ordered`, the artifact
     numbering, `keep_pending.pending`).
+
+    `guard` is asked once, with the temporary file already on the platter and
+    immediately before the rename: a false answer discards the write and
+    returns None. It is how a caller says "only if nothing has changed under me
+    since I looked" — a decision taken on bytes read a moment earlier is stale
+    by the time the rename runs, and somebody saving inside that moment had
+    their edit renamed over (an independent review).
+
+    `exclusive` makes the sibling a name this call creates and nothing else: it
+    is never opened through a link and never reused, so a link planted at that
+    name between a caller's check and this write cannot be followed and its
+    target emptied. It raises `FileExistsError` when the name is taken, which
+    the loop's own writers do not want — a temporary file a crash left behind
+    would stall every write to that path afterwards — so it is off by default
+    and only a caller that would rather refuse than guess asks for it.
     """
     raw = data.encode("utf-8") if isinstance(data, str) else data
     _folders(path.parent)
     beside = path.parent / f".{path.name}.tmp"
-    with open(beside, "wb") as handle:
+    with _open(beside, path, exclusive) as handle:
         handle.write(raw)
         handle.flush()
         os.fsync(handle.fileno())
+    if guard is not None and not guard():
+        beside.unlink(missing_ok=True)
+        return None
     os.replace(beside, path)
     _sync(path.parent)        # the rename itself: without this the new name can be lost
     return path
@@ -50,6 +69,17 @@ def append(path: pathlib.Path, data: str) -> pathlib.Path:
         os.fsync(handle.fileno())
     _sync(path.parent)        # the file may be new: its name can be lost too
     return path
+
+
+def _open(beside: pathlib.Path, path: pathlib.Path, exclusive: bool):
+    """The sibling, open for writing. `exclusive` refuses a name that is
+    already taken and never follows a link, and keeps the destination's own
+    permissions rather than handing a private note a wider mode."""
+    if not exclusive:
+        return open(beside, "wb")
+    mode = path.stat().st_mode & 0o777 if path.exists() else 0o600
+    return os.fdopen(os.open(beside, os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                             | os.O_NOFOLLOW, mode), "wb")
 
 
 def _folders(folder: pathlib.Path) -> None:

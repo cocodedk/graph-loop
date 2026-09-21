@@ -37,21 +37,26 @@ def code_first(ready: list[dict]) -> list[dict]:
     return [row for row in ready if not runs_alone(row)]
 
 
-def lane_cap(ready: list[dict], args) -> int:
+def lane_cap(ready: list[dict], args, chosen: int = 0) -> int:
     """How many lanes this turn may use, and the one place that says so.
 
     One for a card that runs alone; otherwise the smallest of what was asked
     for and the keeper's ceiling. The recorder below and the picker read the
     same answer, because a cap read twice is a cap that can disagree with
     itself in the record.
+
+    `chosen` is the throttler's answer under `--lanes auto`, which is a number
+    where `args.lanes` is the word itself. Zero means nobody chose, and then
+    `--lanes N` means exactly what it always did: a cap, never a floor.
     """
     if not ready or runs_alone(ready[0]):
         return 1
-    return max(1, min(MOST_LANES, args.lanes))
+    asked = chosen or (args.lanes if isinstance(args.lanes, int) else 1)
+    return max(1, min(MOST_LANES, asked))
 
 
 def width_against_lanes(space, ready: list[dict], taking: list[dict],
-                        args, turn_id: str) -> dict:
+                        args, turn_id: str, chosen: int = 0) -> dict:
     """Record what the graph offered this turn against what the loop could run.
 
     Here, because these three numbers are this module's own decision: the
@@ -61,10 +66,11 @@ def width_against_lanes(space, ready: list[dict], taking: list[dict],
     """
     offered = code_first(ready)
     return space.event("turn_lanes", turn=turn_id, width=len(offered),
-                       cap=lane_cap(offered, args), lanes=len(taking))
+                       cap=lane_cap(offered, args, chosen), lanes=len(taking))
 
 
-def taking_now(ready: list[dict], args, started: int = 0) -> list[dict]:
+def taking_now(ready: list[dict], args, started: int = 0,
+               chosen: int = 0) -> list[dict]:
     """The cards a turn runs, chosen once from what is startable.
 
     One place picks them, and one only: two lists picked in two places drift,
@@ -79,7 +85,7 @@ def taking_now(ready: list[dict], args, started: int = 0) -> list[dict]:
     # A lane is for a CODE card. A live card and a no-files evidence card
     # both run alone (backlog_status.runs_alone) — for two different
     # reasons — rather than holding a lane.
-    lanes = lane_cap(ready, args)
+    lanes = lane_cap(ready, args, chosen)
     taking = [row for row in ready if not runs_alone(row)][:lanes] if lanes > 1 else ready[:1]
     if args.max_tasks:
         taking = taking[:max(0, args.max_tasks - started)]

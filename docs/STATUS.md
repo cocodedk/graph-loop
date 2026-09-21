@@ -13,12 +13,19 @@ The runtime is here. This file says what is proven, what is not, and what is sti
 - `plugins/graph/` — the method as a Claude Code skill; useful without the driver.
 - `scripts/scrub-check.sh` — nothing local travels, checked over contents, filenames and
   the whole history.
+- `--lanes auto` is an option, off unless asked for: a throttler that reads
+  `/proc` every two seconds and decides each turn's lanes from a rise over that
+  turn's own baseline. Its numbers come from a ladder of one, two and three
+  lanes measured on one real machine; the criterion that fired there was swap,
+  at three lanes. It never raises into the loop — a corrupt state file included
+  — it adds a lane only on a turn it actually measured, and what it learned
+  survives the restarts the driver takes routinely. `--lanes N` is untouched.
 - The frontier is visible: `plan` and `status` print the waves the backlog would run in,
   each turn records that width against its lane cap, and `report` names the turns where
   the graph was wider than the loop. The projection is a snapshot — the next plan phase
   re-slices the backlog — and it is labelled as one wherever it is printed.
 
-Both suites run here: the slicer's 211 tests are green and the driver's suite is 1580
+Both suites run here: the slicer's 211 tests are green and the driver's suite is 1682
 tests. Six of them need a machine this one is not — a non-root user, a sandbox that can
 take a variable out of a gate's environment, and a real session launcher — so how many
 pass is a fact about the machine, not about the loop. `ruff check .` is clean.
@@ -48,6 +55,11 @@ synthetic tests in `test_triage_repair_requeue`, `test_triage_repair_rounds` and
 
 ## What is not proven
 
+`--lanes auto` has not driven a real campaign. The decision is measured and tested as a
+table, the throttler is proved not to raise under injected faults, and it has been run
+end to end against stubbed lanes — but no unattended campaign has used it, so what it
+does to a real backlog over days is not known.
+
 **No campaign has finished unattended.** Seven runs on the code that came here: the
 seventh built all three of its buildable cards and parked none, and could not end — fixed
 since, but not measured since. Until a campaign finishes on its own, the difference
@@ -63,6 +75,11 @@ standing preview stays unapplied and says so once on the board. No card is stran
 
 ## What is still owed
 
+- The loop does not READ relatives: nothing feeds one into a builder's or reviewer's
+  prompt, and there is no `evaluate` command. Writing is covered — `graph-goal.py
+  remember` projects the campaign log onto each card's memory relative — but it is a
+  command run by hand after a driver stops, not a step, and a test reads the source to say
+  so. The convention's door — never beside a card — is pinned by its own test.
 - The loop's status vocabulary is its own (`todo`, `sliced`, `rejected`, `needs_slice`, …)
   rather than the four agreed words, `sliced → implemented → verified → merged`.
 - A card should park on its **first** failure. It cannot yet: one counter is incremented

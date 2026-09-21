@@ -14,6 +14,7 @@ passes, when nothing can move, or when you say so.
     python3 graph/graph-goal.py approve --revision 1
     python3 graph/graph-goal.py run
     python3 graph/graph-goal.py status
+    python3 graph/graph-goal.py remember   # after a run: each card's memory, from the log
     python3 graph/graph-goal.py stop        # after the running tasks
     python3 graph/graph-goal.py stop --now  # kill the recorded groups, keep the worktrees
 
@@ -31,6 +32,17 @@ Rules it enforces, each bought with a failure:
   configured pair; the default belt includes Opus and Sonnet (`resources.py`,
   `accounts.py`, `models.py`). A gate that fails twice the same way re-slices the
   task.
+- `--lanes auto [--lanes-max N]` lets the machine decide instead: lanes in a
+  turn are the smallest of the frontier's width, that ceiling, the keeper's
+  three and what the machine will take. It starts at the ceiling when one is
+  given, adds one lane per clean turn, halves and then holds still for two
+  turns when swap grows by more than 500 MB inside a turn, when memory or cpu
+  pressure rises more than 20 points over that turn's own baseline, or when a
+  gate that PASSED takes more than 2.5 times its time alone. It adds a lane
+  only on a turn it actually measured. It never raises: a fault, a corrupt
+  state file included, returns the last safe value and says so in the log.
+  Every decision is an event with its inputs, and what it learned is in the
+  campaign directory, so a restart does not throw a cut away.
 - The frontier is visible. `plan` and `status` print the waves the backlog would
   run in — what could start together, then what that releases — labelled as of
   that moment, because the next plan phase re-slices it. A held card is listed
@@ -71,6 +83,14 @@ Rules it enforces, each bought with a failure:
   remains a possible regression. Missing evidence retries the check within the
   existing limit and preserves the finished work. Matching output cannot prove
   that a check which stops at its first failure has no hidden failures.
+
+`remember` is the only command that writes outside the cards, and it is not on the loop's
+path: run by hand after a driver stops, it projects the campaign log onto each card's
+memory relative in `<Molecule>/relatives/`. It points at the log's numbered artifacts and
+never copies them, it never touches a card, and a second run on the same log writes
+nothing. A note is its own, whole, or not at all: it carries a digest of its own body, and
+a file edited by hand in any way is kept exactly as it is and reported. Nothing is written
+outside the vault or through a symlink. See `docs/RELATIVES.md`.
 
 Keep machinery repairs and simulation feature work in separate task contracts.
 A small fixture delivery proves the loop's controls; live mitigation still needs
