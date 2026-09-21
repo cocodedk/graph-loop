@@ -1,11 +1,12 @@
 """Calling a model, and reading the answer honestly.
 
-Two providers, fixed by the owner on 2026-08-28 and not negotiable inside the loop:
-
-  builders  `claude-opus-5`, on the work account or any second one
-            (cap), at the effort lib/effort.py chose for the task.
-  reviewers `codex exec --model gpt-6-astra`, likewise. Neither review ladder
-            reaches `max`: it cost twelve minutes a review and found what high finds (the owner, 2026-08-30).
+Two providers: builders on `claude-opus-5` or a configured alias, reviewers on
+`codex exec --model gpt-6-astra` or a configured alias. Which model and effort
+an actual call uses is `model_router.choose`'s pick now (docs/ROUTER.md): a
+Jev decision at medium, raised only from a recorded failed medium attempt on
+the same contract. `MODEL`/`EFFORT`/`REVIEW_MODEL`/`REVIEW_EFFORT` below are
+what a caller with no route of its own gets — medium, never `max`, which cost
+twelve minutes a review and found what high finds (the owner, 2026-08-30).
 
 The `kind` an outcome carries decides what the loop may conclude. Only `ok`
 consumes an attempt: a usage limit, a denied tool call, a login failure and
@@ -33,9 +34,9 @@ from provider_words import (  # noqa: F401 — MARKS re-exported for callers tha
 from tools import READ_ONLY_FLAGS, guard_settings
 
 MODEL = "claude-opus-5"
-EFFORT = "high"                 # never raised; see the module docstring
+EFFORT = "medium"               # the default when no task decides (model_router.py does)
 REVIEW_MODEL = "gpt-6-astra"
-REVIEW_EFFORT = "high"          # the default when no task decides (lib/effort.py does)
+REVIEW_EFFORT = "medium"        # the default when no task decides (model_router.py does)
 
 
 @dataclasses.dataclass
@@ -48,6 +49,7 @@ class Outcome:
     denials: int = 0
     session: str = ""    # the call's own session id, so a rebuild round can resume it
     raw: str = ""
+    confidence: float | None = None   # a decisions answer's own probability, not a boolean
 
     @property
     def ok(self) -> bool:
@@ -124,7 +126,8 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
     added without editing code.
     """
     env, drop = accounts.environment(account)
-    argv = [binary, "--permission-mode", "default", "-p", "--output-format", "json",
+    argv = [binary, "--permission-mode", "dontAsk", "--strict-mcp-config",
+            "-p", "--output-format", "json",
             "--model", model or MODEL, "--effort", effort or EFFORT,
             "--disallowedTools", ",".join(name for name in ("Agent", disallowed_tools) if name)]
     if resume:
@@ -136,9 +139,8 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
     if read_only:   # a reviewer reads and nothing else; the denies alone cannot
         argv += list(READ_ONLY_FLAGS)   # reach an inherited MCP server (tools.py)
     if no_tools:   # a planner answers with text: it edits nothing and touches no stack
-        argv += ["--tools", "", "--strict-mcp-config"]   # and no inherited MCP server
-        # --tools empties the built-ins; an inherited MCP server would still be there,
-        # so the families a planner must never have are denied by name as well.
+        argv += ["--tools", ""]   # --strict-mcp-config above already keeps out an inherited MCP server
+        # the families a planner must never have are denied by name as well.
         argv[argv.index("--disallowedTools") + 1] += ",Bash,Edit,Write,MultiEdit,NotebookEdit,Monitor,Workflow,WebFetch,Task"
     settings = None
     if guard:   # a live task: the guard hook first, its prefixes in the environment

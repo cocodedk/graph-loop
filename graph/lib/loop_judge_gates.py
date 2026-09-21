@@ -7,8 +7,6 @@ back, so `loop_judge._gates_on_the_branch` still names this one function.
 
 from __future__ import annotations
 
-import subprocess
-
 from backlog_reach import overlap, reach
 from backlog_status import is_live
 from gate_baseline import same_failure
@@ -74,19 +72,6 @@ def _gate_is_defective(loop, task: dict, clash) -> bool | None:
     return same_failure(loop, task, clash)
 
 
-def _kept_on_the_branch(loop, row: dict) -> bool:
-    """Whether the card's `commit` is an ancestor of the campaign branch — git's
-    answer, not merely having a commit. Any failure to get a yes is a no."""
-    sha = str(row.get("commit") or "").strip()
-    if not sha:
-        return False
-    tip = loop.keeper.tip()      # the branch, or the base it is about to be cut from
-    check = subprocess.run(
-        ("git", "-C", loop.keeper.repo, "merge-base", "--is-ancestor", sha, tip),
-        capture_output=True, text=True, check=False)
-    return check.returncode == 0
-
-
 def _send_to_its_owner(loop, task: dict, tree, owner: str, clash) -> TaskOutcome:
     """ANOTHER card's gate, red on the branch tip WITHOUT this card's work — or
     one that edited the tree it judged: the gate is what needs repairing, and no
@@ -107,6 +92,15 @@ def _send_to_its_owner(loop, task: dict, tree, owner: str, clash) -> TaskOutcome
     watchdog's quarantine. What bounds the wait is the owner's own round cap: an
     owner that spends it ends `rejected`, never settles, and a person is the
     next actor for both cards, which the doctor's starved check says out loud.
+
+    A `done` owner is the one exception: accepted work never reopens for new
+    work's sake. Reopening it would spend this card's rounds retrying into the
+    same red gate for ever, since the owner would settle `done` again the
+    instant the repair lands and nothing would tell the two apart. So a `done`
+    owner is left exactly as it was, and this card is parked with
+    `blocked_by_human` for a person to make the new decision the defect calls
+    for — not offered again, and not the owner's `needs` to wait on, since a
+    `done` id is already "finished" to every reader that checks `needs`.
     """
     task_id = task["id"]
     # One phrase, on the event and on the owner's card: a repair sent off with
@@ -120,24 +114,11 @@ def _send_to_its_owner(loop, task: dict, tree, owner: str, clash) -> TaskOutcome
                      gate_owner=owner, why=why[:400])
     with loop.backlog.only_writer():
         owned = loop.backlog.task(owner) or {}
-        if owned.get("status") == "done" and _kept_on_the_branch(loop, owned):
-            # Finished work the branch already holds is left alone. This card
-            # stops where it is, tree kept, and is not offered again: a person
-            # reads the gate, and nothing here can repair it.
-            loop.backlog.set_status(task_id, "rejected", rebuild_from=tree.path,
-                                    refused_why=why[:400])
-            return TaskOutcome("rejected", why, tree.path)
         if owned.get("status") == "done":
-            # Its hold is passed back explicitly: any write of `todo` pops
-            # `blocked_by_human` (`Backlog._apply`), and a person's hold on the
-            # owner is not this failure's to lift. The dependent waits either way.
-            loop.backlog.set_status(
-                owner, "todo", blocked_by_human=owned.get("blocked_by_human") or None,
-                gate_reviewed_first=True, rebuild_round=None, rebuild_from=None,
-                gate_rounds=None, gate_rounds_refunded=None,
-                refused_why=f"its own gate {defect}, so the gate is the "
-                            f"defect: {clash}"[:400])
-        needs = list(dict.fromkeys([*(task.get("needs") or []), owner]))
-        loop.backlog.set_status(task_id, "todo", rebuild_from=tree.path,
-                                needs=needs, refused_why=None)
+            loop.backlog.set_status(task_id, "todo", blocked_by_human=True,
+                                    rebuild_from=tree.path, refused_why=why[:400])
+        else:
+            needs = list(dict.fromkeys([*(task.get("needs") or []), owner]))
+            loop.backlog.set_status(task_id, "todo", rebuild_from=tree.path,
+                                    needs=needs, refused_why=None)
     return TaskOutcome("rejected", why, tree.path)

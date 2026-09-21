@@ -19,6 +19,7 @@ sys.path.insert(0, str(HERE / "lib"))
 sys.path.insert(0, str(HERE))
 
 import graph_commands
+import real_calls
 from loop import Loop
 from providers import Outcome
 from test_loop import Fakes, repo_with, task
@@ -26,7 +27,7 @@ from test_loop import Fakes, repo_with, task
 EXPECTED_TESTS = 2
 
 
-def fake_codex(binary, prompt, *, cwd="", effort="", attempt=None):
+def fake_codex(binary, prompt, *, cwd="", effort="", attempt=None, **_settings):
     """Stands in at the subprocess boundary, the way
     `test_graph_commands.RealReviewLedgerTest` does — one accepted call,
     reported through whichever ledger callback `_real_review` bound."""
@@ -42,7 +43,7 @@ class RealReviewLedgerTest(unittest.TestCase):
         root, book, space = repo_with(task())
         loop = Loop(repo=root, backlog=book, space=space, build=fakes.builder,
                     review=graph_commands._real_review)
-        with unittest.mock.patch.object(graph_commands, "codex", fake_codex):
+        with unittest.mock.patch.object(real_calls, "codex", fake_codex):
             out = loop.run_task(book.task("T1"))
         self.assertEqual("done", out.state, out.why)
         rows = [row for row in space.events()

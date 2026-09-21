@@ -18,6 +18,14 @@ import tempfile
 # another account when one runs out needs two, independent of the local environment.
 os.environ["GRAPH_ACCOUNTS"] = "work,second=/cfg/second"
 
+# The card router (lib/model_router.py, docs/ROUTER.md) asks a live decision
+# service by default. A fake-provider test never routes for real, so this
+# process stays on the router's own offline fallback unless a router gate
+# explicitly enables its mocked transport (router_probe.CATALOG) — a
+# developer's shell exporting GRAPH_ROUTER=jev must not leak into a test run
+# and spend a real decision call.
+os.environ["GRAPH_ROUTER"] = "off"
+
 ROOT = tempfile.mkdtemp(prefix="graph-tests-")
 tempfile.tempdir = ROOT
 os.environ["TMPDIR"] = ROOT          # the drivers and scripts the tests spawn follow it too

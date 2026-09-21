@@ -8,26 +8,26 @@
      secondary: agent task backlog, AI code review gate, Obsidian vault backlog
      intent:    informational
 -->
-<title>graph-loop — an unattended agent coding loop</title>
+<title>graph-loop: an unattended agent coding loop</title>
 <meta name="description" content="graph-loop breaks a large job into small tasks and builds them unattended: one model writes the code, a second refuses any task that could pass without the work." />
 <meta name="robots" content="index, follow" />
-<link rel="canonical" href="https://cocodedk.github.io/graph-loop/" />
-<link rel="alternate" hreflang="en" href="https://cocodedk.github.io/graph-loop/" />
-<link rel="alternate" hreflang="fa" href="https://cocodedk.github.io/graph-loop/fa/" />
+<link rel="canonical" href="https://graph-loop.cocode.dk/" />
+<link rel="alternate" hreflang="en" href="https://graph-loop.cocode.dk/" />
+<link rel="alternate" hreflang="fa" href="https://graph-loop.cocode.dk/fa/" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="graph-loop" />
-<meta property="og:title" content="graph-loop — an unattended agent coding loop" />
+<meta property="og:title" content="graph-loop: an unattended agent coding loop" />
 <meta property="og:description" content="Two models that never trust each other: one builds a task, the other refuses work that only looks done. The backlog is a folder of linked notes." />
-<meta property="og:url" content="https://cocodedk.github.io/graph-loop/" />
-<meta property="og:image" content="https://cocodedk.github.io/graph-loop/og.png" />
+<meta property="og:url" content="https://graph-loop.cocode.dk/" />
+<meta property="og:image" content="https://graph-loop.cocode.dk/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="graph-loop: build, gate, review, commit." />
 <meta property="og:locale" content="en_US" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="graph-loop — an unattended agent coding loop" />
+<meta name="twitter:title" content="graph-loop: an unattended agent coding loop" />
 <meta name="twitter:description" content="Two models that never trust each other: one builds a task, the other refuses work that only looks done." />
-<meta name="twitter:image" content="https://cocodedk.github.io/graph-loop/og.png" />
+<meta name="twitter:image" content="https://graph-loop.cocode.dk/og.png" />
 <meta name="twitter:image:alt" content="graph-loop: build, gate, review, commit." />
 <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 <link rel="stylesheet" href="styles.css" />
@@ -37,7 +37,7 @@
   "@type": "SoftwareApplication",
   "name": "graph-loop",
   "description": "An unattended agent coding loop. One model builds each task in its own copy of the repository, a gate decides, and a second model reviews the finished diff before anything is committed.",
-  "url": "https://cocodedk.github.io/graph-loop/",
+  "url": "https://graph-loop.cocode.dk/",
   "downloadUrl": "https://github.com/cocodedk/graph-loop",
   "codeRepository": "https://github.com/cocodedk/graph-loop",
   "applicationCategory": "DeveloperApplication",
@@ -70,6 +70,9 @@
   <a class="cta" href="https://github.com/cocodedk/graph-loop/blob/main/docs/DESIGN.md">The design</a>
   <a class="cta" href="https://github.com/cocodedk/graph-loop/blob/main/docs/DIARY.md">The diary</a></p>
 
+  <p><a class="cta" href="how.html">The loop in one picture</a>
+  <a class="cta" href="example.html">A real card, and a real run</a></p>
+
   <h2>How one task runs</h2>
   <ol>
     <li>A reviewer reads the task and refuses it if the check could pass without the work
@@ -87,7 +90,7 @@
 
   <div class="note">
     <p>Reviews take 70 to 99 percent of the clock. One campaign refused nine tasks in a row
-    and built nothing, for $0.00 — and that was the loop working. The backlog was the
+    and built nothing, for $0.00, and that was the loop working. The backlog was the
     defect. The way to go faster is a clearer task, not a faster builder.</p>
   </div>
 
@@ -98,8 +101,8 @@
   having blind spots the builder does not.</p>
 
   <h2>Start with the method</h2>
-  <p>The method is a Claude Code skill, and it is useful on its own — you can slice work
-  into tasks without running the loop at all.</p>
+  <p>The method is a Claude Code skill, and it is useful on its own. You can slice
+  work into tasks without running the loop at all.</p>
 <pre><code>/plugin marketplace add cocodedk/graph-loop
 /plugin install graph@graph-loop</code></pre>
   <p>To run the loop itself, follow

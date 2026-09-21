@@ -31,11 +31,13 @@ class BaselineTest(unittest.TestCase):
         self.assertEqual(1, book.task("T1")["rebuild_round"])
         self.assertNotIn("T9", book.task("T1")["needs"])
 
-    def test_the_same_failure_is_still_routed_to_its_owner(self):
+    def test_the_same_failure_keeps_its_finished_owner_closed(self):
         loop, book, _ = keeper_loop(task(), Fakes(), [BROKEN])
+        owner = dict(book.task("T9"))
         loop.run_task(book.task("T1"))
-        self.assertEqual("todo", book.task("T9")["status"])
-        self.assertIn("T9", book.task("T1")["needs"])
+        self.assertEqual(owner, book.task("T9"))
+        self.assertTrue(book.task("T1")["blocked_by_human"])
+        self.assertNotIn("T1", [row["id"] for row in book.startable()])
         self.assertEqual(0, int(book.task("T1").get("rebuild_round") or 0))
 
     def test_the_exception_keeps_the_full_result_and_exact_commits(self):

@@ -14,15 +14,15 @@ having blind spots the builder does not, so a single-provider setup is a differe
 
 ## Website
 
-- [English](https://cocodedk.github.io/graph-loop/)
-- [فارسی (Persian)](https://cocodedk.github.io/graph-loop/fa/)
+- [English](https://graph-loop.cocode.dk/)
+- [فارسی (Persian)](https://graph-loop.cocode.dk/fa/)
 
 ## The idea
 
 Two models that never trust each other. A reviewer refuses any task whose gate could pass
 without the work being done. A builder does one task in a private worktree. A gate — a
 command whose exit code is the verdict — decides. A fresh reviewer reads the finished diff.
-Only then is the work committed.
+Only then is the work committed. Graph-Loop must repair its own bugs.
 
 The backlog is a vault of Obsidian notes inside the repository being built. One note is one
 card: what a person reads is byte for byte what the loop reads, `Needs` and `Uses` are

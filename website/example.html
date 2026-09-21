@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>A real card, and a real run</title>
+<meta name="description" content="One card from a real unattended run of the graph-loop, shortened but not rewritten, with what the loop wrote back and what the whole run cost." />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://graph-loop.cocode.dk/example.html" />
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="graph-loop" />
+<meta property="og:title" content="A real card, and a real run" />
+<meta property="og:description" content="What one task looks like as an Obsidian note, and what an unattended run of three of them cost in time and money." />
+<meta property="og:url" content="https://graph-loop.cocode.dk/example.html" />
+<meta property="og:image" content="https://graph-loop.cocode.dk/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="graph-loop: build, gate, review, commit." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://graph-loop.cocode.dk/og.png" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header>
+  <img class="mark" src="favicon.svg" alt="" width="32" height="32" />
+  <span class="name"><a href="./">graph-loop</a></span>
+</header>
+
+<main>
+  <h1>A real card, and a real run</h1>
+  <p class="lede">This card is from a run of 19 September 2026, shortened for the page but not
+  rewritten. A person writes the top half. The loop writes the bottom.</p>
+
+  <h2>What a person writes</h2>
+<pre><code>files:
+  - app/src/main/java/dk/cocode/xpost/PostLink.java
+  - app/src/test/java/dk/cocode/xpost/PostLinkTest.java
+gate_files_are_the_work: true
+requirement:
+  goal: A pure function that returns a normalized https fetch URL for a valid
+    x.com or twitter.com single-post link, or says the input is not one.
+  done_when: PostLinkTest compiles and exits 0, proving the function normalizes
+    valid status links (with or without a query string, http or https, with or
+    without www) and refuses anything else.</code></pre>
+
+  <h2>The gate</h2>
+  <p>A command, nothing more. Its exit code is the verdict, and the loop proves it fails
+  before anyone is allowed to make it pass.</p>
+<pre><code>set -e -o pipefail
+TMPD=$(mktemp -d)
+javac -d "$TMPD" app/src/main/java/dk/cocode/xpost/PostLink.java \
+                 app/src/test/java/dk/cocode/xpost/PostLinkTest.java
+java -cp "$TMPD" dk.cocode.xpost.PostLinkTest</code></pre>
+
+  <h2>What the loop writes back</h2>
+  <p>Only front matter, never the words. The note stays yours.</p>
+<pre><code>status: done
+kept_at: '2026-09-19T14:06:00Z'</code></pre>
+
+  <h2>What that run cost</h2>
+  <p>Four cards planned, three of them buildable. All three were built, gated, reviewed and
+  kept, none parked, none dropped, with no restart by hand.</p>
+  <ul>
+    <li>31 minutes from start to stand-down.</li>
+    <li>$3.66 in total: $1.68 building, $1.30 reviewing, $0.68 planning.</li>
+    <li>One thing was refused as needing a person, with the reason recorded: turning a
+    fetched page into the post's text could not be proved by any gate the loop could write.</li>
+  </ul>
+  <p>The code all three cards produced compiles and passes its tests from a clean clone. That
+  check was run by a person, outside the loop, because the thing that builds evidence never
+  grades it.</p>
+
+  <p><a class="cta" href="how.html">How the loop runs a card</a>
+  <a class="cta" href="./">Back to the start</a></p>
+</main>
+
+<footer>
+  <p>MIT &nbsp;|&nbsp; © 2026 <a href="https://cocode.dk" target="_blank" rel="noreferrer">Cocode</a> &nbsp;|&nbsp; Created by <a href="https://linkedin.com/in/babakbandpey" target="_blank" rel="noreferrer">Babak Bandpey</a></p>
+</footer>
+</body>
+</html>

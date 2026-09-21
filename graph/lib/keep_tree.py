@@ -37,10 +37,13 @@ def staged_names(worktree: str) -> list[str]:
     in a name no longer splits one path into two either — and `os.fsdecode` is the
     decoding the filesystem itself uses, so a name that is not UTF-8 survives the
     trip back out as a git argument. (A lesson: every reader of git's paths
-    reads them with `-z`.)
+    reads them with `-z`.) `--no-renames` keeps a rename as the two names it
+    really is — source and destination — so the source's deletion still reaches
+    the private index below; with rename detection on, this call reports only
+    the destination and the source silently survives in the published tree.
     """
-    done = subprocess.run(("git", "-C", worktree, "diff", "--cached", "--name-only", "-z"),
-                          capture_output=True, check=False)
+    done = subprocess.run(("git", "-C", worktree, "diff", "--cached", "--no-renames",
+                          "--name-only", "-z"), capture_output=True, check=False)
     if done.returncode:
         raise RuntimeError("git diff --cached --name-only -z: "
                            + done.stderr.decode("utf-8", "replace").strip())

@@ -88,12 +88,18 @@ def requeue_faults(book, space) -> int:
     Once each: `requeued` stays on the card, so a second fault of the same kind
     on the same card is taken as real and parks. A plan phase that put the same
     card back every time would hide a machine that is actually broken.
+
+    `blocked_by_human` stops it too, the same check `triage_effect.repair_effect`
+    already makes before it touches a gate: a person's hold is not a fault the
+    infrastructure caused, so a retry policy is not the loop's excuse to lift it.
     """
     put_back = 0
     for row in book.tasks():
         if row.get("triage") not in FAULTS or row.get("requeued"):
             continue
         if row.get("status") in (RUNNABLE,) + DONE + DROPPED:
+            continue
+        if row.get("blocked_by_human"):
             continue
         book.set_status(row["id"], RUNNABLE, triage=None, refused_why=None,
                         rebuild_round=None, requeued=True)
@@ -179,6 +185,7 @@ def command_plan(args) -> int:
     space = Workspace(args.workspace or where.campaign())
     if not (space.root / "approved").exists():
         raise SystemExit("not approved — run `graph-goal.py approve` first")
+    space.only_driver()          # planning and building never overlap on one campaign
     book = Backlog(backlog_of(space))
     added = plan(book, space, rounds=args.rounds)
     print(f"the plan added {added} card{'' if added == 1 else 's'}")

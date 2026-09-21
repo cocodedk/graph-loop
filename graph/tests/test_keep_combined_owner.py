@@ -75,37 +75,33 @@ class OtherCardsGateTest(unittest.TestCase):
                  and e.get("step") == "combined_gate"]
         self.assertEqual(["T9"], [e["gate_owner"] for e in clash])
 
-    def test_the_owner_of_a_defective_gate_is_sent_back_to_repair_it(self):
-        """Naming the owner is not repairing it. T9 stayed done with its gate
-        red, so nothing was ever going to fix it, and this card retried into
-        the watchdog's quarantine. The owner goes back for the repair and this
-        card waits for it the way the loop already makes a card wait."""
+    def test_a_finished_owner_is_never_reopened_and_the_dependent_is_parked(self):
+        """T9 stayed done with its gate red, and reopening finished work for a
+        defect this card's builder cannot answer would only spend new rounds
+        retrying into the same red gate — the owner would settle `done` again
+        the moment the repair lands, so `needs` could never tell the two cards
+        apart. The owner is left exactly as it was, and this card is parked
+        for a person to make the new decision the defect calls for."""
         fakes = Fakes()
         loop, book, _ = keeper_loop(task(), fakes, [BROKEN])
         loop.run_task(book.task("T1"))
-        owner = book.task("T9")
-        self.assertEqual("todo", owner["status"])              # done no longer
-        self.assertTrue(owner["gate_reviewed_first"])          # its gate is read before it runs
-        self.assertIn("red on the branch tip", owner["refused_why"])
-        self.assertIn("T9", book.task("T1")["needs"])          # and this card waits for it
-        self.assertNotIn("T1", [row["id"] for row in book.startable()])
+        self.assertEqual(BROKEN, book.task("T9"))               # untouched, still done
+        row = book.task("T1")
+        self.assertTrue(row["blocked_by_human"])                # parked, not requeued to spin
+        self.assertIn("red on the branch tip", row["refused_why"])
+        self.assertNotIn("T1", [r["id"] for r in book.startable()])
 
-    def test_a_held_owner_is_sent_back_for_the_repair_and_stays_held(self):
-        """`Backlog._apply` clears `blocked_by_human` on any write of `todo`, so
-        assigning the repair lifted a person's hold on the owner — the hold is
-        not this failure's to lift, and the dependent still waits either way."""
+    def test_a_held_owner_stays_untouched_too(self):
+        """A person's hold on a finished owner is not even reached: the owner
+        is never written to at all when it is already `done`."""
         fakes = Fakes()
-        loop, book, _ = keeper_loop(task(), fakes,
-                                    [{**BROKEN, "blocked_by_human": True, "gate_rounds": 2}])
+        held = {**BROKEN, "blocked_by_human": True, "gate_rounds": 2}
+        loop, book, _ = keeper_loop(task(), fakes, [held])
         loop.run_task(book.task("T1"))
-        owner = book.task("T9")
-        self.assertTrue(owner["blocked_by_human"])             # the person's, untouched
-        self.assertEqual("todo", owner["status"])              # and the repair is assigned
-        # its rounds start fresh, so the gate charges behind them go too: kept,
-        # they would be refunded against rounds a later repair never paid for
-        self.assertNotIn("gate_rounds", owner)
-        self.assertIn("T9", book.task("T1")["needs"])
-        self.assertNotIn("T1", [row["id"] for row in book.startable()])
+        self.assertEqual(held, book.task("T9"))                 # not written to at all
+        row = book.task("T1")
+        self.assertTrue(row["blocked_by_human"])
+        self.assertNotIn("T1", [r["id"] for r in book.startable()])
 
     def test_a_gate_this_work_turned_red_is_the_builders_own_regression(self):
         """Owning the gate is not being at fault. T0's gate passes on the

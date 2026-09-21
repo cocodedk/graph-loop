@@ -30,6 +30,7 @@ from loop_evidence import red_first
 from loop_judge import REBUILD_ROUNDS, contract, judge
 from loop_peers import lost_why, open_why, release_live_peers, restate_live_peers
 from loop_scope import gate_files
+from loop_start import already_finished
 from loop_steps import build
 from loop_tree import for_this_round
 from loop_types import ACCOUNTS, TaskOutcome
@@ -59,6 +60,11 @@ class Loop:
 
     def run_task(self, task: dict) -> TaskOutcome:
         task_id = task["id"]
+        # A finished card never opens a worktree or calls a builder or
+        # reviewer again: a stale reference to it is not new work.
+        outcome = already_finished(task)
+        if outcome is not None:
+            return outcome
         editable_gate = gate_files(task)
         if editable_gate and not task.get("gate_files_are_the_work"):
             why = ("the builder may edit the test its own gate runs "

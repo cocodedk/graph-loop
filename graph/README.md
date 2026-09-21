@@ -22,16 +22,23 @@ Rules it enforces, each bought with a failure:
 
 - The backlog is the only task source. The planner selects and may slice; it
   never invents a task.
-- Up to three code cards build side by side; `--lanes` may lower that ceiling,
-  never raise it — three is the keeper's own limit, because it gives up after
-  three rebuilds of a branch that moved under it. The first choice for a build
-  is `claude-opus-5` on the work account or the
-  personal one (cap), at effort high climbing to xhigh as the task's weight or a
-  lost round demands — never below high, never above xhigh (`effort.py`). A refusal
-  before reading skips the unavailable account or model and tries the next
-  configured pair; the default belt includes Opus and Sonnet (`resources.py`,
-  `accounts.py`, `models.py`). A gate that fails twice the same way re-slices the
-  task.
+- Up to three code cards build side by side; `--lanes` may lower that ceiling. A
+  Jev decision (`model_router.py`, `docs/ROUTER.md`) picks the configured model
+  and effort for each build and review from the resource belt it is actually
+  offered — never a free-form name. Every first attempt runs at medium; a
+  builder climbs to high only from a recorded medium build on this same
+  contract that then failed its gate, never from a round counter alone. A
+  refusal before reading skips the unavailable account or model and tries the
+  next configured one; the default belt includes Opus and Sonnet
+  (`resources.py`, `accounts.py`, `models.py`). A gate that fails twice the
+  same way re-slices the task.
+- Reviews are routed the same way, always independent of the builder's own
+  family: no eligible reviewer left means no accepted review, never a
+  self-review. A low or malformed decision, an unlisted choice, or the
+  decision service being unavailable all fall back to the first eligible
+  independent resource at medium effort — the same fallback `GRAPH_ROUTER=off`
+  gives explicitly, offline. `review.py` walks the routed belt, Codex reviewers
+  first (`gpt-6-astra`, then `gpt-5.6-sol`).
 - `--lanes auto [--lanes-max N]` lets the machine decide instead: lanes in a
   turn are the smallest of the frontier's width, that ceiling, the keeper's
   three and what the machine will take. It starts at the ceiling when one is
@@ -43,19 +50,6 @@ Rules it enforces, each bought with a failure:
   state file included, returns the last safe value and says so in the log.
   Every decision is an event with its inputs, and what it learned is in the
   campaign directory, so a restart does not throw a cut away.
-- The frontier is visible. `plan` and `status` print the waves the backlog would
-  run in — what could start together, then what that releases — labelled as of
-  that moment, because the next plan phase re-slices it. A held card is listed
-  as held and never scheduled. A wave that costs more than one turn says so in
-  the same line: how wide, the cap, how many turns — one turn each for the
-  cards that run alone, the rest packed into lanes. Each turn records that
-  width, the cap and the lanes it ran, and `report` names the turns where the
-  graph was wider than the loop.
-- Reviews try a fresh `codex exec --model gpt-6-astra` first (gpt-5.6-sol behind it), once on the task
-  contract before any edit and once on the diff, at effort medium climbing to
-  high for a heavier task or a round that already failed — never below medium,
-  never above high (`effort.py`); only when Codex refuses before reading does a
-  read-only Claude review follow (`review.py`).
 - Every gate is proved red for the expected reason before a builder starts, and
   no builder can write a gate or a task contract. A no-files, non-live card has
   no builder to protect: it skips red-first, the build and the diff review, and

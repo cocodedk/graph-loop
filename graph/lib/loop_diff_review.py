@@ -5,7 +5,6 @@ import json
 
 import review_scope
 from backlog_status import is_live
-from effort import review_effort
 from loop_judge_retry import _send_back, back_in_place
 from loop_resume import finished
 from prompts import DiffTooLarge, diff_prompt
@@ -27,8 +26,7 @@ def review_change(loop, task: dict, tree, rebuild: int):
                "the reviewer can read whole — reduce it or split the card")
         return _send_back(loop, task, tree, rebuild, why)
     with loop.space.step(task_id, "diff_review") as note:
-        verdict = loop.review(prompt, effort=review_effort(task), cwd=tree.path,
-                              space=loop.space, task_id=task_id)
+        verdict = loop.review(prompt, cwd=tree.path, space=loop.space, task_id=task_id)
         note(verdict=verdict.verdict, outcome=verdict.kind)
     loop.space.artifact(task_id, "diff-review-answer", verdict.raw or verdict.text)
     if verdict.ok:
