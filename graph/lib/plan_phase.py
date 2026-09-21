@@ -87,12 +87,18 @@ def requeue_faults(book, space) -> int:
     Once each: `requeued` stays on the card, so a second fault of the same kind
     on the same card is taken as real and parks. A plan phase that put the same
     card back every time would hide a machine that is actually broken.
+
+    `blocked_by_human` stops it too, the same check `triage_effect.repair_effect`
+    already makes before it touches a gate: a person's hold is not a fault the
+    infrastructure caused, so a retry policy is not the loop's excuse to lift it.
     """
     put_back = 0
     for row in book.tasks():
         if row.get("triage") not in FAULTS or row.get("requeued"):
             continue
         if row.get("status") in (RUNNABLE,) + DONE + DROPPED:
+            continue
+        if row.get("blocked_by_human"):
             continue
         book.set_status(row["id"], RUNNABLE, triage=None, refused_why=None,
                         rebuild_round=None, requeued=True)
