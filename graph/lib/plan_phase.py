@@ -184,6 +184,7 @@ def command_plan(args) -> int:
     space = Workspace(args.workspace or where.campaign())
     if not (space.root / "approved").exists():
         raise SystemExit("not approved — run `graph-goal.py approve` first")
+    space.only_driver()          # planning and building never overlap on one campaign
     book = Backlog(backlog_of(space))
     added = plan(book, space, rounds=args.rounds)
     print(f"the plan added {added} card{'' if added == 1 else 's'}")
