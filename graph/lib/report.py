@@ -62,6 +62,11 @@ def report(space) -> dict:
     counted = [row for row in attempts if row.get("counted")]
     reviews = [row for row in attempts if row.get("purpose") == "review"]
     decisions = [row for row in attempts if row.get("purpose") == "decide"]
+    # A router decision is a "routed" event, not an "attempt" — it never
+    # consumes a build attempt — but its measured fee is spend all the same,
+    # a paid decision that fell back included, an offline route (no figure)
+    # never turned into an invented zero-cost charge.
+    routed = [row for row in rows if row.get("kind") == "routed"]
     return {
         "tasks": len(by_task),
         "seconds": round(total, 1),
@@ -74,7 +79,8 @@ def report(space) -> dict:
                                      if name in WORK_STEPS), 1),
         "seconds_on_judging": round(sum(entry["seconds"] for name, entry in by_step.items()
                                         if name in JUDGE_STEPS), 1),
-        "spend_known": round(sum(row.get("cost") or 0 for row in attempts), 4),
+        "spend_known": round(sum(row.get("cost") or 0 for row in attempts) +
+                             sum(row.get("cost") or 0 for row in routed), 4),
         # Codex has no account of its own and Claude shares builder accounts,
         # so a review call is told apart only by `purpose="review"`
         # (workspace.py `attempt`). A review with no cost figure is counted,
