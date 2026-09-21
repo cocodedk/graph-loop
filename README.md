@@ -14,8 +14,8 @@ having blind spots the builder does not, so a single-provider setup is a differe
 
 ## Website
 
-- [English](https://cocodedk.github.io/graph-loop/)
-- [فارسی (Persian)](https://cocodedk.github.io/graph-loop/fa/)
+- [English](https://graph-loop.cocode.dk/)
+- [فارسی (Persian)](https://graph-loop.cocode.dk/fa/)
 
 ## The idea
 
