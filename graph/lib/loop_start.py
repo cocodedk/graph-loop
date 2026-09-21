@@ -18,4 +18,4 @@ def already_finished(task: dict) -> TaskOutcome | None:
     without a backlog write, when the card is `done` already."""
     if task.get("status") != "done":
         return None
-    return TaskOutcome("done", "already finished, not reopened", task.get("commit") or "")
+    return TaskOutcome("done", "already finished, not reopened", task.get("worktree") or "")
