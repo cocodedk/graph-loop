@@ -13,11 +13,13 @@ sys.path.insert(0, str(HERE / "lib"))
 import graph_commands
 from loop import Loop
 from loop_steps import build
+from providers import Outcome
+from resources import Resource
 from router_probe import CATALOG, Decisions
 from test_loop import Fakes, repo_with, task
 from worktree import Worktree
 
-EXPECTED_TESTS = 4
+EXPECTED_TESTS = 6
 
 
 class RouterCallsTest(unittest.TestCase):
@@ -58,6 +60,31 @@ class RouterCallsTest(unittest.TestCase):
         argv = call.call_args.args[0]
         self.assertEqual("gpt-5.6-sol", argv[argv.index("--model") + 1])
         self.assertIn('model_reasoning_effort="medium"', argv)
+
+    def test_no_independent_reviewer_produces_no_accepted_review(self):
+        root, _, space = repo_with(task(builder_model="claude-sonnet-5", builder_agent="claude"))
+        with patch.dict("os.environ", CATALOG), \
+             patch("resources.belt", return_value=[Resource("claude", "work", "claude-opus-5")]), \
+             patch("provider_codex._run") as codex_call, patch("providers.claude", return_value=Outcome(
+                 "ok", text="REVIEW: ACCEPT")) as claude_call:
+            result = graph_commands._real_review("Review this card", cwd=root, space=space, task_id="T1")
+        self.assertFalse(result.ok)
+        self.assertNotEqual("ACCEPT", result.verdict)
+        codex_call.assert_not_called()
+        claude_call.assert_not_called()
+
+    def test_exhausting_independent_models_never_falls_back_to_the_builder_family(self):
+        root, _, space = repo_with(task(builder_model="claude-sonnet-5", builder_agent="claude"))
+        with patch.dict("os.environ", CATALOG), \
+             patch("urllib.request.urlopen", side_effect=Decisions(model="gpt-5.6-sol")), \
+             patch("review._one_review", return_value=Outcome("capacity")) as codex_call, \
+             patch("review._claude_review", return_value=Outcome(
+                 "ok", verdict="ACCEPT", text="REVIEW: ACCEPT")) as claude_call:
+            result = graph_commands._real_review("Review this card", cwd=root, space=space, task_id="T1")
+        self.assertFalse(result.ok)
+        self.assertNotEqual("ACCEPT", result.verdict)
+        self.assertEqual(2, codex_call.call_count)
+        claude_call.assert_not_called()
 
     def test_count(self):
         self.assertEqual(EXPECTED_TESTS, unittest.defaultTestLoader.loadTestsFromModule(

@@ -9,7 +9,7 @@ from campaign_repo import git, repository
 from worktree import Worktree
 from worktree_scope import changed_outside
 
-EXPECTED_TESTS = 5
+EXPECTED_TESTS = 7
 
 
 class RenameEndpointsTest(unittest.TestCase):
@@ -38,6 +38,12 @@ class RenameEndpointsTest(unittest.TestCase):
 
     def test_an_artifact_source_cannot_authorize_an_ungranted_destination(self):
         self.assertTrue(self.rename("pkg/__pycache__/cached.py", "outside.py", ["pkg"]))
+
+    def test_a_granted_source_can_be_renamed_to_an_exempt_artifact(self):
+        self.assertEqual([], self.rename("pkg/a.py", "outside.pyc", ["pkg/a.py"]))
+
+    def test_an_exempt_source_can_be_renamed_to_a_granted_destination(self):
+        self.assertEqual([], self.rename("pkg/__pycache__/cached.py", "outside.py", ["outside.py"]))
 
     def test_count(self):
         self.assertEqual(EXPECTED_TESTS, unittest.defaultTestLoader.loadTestsFromModule(

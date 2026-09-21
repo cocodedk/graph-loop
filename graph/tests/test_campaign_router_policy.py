@@ -10,9 +10,10 @@ from unittest.mock import patch
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 from campaigns import campaign
 from contract import contract_digest
+from resources import Resource
 from router_probe import CARD, CATALOG, Decisions
 
-EXPECTED_TESTS = 10
+EXPECTED_TESTS = 16
 
 
 class RouterPolicyTest(unittest.TestCase):
@@ -46,7 +47,7 @@ class RouterPolicyTest(unittest.TestCase):
                          (result.resource.model, result.effort, result.source))
 
     def test_low_or_nonfinite_confidence_is_not_authority(self):
-        for confidence in (0.1, float("nan"), float("inf"), True):
+        for confidence in (0.1, -0.1, 1.1, None, "0.95", float("nan"), float("inf"), True):
             with self.subTest(confidence=confidence):
                 self.assertEqual("fallback", self.choose(Decisions(confidence=confidence)).source)
 
@@ -85,6 +86,8 @@ class RouterPolicyTest(unittest.TestCase):
         self.assertEqual((CARD["id"], "build", result.resource.model, "medium", "fallback"),
                          (record["task"], record["purpose"], record["model"], record["effort"], record["source"]))
         self.assertTrue(record.get("why"))
+        self.assertEqual(result.resource.agent, record["agent"])
+        self.assertEqual(contract_digest(CARD), record["contract_digest"])
 
     def test_offline_mode_never_contacts_the_decision_service(self):
         probe = Decisions()
@@ -92,6 +95,45 @@ class RouterPolicyTest(unittest.TestCase):
             result = self.choose(probe)
         self.assertEqual([], probe.requests)
         self.assertEqual(("medium", "fallback"), (result.effort, result.source))
+
+    def test_review_fallback_still_excludes_the_builders_family(self):
+        with patch("urllib.request.urlopen", side_effect=Decisions(unavailable=True)):
+            result = self.router.choose(CARD, "review", builder_model="claude-sonnet-5")
+        self.assertEqual(("codex", "gpt-6-astra", "medium", "fallback"),
+                         (result.resource.agent, result.resource.model, result.effort, result.source))
+
+    def test_no_independent_candidate_refuses_without_a_decision_call(self):
+        with patch("resources.belt", return_value=[Resource("claude", "work", "claude-opus-5")]), \
+             patch("urllib.request.urlopen") as transport, self.assertRaises(LookupError):
+            self.router.choose(CARD, "review", builder_model="claude-sonnet-5")
+        transport.assert_not_called()
+
+    def test_another_contracts_medium_failure_does_not_authorize_high(self):
+        self._irrelevant_failure(digest="older-contract")
+
+    def test_an_outage_does_not_authorize_high(self):
+        self._irrelevant_failure(outcome="harness")
+
+    def test_another_cards_medium_failure_does_not_authorize_high(self):
+        self._irrelevant_failure(task_id="some-other-card")
+
+    def _irrelevant_failure(self, *, digest=None, outcome="ok", task_id=None):
+        _, space = campaign([CARD])
+        task_id = task_id or CARD["id"]
+        space.event("routed", task=task_id, purpose="build", model="claude-sonnet-5",
+                    agent="claude", effort="medium", source="jev",
+                    contract_digest=digest or contract_digest(CARD))
+        space.event("step", task=task_id, step="build", outcome=outcome, effort="medium",
+                    on="claude:work/claude-sonnet-5")
+        space.event("failed", task=task_id, step="gate", why="regression fails")
+        result = self.choose(Decisions(effort="high"), space=space)
+        self.assertEqual(("medium", "fallback"), (result.effort, result.source))
+
+    def test_measured_decision_cost_is_kept_in_the_route_record(self):
+        _, space = campaign([CARD])
+        self.choose(Decisions(), space=space)
+        record = [row for row in space.events() if row["kind"] == "routed"][-1]
+        self.assertEqual(0.001, record["cost"])
 
     def test_count(self):
         self.assertEqual(EXPECTED_TESTS, unittest.defaultTestLoader.loadTestsFromModule(

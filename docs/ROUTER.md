@@ -22,7 +22,8 @@ campaign records a medium build for this contract followed by a failed work
 gate; an outage or a different card's failure is insufficient. The route record
 binds the choice to `contract_digest(task)`. Review candidates exclude the
 builder's family, including fallback; no eligible independent reviewer means
-no accepted review, never self-review.
+no accepted review, never self-review: `choose` raises `LookupError`, and
+the call site returns an unavailable review without invoking any provider.
 
 Record each decision as a `routed` event with task, purpose, agent, model,
 effort, source, reason and contract digest, plus the provider's measured cost
