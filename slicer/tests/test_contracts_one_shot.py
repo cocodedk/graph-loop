@@ -8,7 +8,7 @@ from backlog import Backlog
 from contract import contract_text
 from tree import publish
 
-EXPECTED_TESTS = 2
+EXPECTED_TESTS = 3
 
 
 class OneShotContracts(unittest.TestCase):
@@ -34,6 +34,14 @@ class OneShotContracts(unittest.TestCase):
         for fields in ({"gate_until_kept": "true"}, {"gate_when_kept": False}):
             with self.subTest(fields=fields), self.assertRaisesRegex(ValueError, next(iter(fields))):
                 rig.check(rig.atom(**fields))
+
+    def test_a_one_shot_gate_requires_a_non_empty_lasting_gate(self):
+        rig = test_contracts.Contracts()
+        rig.setUp()
+        for fields in ({}, {"gate_when_kept": None}, {"gate_when_kept": ""},
+                       {"gate_when_kept": " \t\n"}):
+            with self.subTest(fields=fields), self.assertRaisesRegex(ValueError, "gate_when_kept"):
+                rig.check(rig.atom(gate_until_kept=True, **fields))
 
 
 class Count(unittest.TestCase):

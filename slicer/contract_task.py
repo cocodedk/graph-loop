@@ -91,6 +91,8 @@ def _task(task: dict, repo: pathlib.Path, known: set[str]) -> None:
     for key in ("note", "expect_red", "gate_when_kept"):
         if key in task and not isinstance(task[key], str):
             raise ValueError(f"{key} must be text")
+    if task.get("gate_until_kept") is True and not task.get("gate_when_kept", "").strip():
+        raise ValueError("gate_until_kept requires a non-empty gate_when_kept")
     if task.get("helper_verbs"):
         raise ValueError("the standalone slicer cannot author live helper verbs")
     if is_live(task):

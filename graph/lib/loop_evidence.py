@@ -79,11 +79,10 @@ def red_first(loop, task: dict, tree: Worktree, gate: str, rebuild: int,
             closed = settled(rows)
             peers = [row for row in rows if row.get("id") != task_id
                      and overlap(set(task.get("files") or []), set(row.get("files") or []))]
-            if why == GREEN_ALREADY and all(row["id"] in closed for row in peers):
-                delivered = ", ".join(row["id"] for row in peers if row.get("status") == "done")
-                why = "work was already delivered; gate passed before any work"
-                if delivered:
-                    why += f"; done cards listing these files: {delivered}"
+            delivered = ", ".join(row["id"] for row in peers if row.get("status") == "done")
+            if why == GREEN_ALREADY and delivered and all(row["id"] in closed for row in peers):
+                why = ("work was already delivered; gate passed before any work"
+                       f"; done cards listing these files: {delivered}")
                 loop.backlog.set_status(task_id, "done", done_why=why, refused_why=None)
                 loop.space.event("done", task=task_id, why=why)
                 tree.remove()
