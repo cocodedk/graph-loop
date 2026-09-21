@@ -4,7 +4,8 @@ One decision chooses one executable profile from the configured resource belt;
 model names and effort values returned as free text never become authority.
 Jev's typed choice contains the configured agent, account, model and effort.
 The selection descriptions must name those fields so the decision can compare
-what is offered. Do not hard-code current prices or assume an unavailable
+what is offered; the decision question explicitly asks for a model and effort,
+while the existing triage question stays a failure diagnosis. Do not hard-code current prices or assume an unavailable
 model can run. The existing resource belt still handles account and model
 refusals without repeating paid work.
 
@@ -21,7 +22,7 @@ proof that medium failed. Higher effort becomes eligible only after the
 campaign records a medium build for this contract followed by a failed work
 gate; an outage or a different card's failure is insufficient. The route record
 binds the choice to `contract_digest(task)`. Review candidates exclude the
-builder's family, including fallback; no eligible independent reviewer means
+builder's family, including configured CLI aliases and fallback; no eligible independent reviewer means
 no accepted review, never self-review: `choose` raises `LookupError`, and
 the call site returns an unavailable review without invoking any provider.
 
