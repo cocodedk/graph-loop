@@ -18,6 +18,7 @@ import tmp_root  # noqa: F401 — every temp file of this process under one root
 sys.path.insert(0, str(HERE))
 
 import graph_commands
+import real_calls
 from backlog import Backlog
 from graph_commands import replan_pending
 from providers import Outcome
@@ -119,7 +120,7 @@ class RealReviewCwdTest(unittest.TestCase):
         belt = [review.resources.Resource("claude", "work", "claude-opus-5")]
         with unittest.mock.patch.object(review.resources, "belt", return_value=belt), \
              unittest.mock.patch("providers.claude", fake_claude):
-            out = graph_commands._real_review("judge this", cwd="/worktrees/T1", effort="high")
+            out = review.codex("codex", "judge this", cwd="/worktrees/T1", effort="medium")
         self.assertEqual("ACCEPT", out.verdict)
         self.assertEqual("/worktrees/T1", seen.get("cwd"))
 
@@ -131,14 +132,14 @@ class RealReviewLedgerTest(unittest.TestCase):
     reviewing, when the caller gives it a workspace and a task id."""
 
     def test_a_review_leaves_one_ledger_row_under_its_account_and_task(self):
-        space = Workspace(tempfile.mkdtemp()).init(goal="g", backlog="b.yaml")
+        space = Workspace(tempfile.mkdtemp()).init(goal="g", backlog=str(book(status="todo").path))
 
-        def fake_codex(binary, prompt, *, cwd="", effort="", attempt=None):
+        def fake_codex(binary, prompt, *, cwd="", effort="", attempt=None, belt=None):
             if attempt:
                 attempt("ok", "second", 0.4, 900, "fine")
             return Outcome("ok", verdict="ACCEPT", text="fine")
 
-        with unittest.mock.patch.object(graph_commands, "codex", fake_codex):
+        with unittest.mock.patch.object(real_calls, "codex", fake_codex):
             graph_commands._real_review("judge this", cwd="/worktrees/T1", effort="high",
                                         space=space, task_id="T1")
         rows = [row for row in space.events() if row.get("kind") == "attempt"]
