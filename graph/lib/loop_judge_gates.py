@@ -7,6 +7,8 @@ back, so `loop_judge._gates_on_the_branch` still names this one function.
 
 from __future__ import annotations
 
+import subprocess
+
 from backlog_reach import overlap, reach
 from backlog_status import is_live
 from gate_baseline import same_failure
@@ -67,6 +69,19 @@ def _gate_is_defective(loop, task: dict, clash) -> bool | None:
     return same_failure(loop, task, clash)
 
 
+def _kept_on_the_branch(loop, row: dict) -> bool:
+    """Whether the card's `commit` is an ancestor of the campaign branch — git's
+    answer, not merely having a commit. Any failure to get a yes is a no."""
+    sha = str(row.get("commit") or "").strip()
+    if not sha:
+        return False
+    tip = loop.keeper.tip()      # the branch, or the base it is about to be cut from
+    check = subprocess.run(
+        ("git", "-C", loop.keeper.repo, "merge-base", "--is-ancestor", sha, tip),
+        capture_output=True, text=True, check=False)
+    return check.returncode == 0
+
+
 def _send_to_its_owner(loop, task: dict, tree, owner: str, clash) -> TaskOutcome:
     """ANOTHER card's gate, red on the branch tip WITHOUT this card's work — or
     one that edited the tree it judged: the gate is what needs repairing, and no
@@ -100,6 +115,13 @@ def _send_to_its_owner(loop, task: dict, tree, owner: str, clash) -> TaskOutcome
                      gate_owner=owner, why=why[:400])
     with loop.backlog.only_writer():
         owned = loop.backlog.task(owner) or {}
+        if owned.get("status") == "done" and _kept_on_the_branch(loop, owned):
+            # Finished work the branch already holds is left alone. This card
+            # stops where it is, tree kept, and is not offered again: a person
+            # reads the gate, and nothing here can repair it.
+            loop.backlog.set_status(task_id, "rejected", rebuild_from=tree.path,
+                                    refused_why=why[:400])
+            return TaskOutcome("rejected", why, tree.path)
         if owned.get("status") == "done":
             # Its hold is passed back explicitly: any write of `todo` pops
             # `blocked_by_human` (`Backlog._apply`), and a person's hold on the
