@@ -48,8 +48,9 @@ combined gate blamed them, and they ended `blocked_by_agent`. Three code cards e
 
 *Behaviour.* A card whose kept commit is an ancestor of the campaign branch is `done`, and
 nothing but a person changes that. A red-first gate belongs to the moment before its code
-exists: once a card whose files the judge's test exercises is kept, the judge's gate is never
-re-run as a red gate. A card found green before any work, whose files no open card owns, ends
+exists: once the code it waits for is kept, the judge's obligation inverts — the same test
+must now PASS — and that is the gate the combined check runs for it from then on. Leaving the
+judge out instead would drop the regression check the judge exists to give. A card found green before any work, whose files no open card owns, ends
 `dropped` with a line naming the card that delivered it — not `green_already` for a person.
 
 *Seam.* `loop_judge_gates._gates_on_the_branch` and `_send_to_its_owner`; the red-first step in
