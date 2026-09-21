@@ -29,7 +29,7 @@ class Decisions:
             "usage": {"input_tokens": 20, "output_tokens": 1, "cost": 0.001}}).encode())
 
 
-CATALOG = {"GRAPH_ACCOUNTS": "work", "GRAPH_BUILDERS": "claude-sonnet-5,claude-opus-5",
+CATALOG = {"GRAPH_ROUTER": "jev", "GRAPH_ACCOUNTS": "work", "GRAPH_BUILDERS": "claude-sonnet-5,claude-opus-5",
            "GRAPH_REVIEWERS": "gpt-6-astra,gpt-5.6-sol",
            "GRAPH_CLAUDE_REVIEWERS": "claude-opus-5,claude-sonnet-5"}
 CARD = {"id": "route-card", "goal": "repair a small helper", "files": ["a.py"],

@@ -12,7 +12,7 @@ from campaigns import campaign
 from contract import contract_digest
 from router_probe import CARD, CATALOG, Decisions
 
-EXPECTED_TESTS = 9
+EXPECTED_TESTS = 10
 
 
 class RouterPolicyTest(unittest.TestCase):
@@ -85,6 +85,13 @@ class RouterPolicyTest(unittest.TestCase):
         self.assertEqual((CARD["id"], "build", result.resource.model, "medium", "fallback"),
                          (record["task"], record["purpose"], record["model"], record["effort"], record["source"]))
         self.assertTrue(record.get("why"))
+
+    def test_offline_mode_never_contacts_the_decision_service(self):
+        probe = Decisions()
+        with patch.dict("os.environ", {"GRAPH_ROUTER": "off"}):
+            result = self.choose(probe)
+        self.assertEqual([], probe.requests)
+        self.assertEqual(("medium", "fallback"), (result.effort, result.source))
 
     def test_count(self):
         self.assertEqual(EXPECTED_TESTS, unittest.defaultTestLoader.loadTestsFromModule(

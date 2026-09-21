@@ -35,3 +35,8 @@ fallback; `graph/tests/test_campaign_router_calls.py` drives the actual call
 sites, with a deterministic Decisions API stand-in so the gates spend nothing.
 A live probe of the existing transport has separately returned a typed model
 profile successfully; deterministic tests remain the acceptance verdict.
+
+`GRAPH_ROUTER=off` provides an explicit offline mode using the same eligible
+medium fallback; the default is Jev routing. Test process fixtures select
+offline mode, and the router gates explicitly enable their mocked transport,
+so running either repository suite never contacts the decision service.
