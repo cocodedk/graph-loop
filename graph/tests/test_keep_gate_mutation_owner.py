@@ -37,15 +37,14 @@ class MutatingGateTest(unittest.TestCase):
         loop = Loop(repo=root, backlog=book, space=space, build=fakes.builder,
                     review=fakes.reviewer, branch="campaign/test")
         loop.run_task(book.task("T1"))
-        owner = book.task("T9")
-        self.assertEqual("todo", owner["status"])              # the gate is what gets repaired
-        self.assertTrue(owner["gate_reviewed_first"])          # its contract is read again first
-        # The reason on the card is this defect, not the tip-red one: a repair
-        # sent to read the gate for a redness that was never there wastes a round.
-        self.assertIn("edited the tree it judged", owner["refused_why"])
+        # T9 is already done: reopening finished work for a defect this card's
+        # builder cannot answer would only spend rounds retrying into the same
+        # mutating gate, so the owner is left exactly as it was.
+        self.assertEqual(MUTATES, book.task("T9"))
         mine = book.task("T1")
         self.assertEqual(0, int(mine.get("rebuild_round") or 0))   # not this card's round
-        self.assertIn("T9", mine["needs"])                     # and this card waits for it
+        self.assertTrue(mine["blocked_by_human"])              # parked for a person to decide
+        self.assertIn("edited the tree it judged", mine["refused_why"])
         clash = [event for event in space.events() if event.get("kind") == "failed"
                  and event.get("step") == "combined_gate"]
         self.assertEqual(["T9"], [event["gate_owner"] for event in clash])
