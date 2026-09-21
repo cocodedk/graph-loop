@@ -5,9 +5,55 @@ source:
 files:
 - slicer/cut_verdicts.py
 - slicer/tests/test_cut_verdicts.py
-status: todo
-gate_reviewed_first: true
+status: done
 expect_red: the verdict was matched by substring
+requirement:
+  goal: 'slicer/cut_verdicts.py reads the atom names out of a verdict id by taking the id apart the way
+    cut_questions built it: among atoms `a`, `ab` and `c`, a usable keep_together on the cut between `ab`
+    and `c` merges that pair and no other, and among atoms `a` and `atom`, a usable fail on the atom id
+    `atom:a` names `a`.'
+  done_when: The gate passes. For atoms `a`, `ab` and `c` that all grant one shared file, a single usable
+    keep_together verdict whose id is `cut_questions._cut_id("ab", "c")` gives `merges` exactly `[("ab",
+    "c")]`. For atoms `a` and `atom`, a usable fail whose id is `atom:a` gives `findings` exactly `["Atom
+    a fails the question one_job."]`. slicer/tests/test_cut_check.py stays green.
+  sources:
+  - docs/rfc/jev-cuts-brief.md:43
+  - docs/rfc/jev-cuts-brief.md:53
+contract_seen: 9fedd6f841db9aa5
+accepted_criteria:
+  goal: 'slicer/cut_verdicts.py reads the atom names out of a verdict id by taking the id apart the way
+    cut_questions built it: among atoms `a`, `ab` and `c`, a usable keep_together on the cut between `ab`
+    and `c` merges that pair and no other, and among atoms `a` and `atom`, a usable fail on the atom id
+    `atom:a` names `a`.'
+  gate: "set -e -o pipefail\ntimeout 600 python3 - <<'PY'\nimport os, pathlib, sys, types\nroot = pathlib.Path(os.getcwd()).resolve()\n\
+    sys.path.insert(0, str(root / \"graph\" / \"lib\"))\nsys.path.insert(0, str(root / \"slicer\"))\n\
+    import cut_verdicts\nfrom cut_questions import _cut_id\n\ndef atom(name, stage, files):\n    return\
+    \ {\"name\": name, \"stage\": stage, \"goal\": f\"goal {name}\", \"files\": files,\n            \"\
+    gate\": \"g\", \"done_when\": f\"done {name}\"}\n\ndef verdicts(ident, question, choice, confidence=0.9):\n\
+    \    asked = types.SimpleNamespace(id=ident, questions={question: {}})\n    reply = types.SimpleNamespace(ok=True,\
+    \ answers={\n        question: {\"choice\": choice, \"confidence\": confidence}})\n    return cut_verdicts.read(asked,\
+    \ reply)\n\ncuts = {\"atoms\": [atom(\"a\", 1, [\"s.py\"]), atom(\"ab\", 2, [\"s.py\"]), atom(\"c\"\
+    , 3, [\"s.py\"])]}\nonly = verdicts(_cut_id(\"ab\", \"c\"), \"cut\", \"keep_together\")\npaired =\
+    \ cut_verdicts.merges(cuts, only)\nassert paired == [(\"ab\", \"c\")], f\"the verdict was matched\
+    \ by substring: {paired}\"\n\nnamed = {\"atoms\": [atom(\"a\", 1, [\"x.py\"]), atom(\"atom\", 2, [\"\
+    y.py\"])]}\none = verdicts(\"atom:a\", \"one_job\", \"fail\")\nraised = cut_verdicts.findings(named,\
+    \ one)\nassert raised == [\"Atom a fails the question one_job.\"], \\\n    f\"the verdict was matched\
+    \ by substring: {raised}\"\nprint(\"PROBE OK\")\nPY\n(cd slicer/tests && timeout 600 python3 -m unittest\
+    \ test_cut_check)"
+  done_when: The gate passes. For atoms `a`, `ab` and `c` that all grant one shared file, a single usable
+    keep_together verdict whose id is `cut_questions._cut_id("ab", "c")` gives `merges` exactly `[("ab",
+    "c")]`. For atoms `a` and `atom`, a usable fail whose id is `atom:a` gives `findings` exactly `["Atom
+    a fails the question one_job."]`. slicer/tests/test_cut_check.py stays green.
+  files:
+  - slicer/cut_verdicts.py
+  - slicer/tests/test_cut_verdicts.py
+rebuild_from: /var/tmp/graph-trees/graph-cr_6vjmh/task-cut-verdict-ids-are-parsed
+session: 0fc0de70-3c07-4aa3-bdb5-52ba3b15a477
+session_account: personal
+
+commit: 4f6c9e2b55cc3167140bc77a402041f61ee94545
+worktree: /var/tmp/graph-trees/graph-cr_6vjmh/task-cut-verdict-ids-are-parsed
+kept_at: '2026-09-20T17:56:24Z'
 ---
 
 ## Goal
