@@ -119,7 +119,7 @@ def build(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOutco
         # in the tree. A crash, a malformed answer, or a limit hit part way
         # through (its cost, or the diff it left, says so) means the call did
         # paid work; another resource would spend money repeating it, and the
-        # rebuild rounds exist for that. A refused commit never hides that
+        # next turn resumes that work. A refused commit never hides that
         # diff: HEAD does not move, so the working tree still differs from it.
         acted = _paid(built) or tree.diff() != fingerprint
         if not resources.refused_before_reading(built.kind) or acted:
@@ -152,15 +152,14 @@ def build(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOutco
         return TaskOutcome("waiting", f"every account refused before reading ({built.kind})",
                            tree.path if in_place else "")
     if built.kind != "ok":
-        # The call did paid work and went wrong — a crash, a malformed answer,
-        # a denied tool, a limit hit part way through. The tree may hold part
-        # of that work: continue THERE, counted, never a fresh tree that
-        # re-pays the build.
+        # Keep partial work here. Crashes, malformed answers and denied tools
+        # spend a round; a provider's limit does not.
         from loop_judge import back_in_place
         return back_in_place(loop, task, tree, "harness",
                              f"the builder's call went wrong ({built.kind})",
                              f"Your previous call did not finish ({built.kind}). This worktree holds "
-                             "what it did: read the diff, continue from it, finish, and say DONE.")
+                             "what it did: read the diff, continue from it, finish, and say DONE.",
+                             build_kind=built.kind)
 
     said = read_result(built.text)
     loop.space.event("said", task=task_id, state=said.state, why=said.why[:300])

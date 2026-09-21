@@ -1,6 +1,5 @@
-"""Harness faults after paid work: a broken review or a broken build call
-continues in the kept worktree as a counted round (B4), while a refusal that
-provably spent nothing waits without spending a round. The rig is `test_loop`'s."""
+"""Provider outages keep paid work without charging a round; other harness
+faults still spend a bounded round. The rig is `test_loop`'s."""
 
 from __future__ import annotations
 
@@ -13,15 +12,11 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 from providers import Outcome
 from test_loop import Fakes, loop_for, task
 
-EXPECTED_TESTS = 13
+EXPECTED_TESTS = 14
 
 
 class BrokenReviewTest(unittest.TestCase):
-    """A review that did not happen is a harness fault, never a refusal.
-
-    Seen live: a reviewer was killed, its banner was parsed as the answer, and
-    three good tasks were quarantined for a rejection nobody wrote.
-    """
+    """A review that did not happen is a harness fault, never a refusal."""
 
     def test_a_review_that_crashed_does_not_refuse_the_task(self):
         fakes = Fakes(review=[Outcome("crash", text="the review did not return")])
@@ -43,30 +38,40 @@ class BrokenReviewTest(unittest.TestCase):
         loop, book, _ = loop_for(task(), fakes)
         out = loop.run_task(book.task("T1"))
         self.assertEqual("harness", out.state)
-        # gate-green work: queued as a counted round in the SAME tree, so the
-        # next pick re-reviews there instead of re-paying the build (B4)
         row = book.task("T1")
         self.assertEqual(("todo", 1, out.worktree),
                          (row["status"], row["rebuild_round"], row["rebuild_from"]))
         self.assertIn("diff review did not happen", row["rejections"][-1])
 
     def test_a_limit_hit_part_way_through_keeps_the_paid_work_in_place(self):
-        # The cost proves the call worked before the limit cut it off: the belt
-        # stops (another account would re-pay the same work) and the tree
-        # continues as a counted round, never "waiting" with the work removed.
-        fakes = Fakes(build=[Outcome("limit", text="limit reached mid-call", cost=1.2, tokens=500),
-                             Outcome("limit", text="never called")])
-        loop, book, _ = loop_for(task(), fakes)
-        out = loop.run_task(book.task("T1"))
-        self.assertEqual("harness", out.state)
-        row = book.task("T1")
-        self.assertEqual(("todo", 1, out.worktree),
-                         (row["status"], row["rebuild_round"], row["rebuild_from"]))
-        self.assertEqual(1, len([c for c in fakes.calls if c.startswith("build")]))
+        for kind in ("limit", "auth", "capacity"):
+            for rounds in (0, 2):
+                with self.subTest(kind=kind, rounds=rounds):
+                    fakes = Fakes(build=[Outcome(kind, text="provider unavailable", cost=1.2,
+                                                  tokens=500, session="kept-session")])
+                    loop, book, space = loop_for(task(rebuild_round=rounds,
+                                                      rejections=["unresolved diff finding"]), fakes)
+                    out = loop.run_task(book.task("T1"))
+                    row = book.task("T1")
+                    self.assertEqual("harness", out.state)
+                    self.assertEqual(("todo", rounds, out.worktree),
+                                     (row["status"], row.get("rebuild_round", 0), row["rebuild_from"]))
+                    self.assertEqual("kept-session", row["session"])
+                    self.assertEqual("unresolved diff finding", row["rejections"][0])
+                    self.assertEqual(1, len([c for c in fakes.calls if c.startswith("build")]))
+                    queued = [r for r in space.events() if r.get("kind") == "rebuild_queued"][-1]
+                    self.assertIs(False, queued["charged"])
+
+    def test_a_builder_crash_or_malformed_answer_still_reaches_the_round_cap(self):
+        for kind in ("crash", "malformed"):
+            with self.subTest(kind=kind):
+                fakes = Fakes(build=[Outcome(kind, text="broken answer", cost=1.2, tokens=500)])
+                loop, book, _ = loop_for(task(rebuild_round=2), fakes)
+                out = loop.run_task(book.task("T1"))
+                self.assertEqual("rejected", out.state)
+                self.assertEqual(("rejected", 3), (book.task("T1")["status"], book.task("T1")["rebuild_round"]))
 
     def test_an_unavailable_review_stops_at_the_same_cap_as_a_rejected_diff(self):
-        # the worktree is lost, so this round reviews the contract again (ACCEPT)
-        # before the diff review breaks — at round three, the cap holds
         fakes = Fakes(review=[Outcome("ok", verdict="ACCEPT", text="ok"),
                               Outcome("malformed", text="banner only")])
         loop, book, _ = loop_for(task(rebuild_round=2, rebuild_from=""), fakes)
@@ -77,9 +82,6 @@ class BrokenReviewTest(unittest.TestCase):
         self.assertIn("did not happen", row["refused_why"])
 
     def test_an_unknown_limit_that_changed_nothing_is_a_refusal_not_paid_work(self):
-        # Missing figures mean unknown, not innocent: the judge is the tree.
-        # edit=None models a refusal that left no edit behind — the belt walks
-        # and the queue stands, never a counted round on a weekend limit.
         fakes = Fakes(build=[Outcome("limit", text="usage limit reached"),
                              Outcome("limit", text="usage limit reached")], edit=None)
         loop, book, _ = loop_for(task(), fakes)
@@ -91,11 +93,9 @@ class BrokenReviewTest(unittest.TestCase):
         self.assertEqual(2, len([c for c in fakes.calls if c.startswith("build")]))
 
     def test_an_unknown_limit_that_edited_the_tree_is_paid_work_kept_in_place(self):
-        # The same figureless limit, but the call edited a file before dying:
-        # the diff is the proof — the belt stops and the round is counted.
-        import pathlib
+        # The diff proves work happened; the provider's limit still spends no round.
         fakes = Fakes()
-        loop, book, _ = loop_for(task(), fakes)
+        loop, book, space = loop_for(task(), fakes)
         builds = []
 
         def builder(prompt, *, cwd, **kw):
@@ -107,14 +107,14 @@ class BrokenReviewTest(unittest.TestCase):
         out = loop.run_task(book.task("T1"))
         self.assertEqual("harness", out.state)
         row = book.task("T1")
-        self.assertEqual(("todo", 1, out.worktree),
-                         (row["status"], row["rebuild_round"], row["rebuild_from"]))
+        self.assertEqual(("todo", 0, out.worktree),
+                         (row["status"], row.get("rebuild_round", 0), row["rebuild_from"]))
         self.assertEqual(1, len(builds))                        # the belt stopped
+        self.assertEqual("half-done\n", (pathlib.Path(out.worktree) / "a.py").read_text())
+        queued = [r for r in space.events() if r.get("kind") == "rebuild_queued"][-1]
+        self.assertIs(False, queued["charged"])
 
     def test_a_diff_review_outage_spends_no_round(self):
-        # The reviewer itself was never reached. Recorded 2026-09-03: one
-        # review attempt, 15:02:59Z-15:03:13Z, ended on the reviewer's 404 —
-        # not a finding about the work, so no round is spent.
         fakes = Fakes(review=[Outcome("ok", verdict="ACCEPT", text="ok"),
                               Outcome("capacity", text="unexpected status 404 Not Found, "
                                       "url: https://chatgpt.com/backend-api/codex/responses")])
@@ -130,10 +130,7 @@ class BrokenReviewTest(unittest.TestCase):
 
 
 class ContractFaultTest(unittest.TestCase):
-    """A rebuild round's contract is read again only once its digest goes
-    stale (a goal edited after round one's ACCEPT); its outage and its
-    refusal must not delete the tree round one already paid for (2026-09-01:
-    a round-2 contract REJECT deleted a 20-minute build)."""
+    """A stale contract must be read again without losing earlier paid work."""
 
     def test_a_rebuild_rounds_contract_refusal_keeps_the_tree(self):
         fakes = Fakes(review=[Outcome("ok", verdict="ACCEPT", text="ok"),
@@ -162,9 +159,6 @@ class ContractFaultTest(unittest.TestCase):
         self.assertTrue(pathlib.Path(first.worktree).exists())
 
     def test_a_rebuild_rounds_contract_outage_by_limit_spends_no_round(self):
-        # Same stale-digest reread as above, but the reviewer's own account hit
-        # its usage limit — the belt would try another, so this never spends
-        # the round a crash or a malformed answer would (B4's carve-out).
         fakes = Fakes(review=[Outcome("ok", verdict="ACCEPT", text="ok"),
                               Outcome("ok", verdict="REJECT", text="1. wrong line")])
         loop, book, space = loop_for(task(), fakes)
