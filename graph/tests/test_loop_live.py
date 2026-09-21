@@ -70,14 +70,13 @@ class BuilderToolsTest(unittest.TestCase):
         self.assertNotIn(HELPER, tools)
 
     def test_a_card_creating_a_listed_file_gets_write(self):
-        # T26.observed's builder finished the code and was then refused the very
-        # test file the card ordered it to create: a listed file absent from the
-        # builder's OWN worktree grants Write; one already there does not.
+        # Both absent and existing files may be written; the scope check
+        # still bounds which files the builder may change.
         import tempfile
         tree = tempfile.mkdtemp()
         self.assertIn("Write", builder_tools(task(files=["not-made-yet.py"]), tree))
         (pathlib.Path(tree) / "made.py").write_text("x")
-        self.assertNotIn("Write", builder_tools(task(files=["made.py"]), tree))
+        self.assertIn("Write", builder_tools(task(files=["made.py"]), tree))
 
 
 class LiveBuilderTest(unittest.TestCase):

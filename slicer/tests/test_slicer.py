@@ -77,9 +77,10 @@ class Command(unittest.TestCase):
         self.assertIn("Never invent a required method", question)
         self.assertIn("the gate cannot observe, or a shape nothing here declares, "
                       "answer NEEDS_PERSON", question)
-        # a method it cannot observe was all this reached, so a card could invent a
-        # page format and the gate would prove the code matched the invention
         self.assertIn("never invent the SHAPE of data from outside this repository", question)
+        self.assertIn("never hide or delete the output a builder needs", question)
+        self.assertIn("no quiet flags that drop compiler errors, no deleting the log it greps", question)
+        self.assertIn("compilation/interface availability, never continued non-implementation", question)
         self.assertIn("`src/main/Link.java:parseLink`", question)   # the form to write
         self.assertIn("A bare path is not a name and neither is `creates: [result.txt]`", question)
 

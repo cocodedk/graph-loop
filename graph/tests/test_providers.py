@@ -18,7 +18,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 from providers import claude, codex
 
-EXPECTED_TESTS = 13
+EXPECTED_TESTS = 14
 
 
 def fake(script: str) -> str:
@@ -52,6 +52,16 @@ class ClaudeTest(unittest.TestCase):
         self.assertEqual("limit", out.kind)
         self.assertFalse(out.ok)
         self.assertFalse(out.consumes_attempt)
+
+    def test_provider_errors_keep_their_kind_and_spend_after_work_started(self):
+        for message, kind in (("HTTP 429", "limit"), ("rate limit exceeded", "limit"),
+                              ("rate_limit_error", "limit"), ("quota exceeded", "limit"),
+                              ("network failure", "capacity"), ("network error", "capacity")):
+            with self.subTest(message=message):
+                body = result(is_error=True, result=message, session_id="kept-session")
+                out = claude(fake(f"cat > /dev/null; echo '{body}'"), "prompt", account="work")
+                self.assertEqual(kind, out.kind)
+                self.assertEqual((0.5, 30, "kept-session"), (out.cost, out.tokens, out.session))
 
     def test_a_denial_before_any_work_is_a_harness_fault(self):
         denials = result(permission_denials=[{"tool": "Edit"}], result="")

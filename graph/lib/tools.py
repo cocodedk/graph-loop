@@ -102,19 +102,10 @@ def helper_commands(task: dict) -> list[str]:
 
 
 def builder_tools(task: dict, root: str = "") -> str:
-    """The --allowedTools string for this task's builder. `root` is the
-    builder's own worktree — the tree the grant must be true OF; the checkout
-    stands in only when no worktree exists yet."""
+    """The --allowedTools string; file scope is checked after the build."""
     if not is_live(task):
-        # Edit changes a file that exists; only Write creates one. A split
-        # (may_add_files) needs it — and so does a card ORDERED to create a
-        # listed file that does not exist yet: T26.observed's builder finished
-        # the code and was then refused the very test it was told to write.
-        # The scope check refuses whatever lands outside the list either way.
-        repo = pathlib.Path(root or where.repo())
-        creates = any(not (repo / path).exists() for path in (task.get("files") or []))
-        creator = ",Write" if task.get("may_add_files") or creates else ""
-        return f"{READ},Edit{creator},{code_shell(task)}"
+        # The scope check bounds the files, whichever writing tool is used.
+        return f"{READ},Edit,Write,{code_shell(task)}"
     own = ",".join(f"Edit({path})" for path in (task.get("files") or []))
     verbs = ",".join(f"Bash({command})" for command in helper_commands(task))
     return ",".join(part for part in (READ, own, verbs, LIVE_SHELL) if part)

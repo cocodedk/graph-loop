@@ -76,16 +76,26 @@ def settled(rows: list[dict]) -> set:
 
     A dropped card settles too: it was decided against, and a card that merely
     followed it must not inherit a wait that will never end.
+
+    A card's pieces are the union of what its own `needs` names and the cards
+    that name it in `sliced_from`. A piece cut by hand sits in its own folder and
+    names its parent; the parent's `needs` never lists it. Neither source stands
+    in for the other, so each one alone can keep the parent open.
     """
     by_id = {row.get("id"): row for row in rows}
+    cut_from: dict = {}
+    for row in rows:
+        parent = row.get("sliced_from")
+        if parent and row.get("id"):
+            cut_from.setdefault(parent, []).append(row["id"])
     settled = {row["id"] for row in rows if row.get("status") in DONE + DROPPED}
     growing = True
     while growing:            # a slice of a slice settles once its own pieces do
         growing = False
         for row in rows:
-            if row.get("id") in settled or row.get("status") != "sliced":
+            if row.get("id") in settled or row.get("status") != "sliced" or not row.get("id"):
                 continue
-            pieces = list(row.get("needs") or [])
+            pieces = list(row.get("needs") or []) + cut_from.get(row["id"], [])
             # Every piece must EXIST and be settled. Dropping the ones the
             # backlog does not hold would settle a parent on pieces nobody
             # wrote, and release everything waiting behind it.

@@ -64,7 +64,9 @@ def build_prompt(task: dict, in_place: bool = False) -> str:
     # a crash, a review that did not happen) queues a round too, and a prompt
     # that invents a rejection sends the builder hunting for a finding nobody wrote.
     rebuild = (("The previous round of this work needs another pass. " + where
-                + "Act on exactly these recorded reasons, then prove it again:\n"
+                + "Recorded reasons are historical findings: recheck each against the CURRENT "
+                "files and gates, ignore one that no longer applies, and keep unresolved "
+                "diff-review findings:\n"
                 + "".join(f"  - {line}\n" for line in findings) + "\n")
                if findings else (where + "\n" if lost else ""))
     return (
@@ -76,7 +78,9 @@ def build_prompt(task: dict, in_place: bool = False) -> str:
            "directories, when a split needs them — no new directory, and nothing beside a "
            "directory you were given.\n" if task.get("may_add_files") else "")
         + f"{('Note: ' + task['note']) if task.get('note') else ''}\n\n"
-        f"Prove it with: {task.get('gate')}\n"
+        f"The loop proves it with: {task.get('gate')}\n"
+        "You do not need to run the gate yourself — the loop runs it after you finish; "
+        "if a command is denied, finish the edit and end normally, do not stop as BLOCKED for that.\n"
         + (f"Run it with: bash {gate_script_path(task)}\n"
            "That file holds the gate above, byte for byte, and is the ONE command you are "
            "granted for it — the gate is a script, and a grant for each program in it does "
@@ -95,7 +99,7 @@ def build_prompt(task: dict, in_place: bool = False) -> str:
         "works. Do not commit. " + stack + "\n\n"
         "End your answer with one line of JSON and nothing after it:\n  "
         + DISTRESS_TEMPLATE + "\n"
-        "`result` is DONE when the gate passes, BLOCKED when something stopped "
+        "`result` is DONE when the edit is finished, BLOCKED when something stopped "
         "you, PARTIAL when some of it is done and the rest needs a decision. "
         "Say BLOCKED rather than guessing: nobody may be watching, and a "
         "blocked task is read by a person while a wrong guess is not.")

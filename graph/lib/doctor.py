@@ -18,6 +18,7 @@ import time
 import where
 from backlog_status import is_live
 from doctor_auth import check_auth
+from doctor_slices import check_orphan_slices
 from doctor_spend import check_costly_silence
 from doctor_starved import check_starved
 from doctor_types import Complaint
@@ -175,7 +176,8 @@ def diagnose(backlog, space, rows: list[dict] | None = None) -> list[Complaint]:
     claimed = space.claimed_now()
     return (check_backlog(backlog) + check_campaign(space, rows, claimed)
             + check_costly_silence(space, sliced, rows, claimed)
-            + check_starved(tasks, len(claimed)) + check_auth())
+            + check_starved(tasks, len(claimed)) + check_auth()
+            + check_orphan_slices(tasks, parents))
 
 
 def as_text(complaints: list[Complaint]) -> str:

@@ -10,9 +10,9 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 from test_watchdog import space
-from watchdog import check
+from watchdog import TURN_LIMIT, _is_progress, check
 
-EXPECTED_TESTS = 3
+EXPECTED_TESTS = 4
 
 
 class ParallelTurnTest(unittest.TestCase):
@@ -52,6 +52,21 @@ class StuckIgnoresFailedGatesTest(unittest.TestCase):
             here.attempt(task, account="gate", kind="ok", failed_gate=True)
             here.event("released", task=task)
         self.assertTrue(check(here).stuck)
+
+
+class RebuildProgressTest(unittest.TestCase):
+    def test_uncharged_rebuilds_do_not_reset_the_turn_ceiling(self):
+        for flag, progress in (({"charged": False}, False), ({"charged": True}, True), ({}, True)):
+            with self.subTest(flag=flag):
+                here = space()
+                row = {"kind": "rebuild_queued", "task": "T1", "round": 0, **flag}
+                for turn in range(TURN_LIMIT):
+                    self.assertFalse(check(here).stuck)
+                    # A provider outage queues the same card before its lane releases it.
+                    here.event("rebuild_queued", task="T1", round=0, **flag)
+                    here.event("released", task="T1", turn=f"turn-{turn}")
+                self.assertEqual(not progress, check(here).stuck)
+                self.assertIs(_is_progress(row), progress)
 
 
 class CountTest(unittest.TestCase):

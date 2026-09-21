@@ -46,6 +46,9 @@ class GateRebuildTest(unittest.TestCase):
         self.assertEqual("done", again.state)
         self.assertEqual(out.worktree, again.worktree)          # same worktree, not a fresh one
         self.assertEqual([out.worktree, out.worktree], cwds)    # the builder saw the same cwd both times
+        self.assertIn("historical findings", fakes.prompts[-1])
+        self.assertIn("ignore one that no longer applies", fakes.prompts[-1])
+        self.assertIn("not yet two", fakes.prompts[-1])
         # one build and ONE review (the diff): no contract review this round
         self.assertEqual(["build:work", "review"], fakes.calls[len(calls_before):])
         events = space.events()
