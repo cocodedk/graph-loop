@@ -7,7 +7,7 @@ evidence that paid for it, what the loop does instead, and the seam it plugs int
 
 A campaign of 119 cards ran four times in one day. It never stopped for want of work: it stopped
 because cards ended in a state only a person could clear. A person cleared 40-odd of them by
-hand. None needed judgment a machine lacks; each was one of nine repeatable classes. The loop
+hand. None needed judgment a machine lacks; each was one of ten repeatable classes. The loop
 already classifies an ending (`triage_signatures`, the Jev rung in `triage_jev`, the text belt) —
 but for these classes the route ends at `needs_a_person`. This brief moves the repair into the
 loop. A person is paged only when a bounded repair has been tried once and the state repeats.
@@ -143,6 +143,19 @@ kept; the card that then wrote the function could never be kept beside it.
 also lists. The stub template in class 4 never asserts absence.
 
 *Seam.* `doctor`.
+
+### 10. A builder is shown why its gate failed
+
+*Evidence.* A judge card ended BLOCKED: its gate said "the judge does not compile" and printed no
+error. The gate ran the build quietly and deleted its log on exit; the compiler's one line —
+an unresolved import — was never shown. A person read it from the builder's worktree in a minute.
+
+*Behaviour.* When a gate fails, the builder's next round is given the last lines the gate's
+commands wrote, kept by the harness rather than by the gate's own text, so a gate that hides or
+deletes its output cannot blind the builder. A BLOCKED ending that says the gate's failure could
+not be read is a harness fault: one refunded round with that output attached.
+
+*Seam.* `gates.run_gate` (what it keeps), `prompts` (the rebuild prompt), `triage_signatures`.
 
 ## Not in this brief
 
