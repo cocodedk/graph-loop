@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://cocodedk.github.io/graph-loop/sitemap.xml
+Sitemap: https://graph-loop.cocode.dk/sitemap.xml
