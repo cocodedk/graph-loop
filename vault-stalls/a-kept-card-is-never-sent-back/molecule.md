@@ -4,9 +4,106 @@ source:
 - docs/rfc/stalls-brief.md:50
 files:
 - graph/lib/loop_judge_gates.py
-status: todo
-gate_reviewed_first: true
+status: done
 expect_red: a finished card was sent back for its own gate
+requirement:
+  goal: 'When the combined gate fails on a gate owned by another card that is `done` and whose `commit`
+    is an ancestor of the campaign branch, that owner is left alone: it stays `done`, keeps its `commit`
+    and `kept_at`, and is not marked `gate_reviewed_first`. The card that met the failure pays no rebuild
+    round and keeps its worktree, as it does today; the failure is still recorded as a `failed` event
+    with `step` `combined_gate` naming the owner; and that card does not gain the owner in its `needs`
+    and is not offered again as `todo`. An owner that is `done` with no commit on the branch is still
+    sent back for the repair, exactly as today.'
+  done_when: 'The gate passes. With the `test_loop` rig and a `Loop` on branch `campaign/test`: over a
+    backlog whose owner `T9` is `done` with a gate that is red on the branch tip by itself and with `commit`
+    set to the repository''s `HEAD` — an ancestor of the campaign branch — running the candidate card
+    leaves `T9` `done`, with the same `commit` and `kept_at` it had and no `gate_reviewed_first`; the
+    candidate card''s `rebuild_round` is unset or 0, its `rebuild_from` is the outcome''s worktree, its
+    `needs` does not hold `T9`, its status is not `todo`, and it is not in `Backlog.startable()`; and
+    one `failed` event with `step` `combined_gate` carries `gate_owner` `T9`. Over the same backlog with
+    `T9` carrying no commit, and again with `T9` carrying a parentless commit that the campaign branch
+    does not hold, `T9` is `todo` with `gate_reviewed_first` set, as today. graph/tests/test_keep_combined_owner.py,
+    graph/tests/test_combined_failure_baseline.py, graph/tests/test_keep_combined.py and graph/tests/test_branch_gates_by_files.py
+    stay green. The gate does not prove which ending the candidate card takes, nor anything about re-running
+    the owner''s gate later.'
+  sources:
+  - docs/rfc/stalls-brief.md:49
+  - docs/rfc/stalls-brief.md:50
+contract_seen: 1b022c90b025fe33
+accepted_criteria:
+  goal: 'When the combined gate fails on a gate owned by another card that is `done` and whose `commit`
+    is an ancestor of the campaign branch, that owner is left alone: it stays `done`, keeps its `commit`
+    and `kept_at`, and is not marked `gate_reviewed_first`. The card that met the failure pays no rebuild
+    round and keeps its worktree, as it does today; the failure is still recorded as a `failed` event
+    with `step` `combined_gate` naming the owner; and that card does not gain the owner in its `needs`
+    and is not offered again as `todo`. An owner that is `done` with no commit on the branch is still
+    sent back for the repair, exactly as today.'
+  gate: "set -e -o pipefail\ntimeout 600 python3 - <<'PY'\nimport os, pathlib, subprocess, sys\nroot =\
+    \ pathlib.Path(os.getcwd()).resolve()\nsys.path.insert(0, str(root / \"graph\" / \"lib\"))\nsys.path.insert(0,\
+    \ str(root / \"graph\" / \"tests\"))\ntry:\n    import tmp_root  # noqa: F401 — every temp file of\
+    \ this process under one root\n    from loop import Loop\n    from test_loop import Fakes, repo_with,\
+    \ task\nexcept ImportError as gone:\n    sys.exit(f\"a finished card was sent back for its own gate:\
+    \ {gone}\")\n\nRED = \"a finished card was sent back for its own gate\"\n\n# Red on the branch tip\
+    \ by itself, with or without the candidate's diff: the\n# gate is what needs repairing, and no builder\
+    \ of another card can do it.\nBROKEN = {\"id\": \"T9\", \"goal\": \"a file that is not there\", \"\
+    status\": \"done\", \"needs\": [],\n          \"files\": [\"a.py\"], \"gate\": \"test -f never-here\"\
+    , \"done_when\": \"the file is there\",\n          \"kept_at\": \"2026-08-30T10:00:00Z\"}\n\n\ndef\
+    \ run(owner):\n    fakes = Fakes()\n    where, book, space = repo_with(task(), [dict(owner)])\n  \
+    \  head = subprocess.run((\"git\", \"-C\", where, \"rev-parse\", \"HEAD\"),\n                    \
+    \      capture_output=True, text=True, check=True).stdout.strip()\n    if owner.get(\"commit\") ==\
+    \ \"HEAD\":\n        book.note(\"T9\", commit=head)\n    elif owner.get(\"commit\") == \"STRAY\":\n\
+    \        # A commit git can read that no branch holds: parentless, so it is an\n        # ancestor\
+    \ of nothing.\n        book.note(\"T9\", commit=subprocess.run(\n            (\"git\", \"-C\", where,\
+    \ \"commit-tree\", \"HEAD^{tree}\", \"-m\", \"stray\"),\n            capture_output=True, text=True,\
+    \ check=True).stdout.strip())\n    loop = Loop(repo=where, backlog=book, space=space, build=fakes.builder,\n\
+    \                review=fakes.reviewer, branch=\"campaign/test\")\n    out = loop.run_task(book.task(\"\
+    T1\"))\n    return book, space, out, head\n\n\nbook, space, out, head = run({**BROKEN, \"commit\"\
+    : \"HEAD\"})\nowner = book.task(\"T9\")\nassert owner[\"status\"] == \"done\", \\\n    f\"{RED}: the\
+    \ owner kept at {head[:8]} is {owner['status']}\"\nassert owner.get(\"commit\") == head, f\"{RED}:\
+    \ its commit is {owner.get('commit')!r}\"\nassert owner.get(\"kept_at\") == BROKEN[\"kept_at\"], \\\
+    \n    f\"{RED}: its kept_at is {owner.get('kept_at')!r}\"\nassert not owner.get(\"gate_reviewed_first\"\
+    ), \\\n    f\"{RED}: its contract was queued for reading again: {owner.get('gate_reviewed_first')!r}\"\
+    \n\nmine = book.task(\"T1\")\nassert int(mine.get(\"rebuild_round\") or 0) == 0, \\\n    f\"the innocent\
+    \ card was charged round {mine.get('rebuild_round')}\"\nassert mine.get(\"rebuild_from\") == out.worktree,\
+    \ \\\n    f\"the innocent card lost its worktree: {mine.get('rebuild_from')!r}\"\nassert \"T9\" not\
+    \ in (mine.get(\"needs\") or []), \\\n    f\"the innocent card waits on a card that is already settled:\
+    \ {mine.get('needs')}\"\nassert mine[\"status\"] != \"todo\", \\\n    \"the innocent card is todo\
+    \ again, so the picker offers it into the same ending\"\nassert \"T1\" not in [row[\"id\"] for row\
+    \ in book.startable()], \\\n    \"the innocent card is startable again, so the picker offers it into\
+    \ the same ending\"\nclash = [one for one in space.events()\n         if one.get(\"kind\") == \"failed\"\
+    \ and one.get(\"step\") == \"combined_gate\"]\nassert [one.get(\"gate_owner\") for one in clash] ==\
+    \ [\"T9\"], \\\n    f\"the failure no longer names the gate's owner: {clash}\"\n\n# A done card with\
+    \ no commit at all is not kept work: today's repair stands.\nbook, _, _, _ = run(BROKEN)\nowner =\
+    \ book.task(\"T9\")\nassert owner[\"status\"] == \"todo\" and owner.get(\"gate_reviewed_first\"),\
+    \ \\\n    f\"an owner with no kept commit stopped being sent back: {owner['status']}\"\n\n# And neither\
+    \ is a commit the campaign branch does not hold: having a commit is\n# not the question, git's answer\
+    \ about it is.\nbook, _, _, _ = run({**BROKEN, \"commit\": \"STRAY\"})\nowner = book.task(\"T9\")\n\
+    assert owner[\"status\"] == \"todo\" and owner.get(\"gate_reviewed_first\"), \\\n    f\"an owner whose\
+    \ commit is on no branch stopped being sent back: {owner['status']}\"\nprint(\"PROBE OK\")\nPY\n(cd\
+    \ graph/tests && timeout 600 python3 -m unittest test_keep_combined_owner)\n(cd graph/tests && timeout\
+    \ 600 python3 -m unittest test_combined_failure_baseline)\n(cd graph/tests && timeout 600 python3\
+    \ -m unittest test_keep_combined)\n(cd graph/tests && timeout 600 python3 -m unittest test_branch_gates_by_files)"
+  done_when: 'The gate passes. With the `test_loop` rig and a `Loop` on branch `campaign/test`: over a
+    backlog whose owner `T9` is `done` with a gate that is red on the branch tip by itself and with `commit`
+    set to the repository''s `HEAD` — an ancestor of the campaign branch — running the candidate card
+    leaves `T9` `done`, with the same `commit` and `kept_at` it had and no `gate_reviewed_first`; the
+    candidate card''s `rebuild_round` is unset or 0, its `rebuild_from` is the outcome''s worktree, its
+    `needs` does not hold `T9`, its status is not `todo`, and it is not in `Backlog.startable()`; and
+    one `failed` event with `step` `combined_gate` carries `gate_owner` `T9`. Over the same backlog with
+    `T9` carrying no commit, and again with `T9` carrying a parentless commit that the campaign branch
+    does not hold, `T9` is `todo` with `gate_reviewed_first` set, as today. graph/tests/test_keep_combined_owner.py,
+    graph/tests/test_combined_failure_baseline.py, graph/tests/test_keep_combined.py and graph/tests/test_branch_gates_by_files.py
+    stay green. The gate does not prove which ending the candidate card takes, nor anything about re-running
+    the owner''s gate later.'
+  files:
+  - graph/lib/loop_judge_gates.py
+rebuild_from: /var/tmp/graph-trees/graph-9lto17mh/task-a-kept-card-is-never-sent-back
+session: 3fb6039b-36e6-489a-8d9b-d5170e7e33dd
+session_account: personal
+
+commit: 899a72fff7c47b6c2f4a585fb6d83a641a262868
+worktree: /var/tmp/graph-trees/graph-9lto17mh/task-a-kept-card-is-never-sent-back
+kept_at: '2026-09-21T06:33:52Z'
 ---
 
 ## Goal

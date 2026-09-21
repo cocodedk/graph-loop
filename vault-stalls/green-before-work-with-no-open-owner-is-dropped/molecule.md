@@ -5,8 +5,70 @@ source:
 files:
 - graph/lib/loop_evidence.py
 status: todo
-gate_reviewed_first: true
 expect_red: a card another card already delivered is left for a person
+requirement:
+  goal: A card whose gate is already green before any work ends `dropped`, with a reason naming the settled
+    card whose files it shares, when no other unsettled card lists those files — and a `dropped` event
+    carrying that reason is written for it. While another unsettled card does list them, and when no settled
+    card shares any of them, the card ends `green_already` as it does today.
+  done_when: 'The gate passes. With the `test_loop` rig, over a card `T1` whose gate is `true` and whose
+    files are `["a.py"]`: with a `done` card `T0` that also lists `a.py` and no other card, `T1` ends
+    `dropped`, its `refused_why` names `T0`, and the campaign holds a `dropped` event for `T1` whose `why`
+    names `T0`. With `T0` and a second `todo` card `T2` that also lists `a.py`, `T1` ends `green_already`.
+    With neither, and with only a `done` card `T3` that lists `b.py` alone, `T1` ends `green_already`.
+    graph/tests/test_loop.py, graph/tests/test_loop_evidence.py, graph/tests/test_red_first_card_moved.py
+    and graph/tests/test_loop_rebuild_gate_green.py stay green. The gate does not prove the wording of
+    the reason beyond the card''s id, and it does not prove what the task outcome''s state is.'
+  sources:
+  - docs/rfc/stalls-brief.md:53
+  - docs/rfc/stalls-brief.md:54
+contract_seen: b6ede18e6c52eb13
+accepted_criteria:
+  goal: A card whose gate is already green before any work ends `dropped`, with a reason naming the settled
+    card whose files it shares, when no other unsettled card lists those files — and a `dropped` event
+    carrying that reason is written for it. While another unsettled card does list them, and when no settled
+    card shares any of them, the card ends `green_already` as it does today.
+  gate: "set -e -o pipefail\ntimeout 600 python3 - <<'PY'\nimport os, pathlib, sys\nroot = pathlib.Path(os.getcwd()).resolve()\n\
+    sys.path.insert(0, str(root / \"graph\" / \"lib\"))\nsys.path.insert(0, str(root / \"graph\" / \"\
+    tests\"))\ntry:\n    import tmp_root  # noqa: F401 — every temp file of this process under one root\n\
+    \    from test_loop import Fakes, loop_for, task\nexcept ImportError as gone:\n    sys.exit(f\"a card\
+    \ another card already delivered is left for a person: {gone}\")\n\nRED = \"a card another card already\
+    \ delivered is left for a person\"\n\nDELIVERED = {\"id\": \"T0\", \"goal\": \"a.py says one\", \"\
+    status\": \"done\", \"needs\": [],\n             \"files\": [\"a.py\"], \"gate\": \"grep -q one a.py\"\
+    , \"done_when\": \"a.py says one\",\n             \"kept_at\": \"2026-08-30T10:00:00Z\"}\nSTILL_OPEN\
+    \ = {\"id\": \"T2\", \"goal\": \"a.py says three\", \"status\": \"todo\", \"needs\": [],\n       \
+    \       \"files\": [\"a.py\"], \"gate\": \"grep -q three a.py\", \"done_when\": \"a.py says three\"\
+    }\nELSEWHERE = {\"id\": \"T3\", \"goal\": \"b.py says one\", \"status\": \"done\", \"needs\": [],\n\
+    \             \"files\": [\"b.py\"], \"gate\": \"grep -q one b.py\", \"done_when\": \"b.py says one\"\
+    ,\n             \"kept_at\": \"2026-08-30T10:00:00Z\"}\n\n\ndef green_first(extra):\n    \"\"\"T1's\
+    \ gate passes before anything is built against it.\"\"\"\n    loop, book, space = loop_for(task(gate=\"\
+    true\"), Fakes(), extra)\n    loop.run_task(book.task(\"T1\"))\n    return book.task(\"T1\"), space\n\
+    \n\nmine, space = green_first([DELIVERED])\nassert mine[\"status\"] == \"dropped\", \\\n    f\"{RED}:\
+    \ T0 delivered it and the card is {mine['status']}\"\nassert \"T0\" in str(mine.get(\"refused_why\"\
+    ) or \"\"), \\\n    f\"{RED}: the reason does not name the card that delivered it: {mine.get('refused_why')!r}\"\
+    \ndropped = [one for one in space.events()\n           if one.get(\"kind\") == \"dropped\" and one.get(\"\
+    task\") == \"T1\"]\nassert dropped and \"T0\" in str(dropped[-1].get(\"why\") or \"\"), \\\n    f\"\
+    {RED}: no dropped event names the card that delivered it: {dropped}\"\n\n# Another card is still being\
+    \ built against those files: not the same work.\nmine, _ = green_first([DELIVERED, STILL_OPEN])\n\
+    assert mine[\"status\"] == \"green_already\", \\\n    f\"a card an open card still reaches was dropped:\
+    \ {mine['status']}\"\n\n# Nobody delivered it: green for a reason nobody has looked at.\nmine, _ =\
+    \ green_first([])\nassert mine[\"status\"] == \"green_already\", \\\n    f\"a card nothing delivered\
+    \ was dropped: {mine['status']}\"\n\n# A settled card that shares none of its files delivered nothing\
+    \ of its work.\nmine, _ = green_first([ELSEWHERE])\nassert mine[\"status\"] == \"green_already\",\
+    \ \\\n    f\"a card was dropped for a settled card sharing none of its files: {mine['status']}\"\n\
+    print(\"PROBE OK\")\nPY\n(cd graph/tests && timeout 600 python3 -m unittest test_loop)\n(cd graph/tests\
+    \ && timeout 600 python3 -m unittest test_loop_evidence)\n(cd graph/tests && timeout 600 python3 -m\
+    \ unittest test_red_first_card_moved)\n(cd graph/tests && timeout 600 python3 -m unittest test_loop_rebuild_gate_green)"
+  done_when: 'The gate passes. With the `test_loop` rig, over a card `T1` whose gate is `true` and whose
+    files are `["a.py"]`: with a `done` card `T0` that also lists `a.py` and no other card, `T1` ends
+    `dropped`, its `refused_why` names `T0`, and the campaign holds a `dropped` event for `T1` whose `why`
+    names `T0`. With `T0` and a second `todo` card `T2` that also lists `a.py`, `T1` ends `green_already`.
+    With neither, and with only a `done` card `T3` that lists `b.py` alone, `T1` ends `green_already`.
+    graph/tests/test_loop.py, graph/tests/test_loop_evidence.py, graph/tests/test_red_first_card_moved.py
+    and graph/tests/test_loop_rebuild_gate_green.py stay green. The gate does not prove the wording of
+    the reason beyond the card''s id, and it does not prove what the task outcome''s state is.'
+  files:
+  - graph/lib/loop_evidence.py
 ---
 
 ## Goal
