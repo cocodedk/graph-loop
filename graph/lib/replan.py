@@ -36,9 +36,6 @@ from contract_yaml import quote_plain_values
 KEEP = ("id", "why", "needs", "status", "sliced_from", "blocked_by_human",
         "gate_has_side_effects", "replans", "replan_history")
 WANTED = ("goal", "files", "done_when", "gate")
-# 142 of 153 contract refusals concerned gates that could pass without the work.
-# Rewritten gates get gate_reviewed_first before execution; LIVE gates stay
-# the commander's.
 
 
 @dataclasses.dataclass
@@ -148,6 +145,9 @@ def _store(backlog, task: dict, text: str) -> Replanned:
         fresh = _parse(text, strict=True)
     except yaml.YAMLError as error:
         return _refuse(backlog, task, f"the planner's answer was not a task contract: {error}")
+    if fresh and isinstance(why := fresh.get("needs_slice"), str) and why.strip():
+        backlog.set_status(task["id"], "needs_slice", refused_why=why)
+        return Replanned(False, why)
     if not fresh or not all(key in fresh for key in ("goal", "files")):
         return _refuse(backlog, task, "the planner's answer was not a task contract")
     # The prompt asks for these keys and nothing else, and this is where that is
