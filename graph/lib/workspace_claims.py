@@ -1,12 +1,4 @@
-"""Who is working on what right now.
-
-The claims file is the truth about "now": a claim names the task, the process
-that holds it, its process group and its worktree, and clears itself when the
-claimant's process dies. Liveness is the claimant's own pid: the driver shares
-its process group with the supervisor that restarts it, so a group that is
-still there says nothing about a driver that was killed. The event log keeps
-history; this file keeps the present.
-"""
+"""Live task claims identify their owning process; the event log keeps history."""
 
 from __future__ import annotations
 
@@ -49,6 +41,12 @@ def _started(pid: int) -> str | None:
 
 def _now() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def say(text, *, file=None) -> None:
+    """Stamp every output line with UTC time and flush the message."""
+    print("\n".join(f"{_now()} {line}" for line in str(text).split("\n")),
+          file=file, flush=True)
 
 
 def _alive(row: dict) -> bool:

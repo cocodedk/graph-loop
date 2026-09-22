@@ -14,6 +14,8 @@ import pathlib
 import shlex
 import sys
 
+from workspace_claims import say
+
 # Appended, never inserted: the graph's own lib keeps first claim on every name.
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "slicer"))
 from slicer_state import accepted  # type: ignore[import-not-found]
@@ -108,13 +110,13 @@ def stand_down(space, book) -> int:
             if gaps is None:
                 latest = next((row for row in reversed(space.events())
                                if row.get("task") == SOURCE_GAP and row.get("why")), {})
-                print(f"not finished: source gap: {latest.get('why') or 'coverage not reviewed'}; "
+                say(f"not finished: source gap: {latest.get('why') or 'coverage not reviewed'}; "
                       f"sources: {', '.join(declared_sources(space))}")
                 _plan_again(space)
                 return 1
             return _ended_with(gaps, space)
         if not accepted(book.path, book.tasks()):
-            print("not finished: no accepted coverage stands for the backlog as it is; "
+            say("not finished: no accepted coverage stands for the backlog as it is; "
                   f"source gap: {', '.join(declared_sources(space))}")
             _plan_again(space)
             return 1
@@ -128,7 +130,7 @@ def stand_down(space, book) -> int:
 
 
 def _ended_with(gaps: dict, space) -> int:
-    print(f"ended with gaps: {gaps['gaps'] or gaps['why']}")
+    say(f"ended with gaps: {gaps['gaps'] or gaps['why']}")
     _plan_again(space)
     return ENDED_WITH_GAPS
 
@@ -138,5 +140,5 @@ def _plan_again(space) -> None:
     if sources:
         command = ["python3", "graph/graph-goal.py", "--workspace", str(space.root)]
         reopen = command + ["sources"] + [arg for source in sources for arg in ("--source", source)]
-        print("To close this gap, resolve the named claim, then obtain accepted coverage with: "
+        say("To close this gap, resolve the named claim, then obtain accepted coverage with: "
               f"{shlex.join(reopen)} && {shlex.join(command + ['plan'])}")

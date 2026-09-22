@@ -13,6 +13,7 @@ import lane_closing
 import runner
 import worktree
 from prompts import moved_under
+from workspace_claims import say
 
 
 def _tried(unrecorded: list, task_id: str, what: str, write):
@@ -65,7 +66,7 @@ def run_lanes(loop, book, space, tasks: list[dict], turn_id: str = "") -> tuple:
         worktree.owned.trees = trees[task["id"]]
         runner.owned.processes = processes[task["id"]]
         runner.owned.stopping = stopping
-        print(f"→ {task['id']}: {task['goal']}")
+        say(f"→ {task['id']}: {task['goal']}")
         # `claim` writes the claims file under its own lock and records the
         # `claimed` event after releasing it, so a failure in that second step
         # leaves the claim standing. The lane holds one from the moment it asks
@@ -95,7 +96,7 @@ def run_lanes(loop, book, space, tasks: list[dict], turn_id: str = "") -> tuple:
             if gone:
                 # Nothing was claimed, so nothing is released: the card belongs
                 # to whoever decided it, and this lane leaves it alone.
-                print(f"  {task['id']} was decided while the turn started: {gone[:160]}")
+                say(f"  {task['id']} was decided while the turn started: {gone[:160]}")
                 space.event("lane_skipped", task=task["id"], why=gone[:300])
                 return
             out = loop.run_task(task)
@@ -127,9 +128,9 @@ def run_lanes(loop, book, space, tasks: list[dict], turn_id: str = "") -> tuple:
                            lambda: space.alert(
                                task["id"], f"the lane could not release its claim: {stuck!r}"[:300]))
         states.append(out.state)
-        print(f"  {task['id']} {out.state}: {out.why[:200]}")
+        say(f"  {task['id']} {out.state}: {out.why[:200]}")
         if out.state == "failed" and space.needs_slice(task["id"]):
-            print(f"  {task['id']} failed twice the same way — it needs re-slicing")
+            say(f"  {task['id']} failed twice the same way — it needs re-slicing")
             book.set_status(task["id"], "needs_slice")
 
     threads = []

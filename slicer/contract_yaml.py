@@ -6,7 +6,7 @@ import re
 
 import yaml
 
-FIELD = re.compile(r'^(?P<prefix>\s*(?:-\s+)?(?P<key>[A-Za-z_][\w-]*):[ \t]+)'
+FIELD = re.compile(r'^(?P<prefix>\s*(?:(?:-\s+)?(?P<key>[A-Za-z_][\w-]*):[ \t]+|-[ \t]+))'
                    r'(?P<value>\S.*)$')
 
 
@@ -26,7 +26,7 @@ def quote_plain_values(text: str) -> str:
             value = field["value"]
             if value.startswith(("|", ">")):
                 # A gate's literal shell lines are not YAML mapping fields.
-                block_indent = field.start("key")
+                block_indent = field.start("key") if field["key"] else indent
             elif not value.startswith(('"', "'", "[", "{")) and \
                     (": " in value or value.rstrip().endswith(":")):
                 quoted = value.replace("\\", "\\\\").replace('"', '\\"')

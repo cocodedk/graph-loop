@@ -20,6 +20,7 @@ import time
 
 import accounts
 from doctor_types import Complaint
+from workspace_claims import say
 
 # The accounts and where their credentials live come from one table, so this
 # check cannot disagree with the calls about how an account is reached.
@@ -53,7 +54,7 @@ def run_accounts(space):
         complaint = _complaint(dead)
         why = f"{complaint.what}; retired for this run. Sign in with {complaint.do}"
         space.alert(complaint.about, why, limit=None)  # keep every account's login command
-        print(why)
+        say(why)
     with accounts.without(name for name, _ in dead) as remaining:
         yield remaining
 

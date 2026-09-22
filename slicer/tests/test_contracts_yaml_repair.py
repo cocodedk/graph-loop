@@ -12,8 +12,18 @@ import yaml
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from contracts import mapping
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "graph" / "lib"))
+from replan import _parse
+
 
 class YamlRepairTest(unittest.TestCase):
+    def test_a_code_signature_list_item_preserves_the_exact_string(self):
+        signature = "Theme.kt:fun ExampleTheme(content: @Composable () -> Unit)"
+        text = f"creates:\n  - {signature}\n"
+        for parse in (mapping, _parse):
+            with self.subTest(parser=parse.__name__):
+                self.assertEqual({"creates": [signature]}, parse(text))
+
     def test_the_feedback_goal_survives_inside_a_fenced_answer(self):
         goal = "AndroidFeedback(view: View) : Feedback present"
         text = ("Here is the molecule.\n```yaml\nresult: MOLECULE\n"

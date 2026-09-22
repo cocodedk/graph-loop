@@ -59,7 +59,10 @@ class StatusReviewSpendTest(unittest.TestCase):
         with contextlib.redirect_stdout(out):
             self.assertEqual(0, graph_commands.command_status(
                 types.SimpleNamespace(workspace=str(space.root))))
-        lines = [line.strip() for line in out.getvalue().splitlines() if "node [[" in line]
+        for line in out.getvalue().splitlines():
+            self.assertRegex(line, r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z ")
+        lines = [line.split(" ", 1)[1].strip()
+                 for line in out.getvalue().splitlines() if "node [[" in line]
         self.assertEqual(["node [[N01-read]]: 1 done / 1 open",
                           "node [[N02-write]]: 1 done / 0 open — built",
                           "node [[N03-check]]: 0 done / 1 open"], lines)

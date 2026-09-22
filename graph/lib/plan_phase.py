@@ -22,7 +22,6 @@ the contract review a card gets is the slicer's own gate (SLICER.md). The build
 phase that follows writes no cards at all: a card that fails there parks, and
 the next plan phase re-slices it against the code as it then stands.
 """
-
 from __future__ import annotations
 
 from backlog import Backlog
@@ -32,6 +31,7 @@ from finishing import ENDED_WITH_GAPS, covered_since_planning
 from slice_turn import slice_pending
 from waves import say as say_waves
 from workspace import Workspace
+from workspace_claims import say
 
 # Verdicts that are not about the card: the run died, the review never
 # answered, the machine was wrong. TRIAGE names them, and until the decider was
@@ -188,12 +188,12 @@ def command_plan(args) -> int:
     where.repo(space)
     book = Backlog(backlog_of(space))
     added = plan(book, space, rounds=args.rounds)
-    print(f"the plan added {added} card{'' if added == 1 else 's'}")
+    say(f"the plan added {added} card{'' if added == 1 else 's'}")
     say_waves(book.tasks())     # the graph this phase leaves, as of this moment
     if args.rounds:
         return 0                     # stopped early on purpose; nothing is claimed
     done, why = finished(book, space)
     if done:
         return 0
-    print(f"the plan is NOT finished: {why}")
+    say(f"the plan is NOT finished: {why}")
     return ENDED_WITH_GAPS

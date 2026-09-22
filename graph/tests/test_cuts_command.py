@@ -69,13 +69,17 @@ class CutsCommandTest(unittest.TestCase):
         code, out, _ = _run(self.space, "cuts")
         at = yaml.safe_load(self.file.read_text("utf-8"))["history"][0]["at"]
         self.assertEqual(0, code)
-        self.assertEqual(["act", f"act by NAME at {at}"], out.splitlines())
+        for line in out.splitlines():
+            self.assertRegex(line, r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z ")
+        self.assertEqual(["act", f"act by NAME at {at}"],
+                         [line.split(" ", 1)[1] for line in out.splitlines()])
 
     def test_a_state_without_a_name_returns_2_and_writes_nothing(self):
         code, out, err = _run(self.space, "cuts", "--state", "act")
         self.assertEqual(2, code)
         self.assertEqual("", out)
         self.assertIn("--by", err)
+        self.assertRegex(err, r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z cuts:")
         self.assertFalse(self.file.exists())
         _run(self.space, "cuts", "--state", "observe", "--by", "NAME")
         before = self.file.read_bytes()
