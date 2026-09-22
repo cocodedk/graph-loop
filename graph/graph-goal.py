@@ -142,6 +142,8 @@ def command_run(args) -> int:
             # without anybody doing anything, so the loop waits for it. This is
             # the one thing the driver waits on, and it never waits on a person.
             print("  the fault is outside the tasks")
+            space.alert("the campaign", f"the fault is outside the tasks; cooling down for "
+                        f"{args.idle_seconds} seconds before retrying")
             space.event("pause", tasks=[row["id"] for row in taking], sleep=args.idle_seconds)
             space.idle(args.idle_seconds)
     return 0

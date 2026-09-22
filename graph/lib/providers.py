@@ -28,6 +28,7 @@ from provider_words import (  # noqa: F401 — MARKS re-exported for callers tha
     AUTH_MARKS,
     CAPACITY_MARKS,
     LIMIT_MARKS,
+    _classify_failure,
     _classify_text,
     closed_object,
 )
@@ -168,8 +169,8 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
         # Valid JSON of the wrong shape: an answer we cannot read is still an
         # answer, and raising here left a live task todo for the next turn.
         return Outcome("malformed", text=str(body)[:500], raw=blob)
-    if done.returncode or body.get("is_error"):   # a call that exited badly did not finish, whatever it printed: its spend and session are kept, its answer is not a result
-        return Outcome(_classify_text(blob) or "crash",
+    if failure := _classify_failure(body, done.returncode, blob):
+        return Outcome(failure,
                        text=str(body.get("result") or "")[:500], raw=blob,
                        session=str(body.get("session_id") or ""), **_spent(body))
     if not isinstance(body.get("usage", {}), dict) or not isinstance(body.get("permission_denials", []), list):

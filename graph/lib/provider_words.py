@@ -5,12 +5,16 @@ other modules import from.
 
 from __future__ import annotations
 
+import re
+
 LIMIT_MARKS = ("hit your weekly limit", "hit your session limit",
                "usage limit", "resets ", "quota", "http 429", "status 429",
                "rate limit", "rate_limit", "too many requests")
-CAPACITY_MARKS = ("at capacity", "try a different model", "model_overloaded",
-                  "overloaded_error", "is not supported when using",
-                  "model metadata for", "model_not_found", "network failure", "network error")
+CAPACITY_MARKS = ("at capacity", "try a different model", "overloaded",
+                  "is not supported when using", "model metadata for", "model_not_found",
+                  "network failure", "network error", "connection reset", "econnreset",
+                  "gateway timeout", "service unavailable", "internal server error", "bad gateway")
+HTTP_5XX = re.compile(r"\b(?:http(?:/\d(?:\.\d)?)?|error|status(?: code)?)\s*[:=]?\s*5[0-9]{2}\b")
 # codex's responses endpoint answered 404, not this repo's fault — 2026-09-03T15:02:59Z-15:03:13Z (one
 # 14-second call, this loop's own review_unavailable record): read as "malformed"
 # for want of this, and charged like a real finding. Both parts are required, and
@@ -28,12 +32,27 @@ AUTH_MARKS = ("invalid api key", "please run /login", "not logged in",
 def _classify_text(text: str) -> str | None:
     low = text.lower()
     if (any(mark in low for mark in CAPACITY_MARKS)
+            or HTTP_5XX.search(low)
             or all(mark in low for mark in CODEX_BACKEND_OUTAGE_MARKS)):
-        return "capacity"      # the model refused before reading anything; another may answer
+        return "capacity"      # provider unavailable, never a finding against the card
     if any(mark in low for mark in LIMIT_MARKS):
         return "limit"
     if any(mark in low for mark in AUTH_MARKS):
         return "auth"
+    return None
+
+
+def _classify_failure(body: dict, returncode: int, text: str) -> str | None:
+    """Read the error's own status even when its result carries no error words.
+
+    Successful answers may discuss HTTP failures; only failed calls have their
+    words classified. Capacity uses the existing uncharged retry and cooldown.
+    """
+    status = body.get("api_error_status")
+    if isinstance(status, int) and 500 <= status < 600:
+        return "capacity"
+    if returncode or body.get("is_error"):
+        return _classify_text(text) or "crash"
     return None
 
 
