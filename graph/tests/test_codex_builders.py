@@ -24,9 +24,9 @@ class CodexBuilders(unittest.TestCase):
         catalog.start()
         self.addCleanup(catalog.stop)
 
-    def test_default_puts_astra_first(self):
+    def test_default_keeps_astra_behind_the_claude_builders(self):
         with patch.dict("os.environ", {"GRAPH_BUILDERS": ""}):
-            self.assertEqual("gpt-6-astra", models.builders()[0])
+            self.assertEqual(("claude-sonnet-5", "gpt-6-astra"), (models.builders()[0], models.builders()[-1]))
 
     def test_codex_is_not_duplicated_across_claude_accounts(self):
         with patch("accounts.available", return_value=["one", "two"]):
