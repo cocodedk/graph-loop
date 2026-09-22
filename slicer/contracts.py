@@ -12,6 +12,7 @@ from contract_paths import (  # noqa: F401 — contracts stays the door
     _strings,
 )
 from contract_task import _task
+from contract_yaml import quote_plain_values, yaml_refusal
 from slicer_law import (
     assert_one_owner,
     assert_order,
@@ -45,14 +46,19 @@ def mapping(text: str) -> dict:
     did write costs nothing and refuses nothing that was ever valid, because a
     fenced block is not YAML at the top level anyway.
     """
-    body = text.strip()
-    fenced = FENCE.search(body)
+    body = text
+    fenced = FENCE.search(text.strip())
     if fenced:
         body = fenced["inside"]
     try:
         loaded = yaml.safe_load(body)
+    except (yaml.scanner.ScannerError, yaml.parser.ParserError):
+        try:
+            loaded = yaml.safe_load(quote_plain_values(body))
+        except yaml.YAMLError as error:
+            raise yaml_refusal(body, error) from error
     except yaml.YAMLError as error:
-        raise ValueError(f"the answer is not YAML: {error}") from error
+        raise yaml_refusal(body, error) from error
     if not isinstance(loaded, dict):
         raise ValueError("the answer is not a mapping")  # noqa: TRY004 — one refusal channel
     return loaded
@@ -106,6 +112,8 @@ def validate(answer: dict, *, repo: pathlib.Path, sources: list[pathlib.Path],
         raise ValueError("molecule needs names a task that does not exist")
     if target and target["id"] in (made.get("needs") or []):
         raise ValueError("a child molecule cannot wait on the leaf it replaces")
+    answer_atoms = {f"{name}.{atom.get('name')}" for atom in atoms}
+    known |= {name} | answer_atoms
     leaves = atoms or [made]
     seen: set[str] = set()
     for atom in leaves:
@@ -118,7 +126,8 @@ def validate(answer: dict, *, repo: pathlib.Path, sources: list[pathlib.Path],
             if not isinstance(atom.get("stage"), int) or isinstance(atom.get("stage"), bool) \
                     or atom["stage"] < 1:
                 raise ValueError("an atom stage must be a positive integer")
-        _task(atom, repo, known)
+        siblings = answer_atoms - {f"{name}.{atom.get('name')}"}
+        _task(atom, repo, known, siblings=siblings)
     assert_order(name, made, rows, target)
     assert_one_owner(name, made, rows, target)
     available(leaves, repo)
