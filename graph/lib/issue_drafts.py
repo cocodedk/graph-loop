@@ -20,7 +20,7 @@ from watchdog_spin import ENDINGS, current_run, ending_signature
 
 PERSON = {"refused_contract", "rejected", "needs_slice", "quarantined",
           "partial_by_agent", "blocked_by_agent", "blocked_by_human", "lane_failed"}
-CAUSES = ENDINGS + ("needs_a_person", "review_unavailable", "held")
+CAUSES = ENDINGS + ("needs_a_person", "review_unavailable", "held", "environment")
 ARTIFACTS = {"gate": "gate-output", "red_first": "red-first",
              "contract": "contract-answer", "diff_review": "diff-review-answer"}
 
@@ -74,6 +74,8 @@ def draft_stalls(space, book=None, *, repeated: str = "") -> None:
         book = Backlog(path)
     cards, rows = book.tasks(), space.events()
     run = current_run(rows)
+    latest = {row.get("task"): row.get("kind") for row in run
+              if row.get("kind") in CAUSES + ("claimed",)}
     names = identities(rows, cards)
     seen = {(row.get("signature"), row.get("task")) for row in run
             if row.get("kind") == "issue_drafted"}
@@ -86,6 +88,8 @@ def draft_stalls(space, book=None, *, repeated: str = "") -> None:
             rule = "watchdog: same ending twice; quarantine unless the card has already settled"
         elif status in PERSON or card.get("blocked_by_human"):
             rule = "driver stood down with a card needing a person"
+        elif status == "todo" and latest.get(card["id"]) == "environment":
+            rule = "driver stood down with an unresolved environment ending"
         else:
             continue
         step, why = _evidence(space, rows, card)

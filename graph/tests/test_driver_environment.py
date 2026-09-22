@@ -11,6 +11,7 @@ from unittest import mock
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 
 from gates import GateResult
+from issue_drafts import draft_stalls
 from loop_environment import environment_stop
 from test_driver import graph_goal
 from test_gate_environment import SDK
@@ -38,6 +39,13 @@ class DriverEnvironmentTest(unittest.TestCase):
             self.assertEqual(old.get("rebuild_round"), new.get("rebuild_round"))
             self.assertEqual(old.get("gate_rounds"), new.get("gate_rounds"))
         self.assertEqual(before[1], book.task("T2"))
+        drafts = list((space.root / "issues").glob("*.md"))
+        self.assertEqual(1, len(drafts))
+        body = drafts[0].read_text()
+        self.assertIn("SDK location not found", body)
+        self.assertIn("Loop step: red_first", body)
+        draft_stalls(space, book)
+        self.assertEqual(body, drafts[0].read_text())
         after.assert_not_called()
         idle.assert_not_called()
         environment_stop(space)  # repeating the read cannot repeat the alert
@@ -54,3 +62,24 @@ class DriverEnvironmentTest(unittest.TestCase):
         space.event("environment", task="T1", remedy="set JAVA_HOME")
         space.event("driver_started")
         self.assertEqual("", environment_stop(space))
+
+    def test_only_a_current_unresolved_environment_ending_is_drafted(self):
+        for later in (None, "driver_started", "claimed", "failed", "done"):
+            with self.subTest(later=later):
+                _, book, space = loop_for(task(), Fakes())
+                space.event("driver_started")
+                space.event("environment", task="T1", step="gate",
+                            why="missing toolchain", charged=False)
+                if later == "done":
+                    book.set_status("T1", "done")
+                elif later:
+                    space.event(later, task="T1")
+                before = book.tasks()
+                for _ in range(2):
+                    draft_stalls(space, book)
+                    drafts = list((space.root / "issues").glob("*.md"))
+                    self.assertEqual(1 if later is None else 0, len(drafts))
+                    self.assertEqual(before, book.tasks())
+                if later is None:
+                    self.assertIn("missing toolchain", drafts[0].read_text())
+                    self.assertIn("Loop step: gate", drafts[0].read_text())
