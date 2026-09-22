@@ -30,7 +30,7 @@ name the requirement it violates, and give concrete evidence. Pre-existing defec
 unrelated improvements and optional cleanup belong only in observations. They do
 not reject this change or expand its task. When the contract is met and there is no
 blocking defect, ACCEPT and stop. Never loosen tests or ignore safety boundaries.
-Answer with exactly one JSON object and no other text:
+Answer with one review JSON object before the distress line:
 {"review":"ACCEPT|REJECT","accept":true,"findings":[{"diff_line":1,
 "requirement":"goal|done_when|gate|note|safety|simplicity","problem":"what fails",
 "evidence":"why this changed line violates that requirement"}],"observations":[]}

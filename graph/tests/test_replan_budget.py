@@ -20,6 +20,34 @@ REASONS = ("The gate accepts a comment instead of executing the implementation."
 
 
 class ReplanBudgetTest(unittest.TestCase):
+    def test_blocked_footer_parks_without_spending_a_replan(self):
+        from unittest import mock
+
+        from distress import INSTRUCTION, TEMPLATE
+        from replan import replan_until_planned
+        from test_distress import BLOCKED, DONE
+        from turn import replan_pending
+        from workspace import Workspace
+        for footer in (BLOCKED, DONE.replace('false, "why": ""',
+                       'true, "why": "missing inputs"')):
+            book = book_with()
+            space = Workspace(tempfile.mkdtemp())
+            planner = mock.Mock(return_value=answer(GOOD + footer))
+            result = replan_until_planned(book, book.task("T1"), planner, space=space)
+            self.assertFalse(result.rewritten)
+            self.assertEqual("blocked_by_agent", book.task("T1")["status"])
+            self.assertTrue(book.task("T1")["blocked_by_human"])
+            self.assertFalse(book.task("T1").get("replans"))
+            self.assertEqual(result.why, next(e["why"] for e in space.events()
+                                              if e["kind"] == "needs_a_person"))
+            self.assertFalse(replan_pending(book, space, planner))
+            planner.assert_called_once()
+            self.assertIn(INSTRUCTION + TEMPLATE, planner.call_args.args[0])
+        book = book_with()
+        self.assertTrue(replan(book, book.task("T1"), lambda _: answer(GOOD + DONE)).rewritten)
+
+
+
     def test_three_different_refusals_do_not_exhaust_two_round_budget(self):
         book = book_with(triage="contract")
         for reason in REASONS:

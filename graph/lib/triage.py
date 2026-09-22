@@ -5,7 +5,9 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Callable
 
+import distress
 from backlog import Backlog
+from contract import moved_under
 from triage_cards import write_cards as _write_cards
 from triage_evidence import Ending, has_outcome, pending_endings
 from triage_intelligence import decide_unknown
@@ -31,6 +33,12 @@ def triage_pending(book: Backlog, space: Workspace,
 
     decisions, decision_rows, unknowns, exhausted = _decide(
         endings, prior, first, space, call)
+    with book.only_writer():
+        for ending, decision in zip(endings, decisions, strict=True):
+            if decision and decision.signature == "person-queued" \
+                    and not moved_under(book.task(ending.task), ending.card) \
+                    and not ending.card.get("blocked_by_human"):
+                distress.park(book, space, ending.task, decision.why)
     card_actions = _write_cards(book, endings, decisions)
     _sweeps(book, space, endings, decisions, first=first, prior=prior)
     alerts, proposals = routes(book, decision_rows, unknowns, exhausted)

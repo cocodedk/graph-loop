@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 
+import distress
 import yaml  # type: ignore[import-untyped]  # no stubs in this environment
 from backlog_status import is_live
 from contract import frozen_requirement
@@ -45,7 +46,7 @@ class Replanned:
     task: dict | None = None
 
 
-def _parse(text: str) -> dict | None:
+def _parse(text: str, *, strict: bool = False) -> dict | None:
     body = text.strip()
     if "```" in body:
         body = body.split("```")[1]
@@ -53,6 +54,8 @@ def _parse(text: str) -> dict | None:
     try:
         loaded = yaml.safe_load(body)
     except yaml.YAMLError:
+        if strict:
+            raise
         return None
     if not isinstance(loaded, dict):
         return None
@@ -80,7 +83,7 @@ def replan_until_planned(backlog, task: dict, planner, *, space=None) -> Replann
                 return Replanned(False, "triage handled the accepted-criteria refusal")
             fresh = backlog.task(task["id"]) or fresh
         spent = int(fresh.get("replans") or 0)
-        out = replan(backlog, fresh, planner)
+        out = replan(backlog, fresh, planner, space=space)
         if out.rewritten:
             break
         after = int((backlog.task(task["id"]) or {}).get("replans") or 0)
@@ -103,7 +106,7 @@ def _refuse(backlog, task: dict, why: str, proposed: dict | None = None) -> Repl
     return Replanned(False, why)
 
 
-def replan(backlog, task: dict, planner) -> Replanned:
+def replan(backlog, task: dict, planner, *, space=None) -> Replanned:
     """Ask the planner for a better contract, check it, and write it back."""
     if is_live(task):
         return Replanned(False, "a live task's contract is the commander's: a refusal waits for a person, "
@@ -132,12 +135,20 @@ def replan(backlog, task: dict, planner) -> Replanned:
             # again: `replan_refused: the planner did not answer (crash)` stood
             # in the record turn after turn (astra round 4, finding 8).
             return _refuse(backlog, task, f"the planner's call did not finish ({out.kind})")
-        return _store(backlog, task, out.text)
+        text, said = distress.answer(out.text)
+        if said.state in ("BLOCKED", "PARTIAL"):
+            why = said.why or distress.tail(said.raw)
+            distress.park(backlog, space, task["id"], why)
+            return Replanned(False, why)
+        return _store(backlog, task, text)
 
 
 def _store(backlog, task: dict, text: str) -> Replanned:
     """Check the planner's answer and write it back. Called under the lock."""
-    fresh = _parse(text)
+    try:
+        fresh = _parse(text, strict=True)
+    except yaml.YAMLError as error:
+        return _refuse(backlog, task, f"the planner's answer was not a task contract: {error}")
     if not fresh or not all(key in fresh for key in ("goal", "files")):
         return _refuse(backlog, task, "the planner's answer was not a task contract")
     # The prompt asks for these keys and nothing else, and this is where that is
@@ -161,13 +172,7 @@ def _store(backlog, task: dict, text: str) -> Replanned:
     refused = check_rewrite(task, backlog.tasks(), fresh)
     if refused:
         return _refuse(backlog, task, refused, fresh)
-    # Checked against the EFFECTIVE gate, whether or not it changed: a
-    # rewrite that omits the gate, or restates the original unchanged,
-    # leaves rewrote_gate False while a pinned original gate would still
-    # reach the queue untouched -- the path that re-added the pinned
-    # clause today. Refused the same way an out-of-bounds rewrite is
-    # refused above -- the card keeps its old gate, and the next planner
-    # reads why.
+    # Validate the effective gate even when the rewrite leaves it unchanged.
     effective_gate = str(fresh.get("gate") or task.get("gate") or "")
     pinned = pins_a_count(effective_gate)
     if pinned:

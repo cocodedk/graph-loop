@@ -46,6 +46,11 @@ def classify(ending: Ending) -> Decision | None:
     if "accepted" in kinds:
         return None
 
+    people = [row for row in events if row.get("kind") == "needs_a_person"]
+    if people:
+        why = str(people[-1].get("why") or "the loop asked for a person")
+        return Decision("unknown", "person-queued", why)
+
     # B4: provider trouble is the harness, whether before work or after it.
     if "review_unavailable" in kinds or "review did not happen" in low \
             or "builder's call went wrong" in low:
@@ -55,11 +60,6 @@ def classify(ending: Ending) -> Decision | None:
                         for row in attempts):
         return Decision("harness", "resource-unavailable",
                         "every resource refused before reading")
-
-    people = [row for row in events if row.get("kind") == "needs_a_person"]
-    if people:
-        why = str(people[-1].get("why") or "the loop asked for a person")
-        return Decision("unknown", "person-queued", why)
 
     refused = [row for row in events if row.get("kind") == "refused"]
     if any(row.get("step") == "red_first" for row in refused):
