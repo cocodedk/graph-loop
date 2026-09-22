@@ -70,19 +70,23 @@ class RecordedCallsTest(unittest.TestCase):
 
 
 class PlannerCallTest(unittest.TestCase):
-    def test_the_planner_has_no_tools_and_its_own_shorter_timeout(self):
-        import turn as graph_commands
-        seen = {}
-        def fake(binary, prompt, **kw):
-            seen.update(kw); return Outcome("ok", text="")
-        original = graph_commands.claude
-        graph_commands.claude = fake
-        try:
-            graph_commands.plan_with_claude("p")
-        finally:
-            graph_commands.claude = original
-        self.assertTrue(seen.get("no_tools"))
-        self.assertLess(seen.get("timeout", 0), 7200)
+    def test_the_planner_reads_the_campaign_checkout_with_its_own_timeout(self):
+        import turn
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            space = Workspace(root / "campaign").init(
+                goal="g", backlog="b.yaml", repo=str(repo))
+            answer = yaml.safe_dump({"goal": "g2", "files": [],
+                                     "gate": "true", "done_when": "y"})
+            with unittest.mock.patch.object(turn, "claude", return_value=Outcome("ok", text=answer)) as call:
+                replan_pending(book(), space)
+            call.assert_called_once()
+            seen = call.call_args.kwargs
+        self.assertTrue(seen.get("read_only"))
+        self.assertFalse(seen.get("no_tools", False))
+        self.assertEqual(str(repo), seen.get("cwd"))
         self.assertEqual(900, seen.get("timeout"))
 
 
