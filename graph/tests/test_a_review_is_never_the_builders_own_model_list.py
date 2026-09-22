@@ -21,7 +21,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import models
 import resources
 
-EXPECTED_TESTS = 4
+EXPECTED_TESTS = 5
 
 
 def claude_rungs() -> list[str]:
@@ -40,6 +40,17 @@ class ReviewBeltTest(unittest.TestCase):
         with unittest.mock.patch.dict(os.environ,
                                       {"GRAPH_CLAUDE_REVIEWERS": "one, two"}):
             self.assertEqual(("one", "two"), models.claude_reviewers())
+
+    def test_planning_uses_strong_models_even_with_a_builder_override(self):
+        with unittest.mock.patch.dict(os.environ, {"GRAPH_BUILDERS": "fast-only"}), \
+                unittest.mock.patch("accounts.available", return_value=["first", "second"]):
+            self.assertEqual(
+                [("claude", account, model)
+                 for model in ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5")
+                 for account in ("first", "second")],
+                [(r.agent, r.account, r.model) for r in resources.belt("plan")])
+            self.assertEqual(["fast-only", "fast-only"],
+                             [r.model for r in resources.belt("build")])
 
 
 class CountTest(unittest.TestCase):
