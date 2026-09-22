@@ -37,7 +37,7 @@ class TheDriversKeysAreNotThere(unittest.TestCase):
     def test_what_a_gate_needs_to_run_is_kept(self):
         with unittest.mock.patch.dict(os.environ, {"PATH": "/usr/bin", "LANG": "C"}):
             env = gate_sandbox.environment("/tmp/home")
-        self.assertEqual("/usr/bin", env["PATH"])
+        self.assertEqual("/usr/bin", env["PATH"].split(os.pathsep)[-1])
         self.assertEqual("C", env["LANG"])
 
     def test_user_site_packages_survive_the_home_swap(self):

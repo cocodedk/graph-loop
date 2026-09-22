@@ -40,6 +40,8 @@ import shutil
 import subprocess
 import tempfile
 
+import gate_toolchain
+
 BWRAP = shutil.which("bwrap")
 # Names that carry a credential or point at one. Dropped whole, by prefix.
 SECRET_PREFIXES = ("CLAUDE", "ANTHROPIC", "GRAPH_", "OPENAI", "GH_", "GITHUB",
@@ -69,6 +71,7 @@ def environment(home: str) -> dict[str, str]:
     # 2026-09-03 and killed every process on the host
     out["TMPDIR"] = home
     out.setdefault("PYTHONUSERBASE", os.path.expanduser("~/.local"))
+    out.update(gate_toolchain.environment(home))
     return out
 
 
@@ -96,9 +99,10 @@ def argv(command: str, cwd: str, home: str) -> list[str]:
             line += ["--ro-bind", "/dev/null", masked]
     line += ["--bind", tree, tree,          # the work, writable
              "--bind", "/tmp", "/tmp",      # where tests put their scratch
-             "--bind", home, home,          # a home with nothing in it
-             "--chdir", tree,
-             "bash", "-c", command]
+             "--bind", home, home]          # private home and writable caches
+    for tool in sorted(set(gate_toolchain.tools().values())):
+        line += ["--ro-bind", tool, tool]
+    line += ["--chdir", tree, "bash", "-c", command]
     return line
 
 
