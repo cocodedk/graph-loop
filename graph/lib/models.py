@@ -26,7 +26,7 @@ _BUILDERS = ("claude-sonnet-5", "claude-opus-5-5", "claude-opus-5")
 # strong at reasoning) and is the default reviewer; gpt-5.6-sol is the model
 # behind it on the same agent. The second AGENT (claude) is still what
 # resources.belt('review') adds after both.
-_REVIEWERS = ("gpt-6-astra", "gpt-5.6-sol")
+_REVIEWERS = ("gpt-6-astra",)
 # What the claude rungs of the review belt use when no codex answers. Its own
 # list, and the STRONG model first: these rungs used to reuse `builders()`, so
 # the moment the builder list was reordered to put the fast model first (the owner,
