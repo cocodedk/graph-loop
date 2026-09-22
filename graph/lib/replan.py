@@ -46,7 +46,7 @@ class Replanned:
     task: dict | None = None
 
 
-def _parse(text: str) -> dict | None:
+def _parse(text: str, *, strict: bool = False) -> dict | None:
     body = text.strip()
     if "```" in body:
         body = body.split("```")[1]
@@ -54,6 +54,8 @@ def _parse(text: str) -> dict | None:
     try:
         loaded = yaml.safe_load(body)
     except yaml.YAMLError:
+        if strict:
+            raise
         return None
     if not isinstance(loaded, dict):
         return None
@@ -143,7 +145,10 @@ def replan(backlog, task: dict, planner, *, space=None) -> Replanned:
 
 def _store(backlog, task: dict, text: str) -> Replanned:
     """Check the planner's answer and write it back. Called under the lock."""
-    fresh = _parse(text)
+    try:
+        fresh = _parse(text, strict=True)
+    except yaml.YAMLError as error:
+        return _refuse(backlog, task, f"the planner's answer was not a task contract: {error}")
     if not fresh or not all(key in fresh for key in ("goal", "files")):
         return _refuse(backlog, task, "the planner's answer was not a task contract")
     # The prompt asks for these keys and nothing else, and this is where that is
