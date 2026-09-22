@@ -45,6 +45,8 @@ file. It runs in CI. If it fails, fix the file — never the check.
 
 ## Coding style
 
+Follow the [KISS repair rule](CLAUDE.md#kiss-repair-rule).
+
 - Every file under 200 lines. A file that outgrows it splits at a natural seam,
   and the old name stays as the front door.
 - One job per module, and the job is stated in the first line of its docstring.

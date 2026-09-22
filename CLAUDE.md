@@ -54,7 +54,7 @@ If it fails, fix the file. Never the check.
 - PyYAML is the only runtime dependency. A second one needs a reason in the pull
   request.
 - Fix a bug at its root: one guard in the shared function, after reading every
-  caller. Graph-Loop must repair its own bugs.
+  caller.
 - A deliberate shortcut carries a `# ponytail: <ceiling>, <upgrade path>`
   comment, so the next reader knows it was chosen rather than missed.
 - Code lints clean before it commits (`ruff check .`).
@@ -72,6 +72,16 @@ If it fails, fix the file. Never the check.
   a grep of the source — spelled the way the source spells it.
 - **Take the inventory from the repository, not from the document.** A file list
   written by hand drifts from the tree it describes. `git ls-files` does not.
+
+## KISS repair rule
+
+- Before coding, use `jev-decisions` to score the plan's simplicity: **at least 0.90**.
+  Confidence is a separate value. A missing score is not approval.
+- Reuse existing code. Add only what the fix needs. Keep docs and updates short.
+- Keep the short plan and Jev result in the PR. Do not reroll an unchanged plan.
+- Fix, test, commit, push and merge one issue before starting the next.
+
+This rule applies to agent plans. Automatic graph-loop enforcement is still pending.
 
 ## Git
 
