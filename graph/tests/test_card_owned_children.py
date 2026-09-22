@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import runner
+import tmp_root  # noqa: F401 — isolate temporary files even when run alone
 from lanes import run_lanes
 from loop_types import TaskOutcome
 from test_loop import Fakes, loop_for, task
