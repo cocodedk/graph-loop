@@ -22,6 +22,13 @@ def decide_unknown(ending: Ending, space, call: Callable | None = None) -> Decis
         if quick is not None:
             return quick
     prompt = _prompt(ending)  # below the rung: an unsent prompt is not a record
+    out = text_call(prompt, space, call)
+    return _read(out.text) if out.ok else Decision(
+        "unknown", "model-unavailable", f"the triage call did not answer ({out.kind})")
+
+
+def text_call(prompt: str, space, call: Callable | None = None) -> Outcome:
+    """The existing finite fallback, shared by cause and path questions."""
     space.artifact(LABEL, "triage-prompt", prompt)
     ask = call or _call
     out = Outcome("harness", text="the plan belt is empty")
@@ -39,8 +46,7 @@ def decide_unknown(ending: Ending, space, call: Callable | None = None) -> Decis
         if out.ok or not resources.refused_before_reading(out.kind):
             break
         spent.note(resource, out.kind)
-    return _read(out.text) if out.ok else Decision(
-        "unknown", "model-unavailable", f"the triage call did not answer ({out.kind})")
+    return out
 
 
 def _call(prompt: str, resource) -> Outcome:
@@ -73,14 +79,14 @@ def _prompt(ending: Ending) -> str:
         + "\n\nArtifacts:\n" + words(ending))
 
 
-def _read(text: str) -> Decision:
+def _read(text: str, allowed=VERDICTS) -> Decision:
     try:
         answer = json.loads(text, object_pairs_hook=closed_object)
     except (TypeError, ValueError):
         answer = None
     if not isinstance(answer, dict) or set(answer) != {"verdict", "why"} \
             or not all(isinstance(answer[key], str) for key in answer) \
-            or answer["verdict"] not in VERDICTS:
+            or answer["verdict"] not in allowed:
         return Decision("unknown", "malformed-model-answer",
                         "the triage answer was not the promised closed JSON")
     return Decision(answer["verdict"], "model", answer["why"][:400])

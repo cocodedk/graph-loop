@@ -15,6 +15,13 @@ def review_change(loop, task: dict, tree, rebuild: int):
     task_id = task["id"]
     diff = tree.diff()
     loop.space.artifact(task_id, "diff", diff)
+    accepted = task.get("accepted_diff")
+    if accepted:
+        loop.backlog.note(task_id, accepted_diff=None)
+        if accepted == finished(task, tree, "gate", diff):
+            loop.space.event("skipped_diff_review", task=task_id,
+                             why="triage accepted this exact change under its accepted contract")
+            return None
     try:
         prompt = diff_prompt(task, diff)
     except DiffTooLarge as oversized:
@@ -59,6 +66,11 @@ def review_change(loop, task: dict, tree, rebuild: int):
                              finished=(None if is_live(task) else
                                        finished(task, tree, "gate", diff)))
     if verdict.verdict != "ACCEPT":
-        return _send_back(loop, task, tree, rebuild, verdict.text)
+        with loop.backlog.only_writer():
+            ending = _send_back(loop, task, tree, rebuild, verdict.text)
+            if ending.state == "rejected":
+                loop.backlog.note(task_id, diff_review_refusal={
+                    "findings": verdict.text, "finished": finished(task, tree, "gate", diff)})
+            return ending
 
     return None
