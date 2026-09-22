@@ -55,7 +55,7 @@ def _parse(text: str) -> dict | None:
             for key, value in loaded.items()}
 
 
-def replan_until_planned(backlog, task: dict, planner) -> Replanned:
+def replan_until_planned(backlog, task: dict, planner, *, space=None) -> Replanned:
     """Rewrite until a rewrite is stored or the rounds are spent: a refused
     rewrite (not a contract, outside the files, a changed gate) is itself a
     round the next planner reads, not a dead end."""
@@ -64,6 +64,13 @@ def replan_until_planned(backlog, task: dict, planner) -> Replanned:
         fresh = backlog.task(task["id"]) or task
         if fresh.get("status") != "refused_contract" or int(fresh.get("replans") or 0) >= MAX_REPLANS:
             break
+        if fresh.get("blocked_by_human"):
+            break
+        if space is not None:
+            from triage_paths import criteria_path
+            if criteria_path(backlog, space, fresh):
+                return Replanned(False, "triage handled the accepted-criteria refusal")
+            fresh = backlog.task(task["id"]) or fresh
         spent = int(fresh.get("replans") or 0)
         out = replan(backlog, fresh, planner)
         if out.rewritten:
@@ -75,10 +82,10 @@ def replan_until_planned(backlog, task: dict, planner) -> Replanned:
     return out
 
 
-def _refuse(backlog, task: dict, why: str) -> Replanned:
+def _refuse(backlog, task: dict, why: str, proposed: dict | None = None) -> Replanned:
     """An answered rewrite that cannot be stored: the round is spent, and the
     next planner reads why — a refusal that costs nothing is a dead end."""
-    backlog.set_status(task["id"], "refused_contract", refused_why=why,
+    backlog.set_status(task["id"], "refused_contract", refused_why=why, refused_rewrite=proposed,
                        # a card whose rewrites are all refused parks for the
                        # next plan phase, which re-slices it
                        requirement=task.get("requirement") or frozen_requirement(task),
@@ -147,7 +154,7 @@ def _store(backlog, task: dict, text: str) -> Replanned:
     from rewrite_guard import check_rewrite
     refused = check_rewrite(task, backlog.tasks(), fresh)
     if refused:
-        return _refuse(backlog, task, refused)
+        return _refuse(backlog, task, refused, fresh)
     # Checked against the EFFECTIVE gate, whether or not it changed: a
     # rewrite that omits the gate, or restates the original unchanged,
     # leaves rewrote_gate False while a pinned original gate would still
@@ -177,5 +184,5 @@ def _store(backlog, task: dict, text: str) -> Replanned:
     row["replan_history"] = list(task.get("replan_history") or []) + [
         str(task.get("refused_why") or "")[:2000]]
     fields = {key: value for key, value in row.items() if key not in ("id", "status")}
-    backlog.set_status(task["id"], "todo", refused_why=None, **fields)
+    backlog.set_status(task["id"], "todo", refused_why=None, refused_rewrite=None, **fields)
     return Replanned(True, "rewritten from the reviewer's findings", backlog.task(task["id"]))

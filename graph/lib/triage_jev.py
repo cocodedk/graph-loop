@@ -104,9 +104,17 @@ def _notes(ending: Ending) -> str:
 
 def rung(state: dict, space, label: str) -> Decision | None:
     """Jev's cause for this ending, or nothing, which leaves it to the text belt."""
-    body = question(state, CAUSES)
+    out = call(state, CAUSES, DECIDING, space, label)
+    if not out.ok or out.verdict not in DECIDING:
+        return None
+    return Decision(out.verdict, "jev", f"{out.text} ({CAUSES[out.verdict]})"[:400])
+
+
+def call(state: dict, criteria: dict, allowed: tuple, space, label: str, **options):
+    """One prepared question, with the same artifacts and accounting as triage."""
+    body = question(state, criteria, **options)
     with space.step(label, "jev_call") as note:
-        out = ask(body, DECIDING)
+        out = ask(body, allowed)
         note(outcome=out.kind, cost=out.cost, tokens=out.tokens, on=MODEL)
     space.artifact(label, "jev-question", body)
     space.artifact(label, "jev-answer", out.raw or out.text)
@@ -114,6 +122,4 @@ def rung(state: dict, space, label: str) -> Decision | None:
     # not grade this as a builder answer that was thrown away (`doctor_spend`).
     space.attempt(label, account="plan", kind=out.kind, cost=out.cost,
                   tokens=out.tokens, purpose="triage")
-    if not out.ok or out.verdict not in DECIDING:
-        return None
-    return Decision(out.verdict, "jev", f"{out.text} ({CAUSES[out.verdict]})"[:400])
+    return out

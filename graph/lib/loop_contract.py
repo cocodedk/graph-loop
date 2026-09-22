@@ -24,6 +24,8 @@ def contract(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOu
     every other harness fault or rejection leaves it for the next round.
     """
     task_id = task["id"]
+    if task.get("contract_observation") and task.get("contract_seen") == contract_digest(task):
+        return None
     if not task.get("requirement"):
         # Frozen here, once: what this card was granted, in the words nobody
         # has rewritten yet. Written to the card AND to the copy this round
@@ -82,7 +84,7 @@ def contract(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOu
             if ended is not None:
                 return ended
             loop.backlog.set_status(task_id, "refused_contract",
-                                    refused_why=verdict.text[:400])
+                                    refused_why=verdict.text)
         tree.keep(f"contract refused after paid work: {verdict.text[:200]}") if in_place else tree.remove()
         return TaskOutcome("refused", verdict.text, tree.path)
     # remember WHICH contract was accepted: a later edit must be read again.

@@ -22,6 +22,7 @@ from lanes import run_lanes  # noqa: F401 — run_lanes' front door stays here
 from providers import PLAN_TIMEOUT, claude
 from replan import replan_until_planned
 from triage import triage_pending
+from triage_paths import contract_path
 from turn_plan import taking_now  # noqa: F401 — the driver's door
 from workspace_flags import RESTART_EXIT
 
@@ -62,6 +63,8 @@ def replan_pending(book, space, planner=None) -> bool:
         # plan phase and this path cannot both claim the same card.
         if not can_replan(task):
             continue
+        if contract_path(book, space, task):
+            return True
         def recorded(prompt: str, task_id: str = task["id"]):
             """Every planner call leaves its own record: a summary of the last
             one hid what the first cost and what it answered.
@@ -95,7 +98,7 @@ def replan_pending(book, space, planner=None) -> bool:
         # report.py's clock, by_step and by_task totals summed the same
         # seconds twice. The outcome is still recorded once, below, as a
         # plain event rather than a second step.
-        fixed = replan_until_planned(book, task, recorded)
+        fixed = replan_until_planned(book, task, recorded, space=space)
         print(f"  replan {task['id']}: {fixed.why[:160]}")
         space.event("replanned" if fixed.rewritten else "replan_refused", task=task["id"], why=fixed.why[:300])
         return True
