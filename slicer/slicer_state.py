@@ -41,12 +41,12 @@ def close(backlog: pathlib.Path, sources: list[pathlib.Path], verdict: str,
     shown. `rows` is the caller's own list — the one the coverage prompt was
     built from — never re-read here, or a card that changed while the review ran
     would be recorded as covered by a verdict about a backlog it was not in."""
-    names = [name for name in named_files(files(sources)) if (root / name).is_file()]
+    names = named_files(files(sources))
     missing = missing_files(names, rows)
     if missing:
         forget(backlog)
         raise ValueError("source files without cards: " + ", ".join(missing))
-    state = {"named_files": names, "source_digest": digest(sources, root),
+    state = {"file_rule": "structured-work", "named_files": names, "source_digest": digest(sources, root),
              "backlog_digest": backlog_digest(rows), "review": verdict}
     with Backlog(backlog).only_writer():
         beside = backlog / f"{STATE}.new"
@@ -75,7 +75,8 @@ def accepted(backlog: pathlib.Path, rows: list[dict]) -> bool:
     delete a verdict that was right."""
     state = _record(backlog)
     names = state.get("named_files")
-    return (isinstance(names, list) and all(isinstance(name, str) for name in names)
+    return (state.get("file_rule") == "structured-work"
+            and isinstance(names, list) and all(isinstance(name, str) for name in names)
             and not missing_files(names, rows)
             and state.get("backlog_digest") == backlog_digest(rows))
 

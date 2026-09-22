@@ -14,7 +14,7 @@ import slicer_answer
 import slicer_state
 import tmp_root  # noqa: F401 — temporary files are removed at exit
 
-EXPECTED_TESTS = 5
+EXPECTED_TESTS = 7
 
 
 class NamedFileCoverageTest(unittest.TestCase):
@@ -24,8 +24,8 @@ class NamedFileCoverageTest(unittest.TestCase):
         self.backlog.mkdir()
         self.source = self.repo / 'spec.md'
         self.names = [f'ui/screen{i}/Card.kt' for i in range(8)]
-        self.create_files(self.names)
-        self.source.write_text('\n'.join(f'Build `{name}`.' for name in self.names))
+        self.source.write_text('\n'.join(
+            f'## Node {i}\nFiles: `{name}`' for i, name in enumerate(self.names)))
         self.rows = [{'id': f'logic{i}', 'status': 'done', 'files': [f'logic/{i}.kt']}
                      for i in range(17)]
 
@@ -64,32 +64,42 @@ class NamedFileCoverageTest(unittest.TestCase):
         self.assertFalse(slicer_state.accepted(self.backlog, self.rows))
         self.assertFalse(slicer_state.covered(self.backlog, [self.source], self.repo, self.rows))
 
-    def test_paths_in_prose_links_and_fences_including_absent_files(self):
-        self.source.write_text('Build ./ui/New.kt:12, [screen](ui/Other.kt#view)\n'
-                               '```\nui/Third.kt\n```\nand `Root.py`, `ui/Absent.kt`.')
-        self.rows = [{'id': 'misleading', 'files': ['ui'], 'goal': 'ui/New.kt',
-                      'uses': ['ui/Other.kt:view']}]
+    def test_mentions_and_fenced_fields_contribute_no_names(self):
+        self.source.write_text('Build `ui/New.kt`. [screen](ui/Other.kt)\n'
+                               '```markdown\nFiles: ui/Third.kt\n```\n'
+                               '~~~~\nCreates: ui/Fourth.kt\n~~~~\n'
+                               '<!-- Files: ui/Hidden.kt -->\n'
+                               'The Files: ui/Prose.kt are examples.\n')
+        self.create_files(['ui/New.kt', 'ui/Other.kt', 'ui/Third.kt'])
+        self.rows = []
         self.assertEqual('covered', self.answer()[0])
-        names = ('ui/New.kt', 'ui/Other.kt', 'ui/Third.kt', 'Root.py')
-        self.create_files(names)
+
+    def test_structured_fields_include_absent_and_extensionless_files(self):
+        self.source.write_text('- **Files:** `Dockerfile`, ./config/feature\n'
+                               '**Creates**: [[ui/New.kt:Screen]]\n'
+                               'Files:\n  - Root.py\n  - ui/Other.kt\n')
+        names = ['Dockerfile', 'config/feature', 'ui/New.kt', 'Root.py', 'ui/Other.kt']
+        self.rows = []
         state, reason = self.answer()
         self.assertEqual('coverage_refused', state)
         for name in names:
             self.assertIn(name, reason)
-        self.assertNotIn('ui/Absent.kt', reason)
-        self.rows.append({'id': 'screens', 'files': list(names)})
+        self.rows = [{'id': 'build', 'files': names}]
         self.assertEqual('covered', self.answer()[0])
 
-    def test_extensionless_paths_and_external_urls(self):
-        self.source.write_text('Build `Dockerfile` and config/feature. '
-                               'See https://example.test/help.html')
+    def test_links_and_sentences_are_not_work_lists(self):
+        self.source.write_text('Files: [reference](docs/DESIGN.md)\n'
+                               'Creates: see ui/Example.kt for details.\n'
+                               'Files: https://example.test/help.html\n')
         self.rows = []
         self.assertEqual('covered', self.answer()[0])
-        self.create_files(['Dockerfile', 'config/feature'])
-        self.rows = [{'id': 'build', 'files': ['Dockerfile', 'config/feature']}]
-        self.assertEqual('covered', self.answer()[0])
-        self.rows[0]['files'].remove('config/feature')
-        self.assertEqual('coverage_refused', self.answer()[0])
+
+    def test_previous_existence_filtered_record_cannot_prove_coverage(self):
+        state = {'source_digest': slicer_state.digest([self.source], self.repo),
+                 'backlog_digest': slicer_state.backlog_digest(self.rows),
+                 'named_files': [], 'review': 'ACCEPT'}
+        (self.backlog / slicer_state.STATE).write_text(yaml.safe_dump(state))
+        self.assertFalse(slicer_state.accepted(self.backlog, self.rows))
 
 
 class CountTest(unittest.TestCase):
