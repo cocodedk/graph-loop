@@ -20,13 +20,13 @@ import os
 # The fast builder first (the owner, 2026-09-18: "you must use faster builder
 # models"). The slower model stays behind it, so a card the fast one cannot
 # carry still reaches one that can, and review keeps its own list below.
-_BUILDERS = ("claude-sonnet-5", "claude-opus-5")
+_BUILDERS = ("claude-sonnet-5", "claude-opus-5-5", "claude-opus-5")
 # Checked against the binary, not guessed: gpt-6-astra answered `codex exec
 # -m gpt-6-astra` on 2026-09-08 (the owner: the account's upgrade, high effort,
 # strong at reasoning) and is the default reviewer; gpt-5.6-sol is the model
 # behind it on the same agent. The second AGENT (claude) is still what
 # resources.belt('review') adds after both.
-_REVIEWERS = ("gpt-6-astra", "gpt-5.6-sol")
+_REVIEWERS = ("gpt-6-astra",)
 # What the claude rungs of the review belt use when no codex answers. Its own
 # list, and the STRONG model first: these rungs used to reuse `builders()`, so
 # the moment the builder list was reordered to put the fast model first (the owner,
@@ -34,7 +34,9 @@ _REVIEWERS = ("gpt-6-astra", "gpt-5.6-sol")
 # that wrote it — which is the one thing a review is for (CLAUDE.md § Code: an
 # independent reviewer, never the builder). Found on the first real campaign
 # run, where a reviewer had to be stood in by hand to get one at all.
-_CLAUDE_REVIEWERS = ("claude-opus-5", "claude-sonnet-5")
+# claude-opus-5-5 answered `claude --model claude-opus-5-5` on 2026-09-22 and leads
+# the strong models; opus 5 stays behind it so a refusal still walks somewhere.
+_CLAUDE_REVIEWERS = ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5")
 
 
 def _listed(variable: str, fallback: tuple[str, ...]) -> tuple[str, ...]:
