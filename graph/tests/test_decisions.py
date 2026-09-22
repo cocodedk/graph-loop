@@ -68,8 +68,10 @@ class AskTest(unittest.TestCase):
         self.assertEqual("Which size?", asked["questions"]["two__0"]["instructions"])
 
     def test_a_question_left_unanswered_refuses_the_whole_call(self):
-        text = json.dumps({"answers": {"one": {"type": "choice", "choice": "left"}}})
-        self.assertTrue(refused(self, text).why)
+        whole = json.loads(reply())
+        for name in ("two__0", "two__1"):
+            del whole["answers"][name]
+        self.assertTrue(refused(self, json.dumps(whole)).why)
 
     def test_an_answer_nobody_asked_for_refuses_the_whole_call(self):
         extra = json.loads(reply())
@@ -77,10 +79,11 @@ class AskTest(unittest.TestCase):
         refused(self, json.dumps(extra))
 
     def test_a_choice_outside_its_own_criteria_is_refused(self):
-        refused(self, reply(one={"type": "choice", "choice": "middle"}))
         # "big" is a real choice, but of the other question in this call
-        refused(self, reply(one={"type": "choice", "choice": "big", "confidence": 0.9}))
-        refused(self, reply(one={"type": "choice", "choice": ["left"]}))
+        for choice in ("middle", "big", ["left"]):
+            with self.subTest(choice=choice):
+                refused(self, reply(one={"type": "choice", "choice": choice, "confidence": 0.9,
+                                        "probabilities": {"left": 0.9, "right": 0.1}}))
 
     def test_a_repeated_key_is_refused(self):
         # each of these reads as a whole, valid answer if the last duplicate wins

@@ -93,7 +93,6 @@ def _answer(whole, allowed: tuple[str, ...], qid: str = QUESTION) -> dict | None
     if not isinstance(answers, dict) or set(answers) != expected:
         return None
     totals = dict.fromkeys(allowed, 0.0)
-    confidence = 0.0
     for said in answers.values():
         if not isinstance(said, dict) or said.get("type") != "choice" \
                 or not set(said) <= ANSWER_FIELDS:
@@ -109,14 +108,17 @@ def _answer(whole, allowed: tuple[str, ...], qid: str = QUESTION) -> dict | None
         if not math.isclose(sum(shares.values()), 1, abs_tol=0.01) \
                 or shares[chosen] != max(shares.values()):
             return None
-        confidence += sure / count
         for option, share in shares.items():
             totals[option] += share / count
     winner = max(totals, key=totals.get)
     if sum(math.isclose(share, totals[winner], abs_tol=1e-12)
            for share in totals.values()) != 1:
         return None
-    return {"choice": winner, "confidence": confidence, "probabilities": totals}
+    confidence = [said["confidence"] for said in answers.values() if said["choice"] == winner]
+    if not confidence:
+        return None
+    return {"choice": winner, "confidence": sum(sure / len(confidence) for sure in confidence),
+            "probabilities": totals}
 
 
 def _spend(whole) -> dict:

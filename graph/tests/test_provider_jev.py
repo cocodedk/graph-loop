@@ -30,15 +30,13 @@ class ReadTest(unittest.TestCase):
         self.assertIn("confidence 0.91", out.text)
 
     def test_nothing_else_is_a_verdict(self):
-        for raw in ("not json", "{}", '{"answers":{"cause":{"noul":0.9}}}',
+        for raw in ("not json", "{}", body(noul=0.9),
                     '{"answers":[{"type":"choice","choice":"work"}]}',
                     body(type="noul"), body(choice="beats me"),
                     body(choice=["work"]), body(choice={"a": 1}),
                     body(veto="a field this loop does not know"),
-                    ('{"error":{"code":502},"answers":{"cause":'
-                     '{"type":"choice","choice":"work"}}}'),
-                    ('{"answers":{"cause":{"type":"choice","choice":"gate"}},'
-                     '"answers":{"cause":{"type":"choice","choice":"work"}}}')):
+                    body().replace('{"answers":', '{"error":{"code":502},"answers":', 1),
+                    body().replace('{"answers":', '{"answers":{},"answers":', 1)):
             with self.subTest(raw=raw):
                 out = _read(raw, ALLOWED)
                 self.assertFalse(out.ok)
@@ -55,11 +53,13 @@ class ReadTest(unittest.TestCase):
 
     def test_the_mean_can_overrule_the_first_order_and_ties_are_refused(self):
         whole = json.loads(body())
+        whole["answers"]["cause__1"]["confidence"] = 0.81
+        self.assertAlmostEqual(0.86, _read(json.dumps(whole), ALLOWED).confidence)
         whole["answers"]["cause__1"].update(
             choice="gate", confidence=0.81, probabilities={"gate": 1.0, "work": 0.0})
         out = _read(json.dumps(whole), ALLOWED)
         self.assertEqual("gate", out.verdict)
-        self.assertAlmostEqual(0.86, out.confidence)
+        self.assertAlmostEqual(0.81, out.confidence)
         whole["answers"]["cause__1"]["probabilities"] = {"gate": 0.9, "work": 0.1}
         self.assertFalse(_read(json.dumps(whole), ALLOWED).ok)
 
