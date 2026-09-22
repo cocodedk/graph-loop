@@ -11,7 +11,7 @@ from providers import Outcome
 from test_loop import Fakes, loop_for, task
 from test_review_scope import answer, finding
 
-EXPECTED_TESTS = 4
+EXPECTED_TESTS = 5
 ACCEPT = Outcome("ok", verdict="ACCEPT", text="ok")
 
 
@@ -20,6 +20,40 @@ def scripted(text: str, verdict="ACCEPT"):
 
 
 class ScopedReviewTest(unittest.TestCase):
+    def test_blocked_footer_parks_before_diff_validation_or_rebuild(self):
+        import tempfile
+        from types import SimpleNamespace
+        from unittest import mock
+
+        from distress import INSTRUCTION, TEMPLATE
+        from loop_diff_review import review_change
+        from resources import Resource
+        from review import _claude_review
+        from test_distress import BLOCKED, DONE
+        from test_replan import book_with
+        from workspace import Workspace
+        for footer in (BLOCKED, DONE.replace('false, "why": ""',
+                       'true, "why": "missing inputs"')):
+            book = book_with(status="todo")
+            space = Workspace(tempfile.mkdtemp())
+            tree = mock.Mock(path="unused", commit="base")
+            tree.diff.return_value = "+two"
+            text = answer() + "\n" + footer
+            with mock.patch("providers.claude", return_value=Outcome("ok", text=text)) as call:
+                loop = SimpleNamespace(backlog=book, space=space, review=lambda prompt, **_:
+                    _claude_review(prompt, Resource("claude", "work", "opus"), "high", 1))
+                out = review_change(loop, book.task("T1"), tree, 0)
+            self.assertEqual("blocked", out.state)
+            self.assertEqual("blocked_by_agent", book.task("T1")["status"])
+            self.assertFalse(book.startable())
+            self.assertFalse(book.task("T1").get("rebuild_round"))
+            self.assertEqual(out.why, next(e["why"] for e in space.events()
+                                          if e["kind"] == "needs_a_person"))
+            self.assertIn(INSTRUCTION + TEMPLATE, call.call_args.args[1])
+        from review_read import _read_review
+        self.assertEqual(("ACCEPT", answer()), _read_review(answer() + "\n" + DONE))
+
+
     def test_observations_are_recorded_and_the_task_finishes_without_a_rebuild(self):
         fakes = scripted(answer(observations=["Separate old-module cleanup"]))
         loop, book, space = loop_for(task(), fakes)

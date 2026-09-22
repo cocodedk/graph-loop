@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pathlib
 
+import distress
 from backlog_status import is_live
 from contract import frozen_requirement
 from worktree_scope import changed_outside
@@ -69,7 +70,8 @@ def prompt_for(task: dict) -> str:
         + "A gate must never hide or delete the output a builder needs: no quiet flags "
         "that drop compiler errors, no deleting the log it greps. A stub's acceptance checks "
         "compilation/interface availability, never continued non-implementation.\n\n"
-        "Answer with YAML only, these keys and nothing else: goal, files, done_when"
+        "Answer with YAML using only these keys, followed by the distress line: goal, files, done_when"
         + ("." if is_live(task) else ", gate.")
         + " Keep the goal to one idea, name every file the gate can fail on, "
-        "and say plainly what the gate will prove and what it will not.")
+        "and say plainly what the gate will prove and what it will not.\n"
+        + distress.INSTRUCTION + distress.TEMPLATE)

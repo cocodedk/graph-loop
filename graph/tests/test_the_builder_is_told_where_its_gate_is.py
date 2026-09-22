@@ -43,7 +43,7 @@ class TheBuilderCanFindItsGate(unittest.TestCase):
             said = build_prompt(card(**extra))
             self.assertIn("You do not need to run the gate yourself", said)
             self.assertIn("the loop runs it after you finish", said)
-            self.assertIn("if a command is denied, finish the edit and end normally", said)
+            self.assertIn("if a denied command prevents a correct edit, say BLOCKED at once", said)
             self.assertIn("do not stop as BLOCKED for that", said)
 
     def test_the_prompt_names_the_path_it_was_granted(self):

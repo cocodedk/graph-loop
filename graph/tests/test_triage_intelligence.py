@@ -17,7 +17,7 @@ from triage_evidence import Ending
 from triage_intelligence import LABEL, _call, decide_unknown
 from workspace import Workspace
 
-EXPECTED_TESTS = 5
+EXPECTED_TESTS = 6
 
 
 def ending() -> Ending:
@@ -27,6 +27,37 @@ def ending() -> Ending:
 
 
 class IntelligenceTest(unittest.TestCase):
+    def test_blocked_footer_parks_before_triage_can_route_it(self):
+        from distress import INSTRUCTION, TEMPLATE
+        from test_distress import BLOCKED, DONE
+        from test_replan import book_with
+        from triage import triage_pending
+        from triage_intelligence import _read
+        for footer in (BLOCKED, DONE.replace('false, "why": ""',
+                       'true, "why": "missing inputs"')):
+            book = book_with(status="todo")
+            space = Workspace(tempfile.mkdtemp())
+            space.event("triage_preview")
+            space.event("claimed", task="T1")
+            space.artifact("T1", "gate-output", "one assertion failed")
+            space.event("failed", task="T1", step="gate")
+            space.event("released", task="T1")
+            call = mock.Mock(return_value=Outcome("ok", text=
+                '{"verdict":"contract","why":"rewrite it"}\n' + footer))
+            with mock.patch.object(resources, "belt", return_value=[
+                    resources.Resource("claude", "work", "opus")]):
+                triage_pending(book, space, call=call)
+                triage_pending(book, space, call=call)
+            self.assertEqual("blocked_by_agent", book.task("T1")["status"])
+            self.assertFalse(book.startable())
+            self.assertEqual(book.task("T1")["refused_why"], next(e["why"] for e in space.events()
+                                              if e["kind"] == "needs_a_person"))
+            call.assert_called_once()
+            self.assertIn(INSTRUCTION + TEMPLATE, call.call_args.args[0])
+            self.assertFalse(any(e["kind"] == "triage_proposal" for e in space.events()))
+        self.assertEqual("work", _read('{"verdict":"work","why":"fix"}\n' + DONE).verdict)
+
+
     def setUp(self):
         self.space = Workspace(pathlib.Path(tempfile.mkdtemp()) / "campaign")
 

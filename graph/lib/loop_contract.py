@@ -6,6 +6,7 @@ Split out of loop_judge.py to hold the 200-line cap. loop_judge.py imports
 
 from __future__ import annotations
 
+import distress
 import resources
 from accepted_contract import criteria
 from contract import frozen_requirement
@@ -41,6 +42,9 @@ def contract(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOu
         verdict = loop.review(prompt, cwd=tree.path, space=loop.space, task_id=task_id)
         note(verdict=verdict.verdict, outcome=verdict.kind)
     loop.space.artifact(task_id, "contract-answer", verdict.raw or verdict.text)
+    ending = distress.stop(loop, task, tree, distress.answer(verdict.text)[1])
+    if ending is not None:
+        return ending
     if not verdict.ok:
         # No verdict was written: the reviewer was limited, killed or answered
         # nothing. That is the harness talking, and it must not refuse a task.

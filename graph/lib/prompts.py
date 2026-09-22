@@ -18,6 +18,7 @@ from contract import (  # split out at the 200-line cap; the old front door stay
     moved_under,  # noqa: F401
     revision,  # noqa: F401
 )
+from distress import INSTRUCTION as DISTRESS_INSTRUCTION
 from distress import TEMPLATE as DISTRESS_TEMPLATE
 from gate_script import gate_script_path
 from review_scope import INSTRUCTION, numbered
@@ -80,7 +81,7 @@ def build_prompt(task: dict, in_place: bool = False) -> str:
         + f"{('Note: ' + task['note']) if task.get('note') else ''}\n\n"
         f"The loop proves it with: {task.get('gate')}\n"
         "You do not need to run the gate yourself — the loop runs it after you finish; "
-        "if a command is denied, finish the edit and end normally, do not stop as BLOCKED for that.\n"
+        "if a denied command prevents a correct edit, say BLOCKED at once.\n"
         + (f"Run it with: bash {gate_script_path(task)}\n"
            "That file holds the gate above, byte for byte, and is the ONE command you are "
            "granted for it — the gate is a script, and a grant for each program in it does "
@@ -97,12 +98,7 @@ def build_prompt(task: dict, in_place: bool = False) -> str:
         "inside your own files and under this gate. Never a tidy-up beside the work. "
         "Plain human language in every word you write. The simplest thing that "
         "works. Do not commit. " + stack + "\n\n"
-        "End your answer with one line of JSON and nothing after it:\n  "
-        + DISTRESS_TEMPLATE + "\n"
-        "`result` is DONE when the edit is finished, BLOCKED when something stopped "
-        "you, PARTIAL when some of it is done and the rest needs a decision. "
-        "Say BLOCKED rather than guessing: nobody may be watching, and a "
-        "blocked task is read by a person while a wrong guess is not.")
+        + DISTRESS_INSTRUCTION + DISTRESS_TEMPLATE)
 
 
 def diff_prompt(task: dict, diff: str) -> str:
@@ -121,4 +117,5 @@ def diff_prompt(task: dict, diff: str) -> str:
         + "The numbered diff:\n"
         + numbered(diff)
         + "\n\nJudge it against that contract: its note is a boundary, and what the note "
-        "forbids is not a finding.\n" + INSTRUCTION)
+        "forbids is not a finding.\n" + INSTRUCTION
+        + "\n" + DISTRESS_INSTRUCTION + DISTRESS_TEMPLATE)
