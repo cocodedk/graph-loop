@@ -22,7 +22,6 @@ REST = (("waits for", "needs"), ("uses", "uses"), ("creates", "creates"),
 
 def field(label: str, value: object) -> str:
     """One field of the contract, on its own line, as JSON.
-
     JSON so a boundary is a boundary. Pasted in raw, a note ending in a line
     that reads `waits for: ['T0']` gave the same text — and the same digest —
     as a card that really waits for T0, so a dependency added mid-round was
@@ -49,7 +48,6 @@ def frozen_requirement(task: dict) -> dict:
 
 def contract_text(task: dict) -> str:
     """The contract itself, in the words both reviewers are shown it in.
-
     One text, so the diff reviewer judges the change against the contract that
     was accepted — its note, its gate, its waits, its names, its red proof and
     its granted authority included, not a wider one it imagines from the goal
@@ -111,6 +109,9 @@ def contract_prompt(task: dict) -> str:
         "that gap only while the gate lacks this probe; never ask for the judge to change.\n"
         + ("Refuse a rewrite that proves less than the requirement recorded below.\n"
            if task.get("requirement") else "")
+        + ("For this judge card, ask what wrong implementation would still pass this judge "
+           "and refuse the contract while such an implementation is named.\n"
+           if task.get("gate_until_kept") is True else "")
         + writes_its_test + uses_question(task) + fixture_question(task) + "\n"
         + contract_text(task)
         + "Answer with one review JSON line, followed by the distress line:\n  "
@@ -121,7 +122,6 @@ def contract_prompt(task: dict) -> str:
 
 def contract_digest(task: dict) -> str:
     """What the contract reviewer actually read, as one short name.
-
     The prompt IS the contract: goal, gate, done_when, files and every flag the
     reviewer is shown. Digesting it needs no list of fields to keep in step, and
     any edit to any of them changes the answer.
@@ -190,7 +190,6 @@ def moved_under(fresh: dict | None, started: dict) -> str:
 
 def revision(task: dict) -> str:
     """All of what `moved_under` compares, as one short name a record can hold.
-
     A crash-recovery note says the branch holds a card's keep; only the card's
     revision AT THAT KEEP says whether the card has been decided again since.
     """
