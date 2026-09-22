@@ -22,7 +22,8 @@ from gate_shell import (  # type: ignore[import-not-found]
 )
 
 
-def _task(task: dict, repo: pathlib.Path, known: set[str]) -> None:
+def _task(task: dict, repo: pathlib.Path, known: set[str], *,
+          siblings: set[str] | None = None) -> None:
     for key in ("goal", "gate", "done_when"):
         if not isinstance(task.get(key), str) or not task[key].strip():
             raise ValueError(f"{key} must be a non-empty string")
@@ -85,6 +86,9 @@ def _task(task: dict, repo: pathlib.Path, known: set[str]) -> None:
         values = _strings(task.get(key, []), key)
         if key == "needs" and set(values) - known:
             raise ValueError("an atom needs a task that does not exist")
+        if key == "needs" and siblings and set(values) & siblings:
+            # Stage numbers derive these waits; only outside needs are stored.
+            task[key] = [value for value in values if value not in siblings]
     for key in ("gate_files_are_the_work", "gate_has_side_effects", "may_add_files", "gate_until_kept"):
         if key in task and not isinstance(task[key], bool):
             raise ValueError(f"{key} must be true or false, not text")

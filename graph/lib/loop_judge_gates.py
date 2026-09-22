@@ -8,7 +8,7 @@ back, so `loop_judge._gates_on_the_branch` still names this one function.
 from __future__ import annotations
 
 from backlog_reach import overlap, reach
-from backlog_status import is_live
+from backlog_status import is_live, settled
 from gate_baseline import same_failure
 from keep_gate import GateMutatedTree
 from loop_types import TaskOutcome
@@ -17,6 +17,23 @@ from loop_types import TaskOutcome
 def _kept_gate(row: dict) -> str:
     key = "gate_when_kept" if row.get("gate_until_kept") is True else "gate"
     return str(row.get(key) or "").strip()
+
+
+def _affected_kept_gates(loop, task: dict) -> list[tuple[dict, str]]:
+    """A lasting judge gate waits for every dependent except this card."""
+    if is_live(task):
+        return []
+    rows = loop.backlog.tasks()  # includes the needs derived from stage order
+    finished = settled(rows)     # done, dropped, or sliced into pieces that are
+    waiting = {need for row in rows
+               if row.get("id") != task.get("id") and row.get("id") not in finished
+               for need in row.get("needs") or []}
+    my_files = {str(path).rstrip("/") for path in (task.get("files") or [])}
+    kept = [row for row in rows if row.get("status") == "done" and not is_live(row)
+            and not (row.get("gate_until_kept") is True and row.get("id") in waiting)
+            and overlap(reach(row), my_files) and _kept_gate(row)]
+    kept.sort(key=lambda row: str(row.get("kept_at") or ""))
+    return [(row, _kept_gate(row)) for row in kept]
 
 
 def _gates_on_the_branch(loop, task: dict) -> list[str]:
@@ -29,16 +46,8 @@ def _gates_on_the_branch(loop, task: dict) -> list[str]:
     """
     if is_live(task):
         return []
-    kept = [row for row in loop.backlog.tasks()
-            if row.get("status") == "done" and not is_live(row)
-            and _kept_gate(row)]
-    kept.sort(key=lambda row: str(row.get("kept_at") or ""))     # keep order, not backlog order
-    my_files = {str(path).rstrip("/") for path in (task.get("files") or [])}
     gates, seen = [], set()
-    for row in kept:
-        if not overlap(reach(row), my_files):
-            continue
-        gate = _kept_gate(row)
+    for _row, gate in _affected_kept_gates(loop, task):
         if gate not in seen:
             seen.add(gate); gates.append(gate)
     mine = str(task.get("gate") or "").strip()
@@ -58,9 +67,9 @@ def _gate_owner(loop, task: dict, gate: str) -> str:
     gate = gate.strip()
     if not gate or gate == str(task.get("gate") or "").strip():
         return ""
-    for row in loop.backlog.tasks():
+    for row, kept_gate in _affected_kept_gates(loop, task):
         if str(row.get("id")) != str(task.get("id")) \
-                and _kept_gate(row) == gate:
+                and kept_gate == gate:
             return str(row.get("id"))
     return ""
 
@@ -111,12 +120,12 @@ def _send_to_its_owner(loop, task: dict, tree, owner: str, clash) -> TaskOutcome
            f"{owner} is what gets repaired, not this card — {clash}")
     tree.keep(why[:200])
     loop.space.event("failed", task=task_id, step="combined_gate",
-                     gate_owner=owner, why=why[:400])
+                     gate_owner=owner, why=why[:2000])
     with loop.backlog.only_writer():
         owned = loop.backlog.task(owner) or {}
         if owned.get("status") == "done":
             loop.backlog.set_status(task_id, "todo", blocked_by_human=True,
-                                    rebuild_from=tree.path, refused_why=why[:400])
+                                    rebuild_from=tree.path, refused_why=why[:2000])
         else:
             needs = list(dict.fromkeys([*(task.get("needs") or []), owner]))
             loop.backlog.set_status(task_id, "todo", rebuild_from=tree.path,

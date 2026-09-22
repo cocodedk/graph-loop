@@ -170,3 +170,26 @@ temporary backlog, proved red on today's tree and green against a candidate befo
 the pattern that closed the cut check's seven fix cards without a refusal. The slicer's cut
 check judges the cards once the decisions key is present. Order: 1, 2, 3 first — they are what
 ends an unattended run.
+
+## Issue #19 — keeping validated molecules from a refused answer
+
+This checkout accepts one molecule per answer. `slicer/asking.py:prompt` requests the
+closed keys `result`, `reason`, `molecule`; `slicer/contracts.py:validate` requires that
+`molecule` be one mapping. `slicer/slicer_answer.py:run_answer` validates that molecule,
+checks its cut and progress where applicable, then calls `slicer/tree.py:publish`.
+Publication exposes the molecule and all its atoms together by renaming a temporary
+directory. A failed molecule has no independently validated sibling molecule to keep.
+
+`graph/lib/plan_phase.py:plan` calls `graph/lib/slice_turn.py:slice_pending` repeatedly.
+Each call invokes the slicer for one molecule. Cards published by an earlier call remain
+when a later answer is refused. The plan counts new backlog IDs after each call and emits
+the `planned` event; `command_plan` prints that accumulated count. The missing source-gap
+closure still makes an unfinished plan exit 78, even when it has published cards.
+
+Partial publication within one answer is not a small change here. It needs a multiple-
+molecule answer contract and prompt, validation of dependencies across those molecules,
+a rule for valid molecules that depend on a refused one, and correction and publication
+state that cannot publish an accepted molecule twice. Fix C is therefore deferred, as
+allowed by the repair brief. The current single-molecule format also means another
+molecule's IDs reach the atom validator through the backlog, not through the same answer;
+the leaf dependency rule keeps all known external IDs and removes only sibling atoms.

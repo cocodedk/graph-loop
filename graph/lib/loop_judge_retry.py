@@ -134,13 +134,13 @@ def _send_back(loop, task: dict, tree, rebuild: int, why: str,
             # Back to the builder with the findings, same worktree, no new
             # contract review: the picker offers it again as todo.
             loop.space.event("rebuild_queued", task=task_id, round=rounds,
-                             why=why[:400])
+                             why=why[:2000])
             loop.backlog.set_status(task_id, "todo", rebuild_round=rounds,
                                     rebuild_from=tree.path, rejections=findings,
                                     refused_why=None, **counters)
         else:
-            loop.space.event("rejected", task=task_id, why=why[:400])
+            loop.space.event("rejected", task=task_id, why=why[:2000])
             loop.backlog.set_status(task_id, "rejected", rebuild_round=rounds,
-                                    rejections=findings, refused_why=why[:400],
+                                    rejections=findings, refused_why=why[:2000],
                                     **counters)
         return TaskOutcome("rejected", why, tree.path)

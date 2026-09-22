@@ -1,10 +1,9 @@
 """Rewriting a refused CODE contract from the reviewer's own findings.
 
-The planner is asked for goal, files and done-when — never the gate, which
-red-first RUNS, so a rewritten one would execute planner text unreviewed. A
-LIVE task's contract is never rewritten at all: its gate, verbs, files and
-wording are the commander's. Every answered refusal costs one of the two
-rounds and is written where the next planner reads it.
+The planner may repair goal, files, done-when and gate within the card's
+authority. A changed gate is reviewed before red-first executes it. A LIVE
+task's contract stays the commander's. Every answered refusal costs one of
+the two rounds and is written where the next planner reads it.
 """
 
 from __future__ import annotations
@@ -50,7 +49,10 @@ def _parse(text: str) -> dict | None:
         loaded = yaml.safe_load(body)
     except yaml.YAMLError:
         return None
-    return loaded if isinstance(loaded, dict) else None
+    if not isinstance(loaded, dict):
+        return None
+    return {str(key).strip().lower().replace(" ", "_").replace("-", "_"): value
+            for key, value in loaded.items()}
 
 
 def replan_until_planned(backlog, task: dict, planner) -> Replanned:
@@ -82,7 +84,7 @@ def _refuse(backlog, task: dict, why: str) -> Replanned:
                        requirement=task.get("requirement") or frozen_requirement(task),
                        replans=int(task.get("replans") or 0) + 1,
                        replan_history=list(task.get("replan_history") or [])
-                       + [str(task.get("refused_why") or "")[:400]])   # the reason this rewrite answered
+                       + [str(task.get("refused_why") or "")[:2000]])   # the reason this rewrite answered
     return Replanned(False, why)
 
 
@@ -173,7 +175,7 @@ def _store(backlog, task: dict, text: str) -> Replanned:
         row["gate_reviewed_first"] = True
     row["replans"] = int(task.get("replans") or 0) + 1
     row["replan_history"] = list(task.get("replan_history") or []) + [
-        str(task.get("refused_why") or "")[:400]]
+        str(task.get("refused_why") or "")[:2000]]
     fields = {key: value for key, value in row.items() if key not in ("id", "status")}
     backlog.set_status(task["id"], "todo", refused_why=None, **fields)
     return Replanned(True, "rewritten from the reviewer's findings", backlog.task(task["id"]))

@@ -44,10 +44,10 @@ def ending_signature(row: dict) -> tuple:
     """What makes two endings 'the same': the task, the step and the WHOLE
     reason, with its ticking counters blanked and its spacing collapsed.
 
-    A 120-character prefix used to stand in for the reason, and it lied both
-    ways: gate output is kept as its last 400 characters (`loop_judge.py`), so
-    whole families of different failures share a prefix and were parked as one
-    spin, while a unittest tail's own elapsed time ("Ran 1028 tests in
+    The whole recorded reason includes up to 2000 characters of gate output.
+    A 120-character prefix used to stand in for it, and it lied both ways:
+    different failures sharing a prefix were parked as one spin, while a
+    unittest tail's own elapsed time ("Ran 1028 tests in
     12.345s") made the same failure read differently every run, so the spin the
     watchdog exists to catch was never seen.
     """

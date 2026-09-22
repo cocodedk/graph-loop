@@ -89,8 +89,8 @@ def red_first(loop, task: dict, tree: Worktree, gate: str, rebuild: int,
                 return TaskOutcome("done", why)
             loop.backlog.set_status(
                 task_id, "green_already" if why == GREEN_ALREADY else "unprovable",
-                refused_why=why[:400])
-        loop.space.event("refused", task=task_id, step="red_first", why=why[:400])
+                refused_why=why[:2000])
+        loop.space.event("refused", task=task_id, step="red_first", why=why[:2000])
         tree.keep(f"gate not proved red: {why[:200]}")
         return TaskOutcome("refused", why, tree.path)
     return None

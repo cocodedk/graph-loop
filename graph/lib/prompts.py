@@ -111,6 +111,9 @@ def diff_prompt(task: dict, diff: str) -> str:
     findings = task.get("rejections") or []
     return (
         "Review this finished change. You did not write it.\n\n"
+        "The contract (goal, gate, done_when, files) is accepted and is not under review. "
+        "Refuse only for what the change does or fails to do under that contract. A weakness "
+        "of the gate or the criteria is an observation, not a refusal.\n\n"
         f"The contract it was built under, as accepted (contract {contract_digest(task)}):\n"
         + contract_text(task)
         + (("Earlier rounds of this work were sent back for these recorded reasons:\n"
