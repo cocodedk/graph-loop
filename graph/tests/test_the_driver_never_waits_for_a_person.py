@@ -10,8 +10,8 @@ So there is one behaviour, and it is neither of the old two. A fault outside
 the tasks — a usage limit, an expired account, a provider down — resets with
 nobody doing anything, so the loop waits for it, for as long as it takes.
 Nothing startable is the opposite: a parked card's next actor is the plan
-phase, a different command, so no amount of waiting moves it and the driver
-hands back to the supervisor. In between is the one case worth waiting on:
+phase, so the driver plans once and stands down if nothing becomes startable.
+In between is the one case worth waiting on:
 another agent holds a claim, and what it finishes can release a dependency.
 """
 
@@ -35,6 +35,7 @@ import tmp_root  # noqa: F401 — every temp file of this process under one root
 
 sys.path.insert(0, str(HERE / "lib"))
 from cli_args import build_parser
+from test_turn_slice import tree_with
 from workspace import Workspace
 
 _spec = importlib.util.spec_from_file_location("graph_goal", HERE / "graph-goal.py")
@@ -42,7 +43,7 @@ assert _spec is not None and _spec.loader is not None
 graph_goal = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(graph_goal)
 
-EXPECTED_TESTS = 5
+EXPECTED_TESTS = 6
 PARKED = {"id": "T1", "status": "needs_slice", "files": ["a.py"], "gate": "false",
           "goal": "the card nothing will offer again"}
 
@@ -89,6 +90,37 @@ class TheDriverDecidesForItself(unittest.TestCase):
         stood = [row for row in self.space.events() if row.get("kind") == "driver_stood_down"]
         self.assertEqual(1, len(stood))
         self.assertIn("nothing startable", stood[0]["why"])
+
+    def test_an_idle_wall_gets_one_plan_and_builds_only_if_work_is_ready(self):
+        for progresses in (False, True):
+            with self.subTest(progresses=progresses):
+                book = tree_with(PARKED)
+                self.args.max_tasks = 1
+
+                def planning(book, space, progresses=progresses):
+                    if progresses:
+                        book.set_status("T1", "todo")
+                    return 0  # requeued work need not add a new card
+
+                with mock.patch.object(graph_goal, "Backlog", return_value=book), \
+                     mock.patch.object(graph_goal.where, "repo", return_value=self.root), \
+                     mock.patch.object(graph_goal, "Loop"), \
+                     mock.patch.object(graph_goal, "alert_cwd"), \
+                     mock.patch.object(graph_goal, "before_turn"), \
+                     mock.patch.object(graph_goal, "turn_opens", return_value=None), \
+                     mock.patch.object(graph_goal, "plan",
+                                       side_effect=planning) as planned, \
+                     mock.patch.object(graph_goal, "run_lanes", return_value=(1, False)) as ran, \
+                     mock.patch.object(graph_goal, "after_lanes"), \
+                     mock.patch.object(graph_goal, "rollup_nodes"), \
+                     mock.patch.object(graph_goal, "environment_stop", return_value=""), \
+                     mock.patch.object(graph_goal, "stand_down", return_value=78) as ended, \
+                     mock.patch.object(graph_goal, "stood_down", side_effect=lambda s, c, w: c):
+                    self.assertEqual(0 if progresses else 78,
+                                     graph_goal._run(self.args, self.space))
+                planned.assert_called_once_with(book, self.space)
+                self.assertEqual(int(progresses), ran.call_count)
+                self.assertEqual(int(not progresses), ended.call_count)
 
     def test_a_claim_another_agent_holds_is_worth_waiting_for(self):
         """The one case waiting helps: what it finishes can release a card
