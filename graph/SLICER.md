@@ -195,6 +195,12 @@ IDs are derived from directory and file names, as they are now. A new molecule
 ID and every atom name MUST be unique, stable, path-safe and chosen from their
 purpose, not from a retry count alone.
 
+An atom's `needs` may name a sibling as `schema` or `molecule.schema`.
+Stage numbers determine sibling order, so validation removes these redundant
+waits. An existing external task ID takes precedence over a short sibling name;
+use the qualified sibling name to disambiguate. Self-dependencies remain cycles,
+and an unknown dependency is refused with its name in the reason.
+
 ### 3. When it runs
 
 In the PLAN PHASE, and never in a build turn. `graph-goal.py plan` runs the

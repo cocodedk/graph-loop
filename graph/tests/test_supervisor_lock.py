@@ -31,8 +31,10 @@ def _stub_env(camp: pathlib.Path, stub: pathlib.Path) -> dict:
     (stub / "python3").write_text(
         "#!/bin/bash\n"
         'case "$*" in\n'
+        '  *"graph-goal.py plan"*) exit 78 ;;\n'
         '  *"graph-goal.py run"*) sleep 2; exit 0 ;;\n'
         '  *"graph-goal.py report"*) echo report ;;\n'
+        '  *view_pulse.py*) exit 1 ;;\n'
         f'  *) exec "{real}" "$@" ;;\n'
         "esac\n")
     (stub / "python3").chmod(0o755)

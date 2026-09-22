@@ -113,6 +113,8 @@ def validate(answer: dict, *, repo: pathlib.Path, sources: list[pathlib.Path],
     if target and target["id"] in (made.get("needs") or []):
         raise ValueError("a child molecule cannot wait on the leaf it replaces")
     answer_atoms = {f"{name}.{atom.get('name')}" for atom in atoms}
+    aliases = {safe_name(atom.get("name"), "atom name"): f"{name}.{atom.get('name')}"
+               for atom in atoms}
     known |= {name} | answer_atoms
     leaves = atoms or [made]
     seen: set[str] = set()
@@ -127,6 +129,10 @@ def validate(answer: dict, *, repo: pathlib.Path, sources: list[pathlib.Path],
                     or atom["stage"] < 1:
                 raise ValueError("an atom stage must be a positive integer")
         siblings = answer_atoms - {f"{name}.{atom.get('name')}"}
+        if atoms and "needs" in atom:
+            # Existing task IDs win over short names local to this answer.
+            atom["needs"] = [need if need in known else aliases.get(need, need)
+                             for need in _strings(atom["needs"], "needs")]
         _task(atom, repo, known, siblings=siblings)
     assert_order(name, made, rows, target)
     assert_one_owner(name, made, rows, target)
