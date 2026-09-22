@@ -11,8 +11,8 @@ reason there is more than one of each.
 
 Every job's belt is the product of what the job can use:
 
-    build    every account, and for each, every builder model
-    plan     the same belt as build: a planner is a builder that writes no code
+    build    each builder model, on its agent and eligible accounts
+    plan     each planner model, strong first, on every Claude account
     review   every reviewer model, then claude on every account — a review is
              read-only, so any agent that can read the repository can give one, so no account
     decide   the review belt: a decision reads the repository and answers with
@@ -35,9 +35,8 @@ import models
 class Resource:
     """One thing to try: the agent that runs it, the account it spends, the model.
 
-    `agent` is the program: `claude` for building and planning, `codex` for
-    review. It is on the resource because a job may one day be answered by a
-    different program, and the caller should ask the belt rather than know.
+    `agent` is the program: `claude` or `codex`. The belt supplies the
+    program, account and model together for each job.
     """
     agent: str
     account: str | None
@@ -70,8 +69,12 @@ def belt(job: str) -> list[Resource]:
         # must not go unmade while one model is at capacity.
         return belt("review")
     if job in ("build", "plan"):
-        return [Resource("claude", account, model)
-                for account in accounts.available() for model in models.builders()]
+        candidates = models._PLANNERS if job == "plan" else models.builders()
+        return [Resource(models.builder_agent(model), account, model)
+                for model in candidates
+                if job == "build" or models.builder_agent(model) == "claude"
+                for account in ([None] if models.builder_agent(model) == "codex"
+                                else accounts.available())]
     raise KeyError(f"no belt for {job!r}; the loop knows build, plan, review and decide")
 
 

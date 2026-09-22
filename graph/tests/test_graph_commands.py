@@ -107,6 +107,7 @@ class RealReviewCwdTest(unittest.TestCase):
         belt = [review.resources.Resource("codex", None, "m1")]
         # the call itself lives in `provider_codex` now; the review only reads it
         with unittest.mock.patch.object(review.resources, "belt", return_value=belt), \
+             unittest.mock.patch("real_calls._routed_task", return_value={"builder_model": "builder"}), \
              unittest.mock.patch("provider_codex._run", side_effect=fake_run):
             out = graph_commands._real_review("judge this", cwd="/worktrees/T1", effort="high")
         self.assertEqual("ACCEPT", out.verdict)

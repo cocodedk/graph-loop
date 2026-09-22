@@ -17,10 +17,11 @@ from __future__ import annotations
 
 import os
 
-# The fast builder first (the owner, 2026-09-18: "you must use faster builder
-# models"). The slower model stays behind it, so a card the fast one cannot
-# carry still reaches one that can, and review keeps its own list below.
-_BUILDERS = ("claude-sonnet-5", "claude-opus-5-5", "claude-opus-5")
+# The Claude builders first, Astra behind them (issue #67: the belt "may hold" codex
+# rungs; the owner: "bigger models can plan and weaker models can execute").
+_BUILDERS = ("claude-sonnet-5", "claude-opus-5-5", "claude-opus-5", "gpt-6-astra")
+# Strong models shape the work; fast builders execute the resulting slices.
+_PLANNERS = ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5")
 # Checked against the binary, not guessed: gpt-6-astra answered `codex exec
 # -m gpt-6-astra` on 2026-09-08 (the owner: the account's upgrade, high effort,
 # strong at reasoning) and is the default reviewer; gpt-5.6-sol is the model
@@ -56,3 +57,8 @@ def reviewers() -> tuple[str, ...]:
 def claude_reviewers() -> tuple[str, ...]:
     """The claude rungs of the review belt: never the builder list."""
     return _listed("GRAPH_CLAUDE_REVIEWERS", _CLAUDE_REVIEWERS)
+
+
+def builder_agent(model: str) -> str:
+    """GPT names use Codex; existing Claude names and aliases stay on Claude."""
+    return "codex" if model.startswith("gpt-") else "claude"

@@ -17,6 +17,7 @@ import math
 import os
 
 import resources
+from backlog_status import is_live
 from contract import contract_digest
 from provider_jev import ask, question
 
@@ -39,7 +40,7 @@ def choose(task: dict, job: str, *, space=None, builder_model: str = "") -> Choi
     Raises `LookupError` when no candidate is eligible at all — a review with
     no independent reviewer left, never a self-review.
     """
-    belt = candidates(job, builder_model)
+    belt = candidates(job, builder_model, task=task)
     if not belt:
         raise LookupError(f"no eligible resource for job {job!r}")
     if os.environ.get("GRAPH_ROUTER", "jev") == "off":
@@ -57,20 +58,14 @@ def choose(task: dict, job: str, *, space=None, builder_model: str = "") -> Choi
     return _record(space, task, job, resource, effort, "fallback", why, out.cost, out.tokens)
 
 
-def candidates(job: str, builder_model: str) -> list[resources.Resource]:
-    """The job's belt, minus the builder's own family for an independent review.
-
-    Public so a review call site can walk the SAME filtered belt `choose`
-    offered, in the order to fall back through, once it has the routed pick.
-
-    Every builder runs on agent `claude` (`resources.belt('build')`), whatever
-    alias a caller configures for it (`sonnet`, `opus`, ...), so the family a
-    review must stay independent of is the agent, not a model-name guess: two
-    CLI aliases of the same agent cannot grade each other either.
-    """
+def candidates(job: str, builder_model: str = "", *, task: dict | None = None) -> list[resources.Resource]:
+    """One eligible belt for routing and fallback; no model reviews its build."""
     every = resources.belt(job)
     if job == "review" and builder_model:
-        every = [one for one in every if one.agent != "claude"]
+        every = [one for one in every if one.model != builder_model]
+    if job == "build" and is_live(task or {}):
+        # Live helper restrictions are implemented by the Claude guard.
+        every = [one for one in every if one.agent == "claude"]
     return every
 
 

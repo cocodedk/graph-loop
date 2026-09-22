@@ -67,14 +67,14 @@ class RouterPolicyTest(unittest.TestCase):
         result = self.choose(Decisions(effort="high"), space=space)
         self.assertEqual(("high", "jev"), (result.effort, result.source))
 
-    def test_review_candidates_exclude_the_builders_family(self):
+    def test_review_candidates_exclude_the_builders_model(self):
         probe = Decisions(model="gpt-5.6-sol")
         with patch("urllib.request.urlopen", side_effect=probe):
             result = self.router.choose(CARD, "review", builder_model="claude-sonnet-5")
         self.assertEqual("gpt-5.6-sol", result.resource.model)
         self.assertEqual("codex", result.resource.agent)
         for question in probe.requests[0]["questions"].values():
-            self.assertNotIn("claude-opus-5", str(question["criteria"]))
+            self.assertIn("claude-opus-5", str(question["criteria"]))
             self.assertNotIn("claude-sonnet-5", str(question["criteria"]))
 
     def test_fallback_is_recorded_with_the_actual_choice(self):
@@ -96,14 +96,14 @@ class RouterPolicyTest(unittest.TestCase):
         self.assertEqual([], probe.requests)
         self.assertEqual(("medium", "fallback"), (result.effort, result.source))
 
-    def test_review_fallback_still_excludes_the_builders_family(self):
+    def test_review_fallback_still_excludes_the_builders_model(self):
         with patch("urllib.request.urlopen", side_effect=Decisions(unavailable=True)):
             result = self.router.choose(CARD, "review", builder_model="claude-sonnet-5")
         self.assertEqual(("codex", "gpt-6-astra", "medium", "fallback"),
                          (result.resource.agent, result.resource.model, result.effort, result.source))
 
     def test_no_independent_candidate_refuses_without_a_decision_call(self):
-        with patch("resources.belt", return_value=[Resource("claude", "work", "claude-opus-5")]), \
+        with patch("resources.belt", return_value=[Resource("claude", "work", "claude-sonnet-5")]), \
              patch("urllib.request.urlopen") as transport, self.assertRaises(LookupError):
             self.router.choose(CARD, "review", builder_model="claude-sonnet-5")
         transport.assert_not_called()

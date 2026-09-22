@@ -66,7 +66,7 @@ class RouterCallsTest(unittest.TestCase):
             with self.subTest(metadata=metadata):
                 root, _, space = repo_with(task(**metadata))
                 with patch.dict("os.environ", CATALOG), \
-                     patch("resources.belt", return_value=[Resource("claude", "work", "claude-opus-5")]), \
+                     patch("resources.belt", return_value=[Resource("claude", "work", "claude-sonnet-5")]), \
                      patch("provider_codex._run") as codex_call, \
                      patch("providers.claude", return_value=Outcome(
                          "ok", text="REVIEW: ACCEPT")) as claude_call:
@@ -76,7 +76,7 @@ class RouterCallsTest(unittest.TestCase):
                 codex_call.assert_not_called()
                 claude_call.assert_not_called()
 
-    def test_exhausting_independent_models_never_falls_back_to_the_builder_family(self):
+    def test_codex_exhaustion_falls_back_to_a_different_claude_model(self):
         root, _, space = repo_with(task(builder_model="claude-sonnet-5", builder_agent="claude"))
         with patch.dict("os.environ", CATALOG), \
              patch("urllib.request.urlopen", side_effect=Decisions(model="gpt-5.6-sol")), \
@@ -84,10 +84,10 @@ class RouterCallsTest(unittest.TestCase):
              patch("review._claude_review", return_value=Outcome(
                  "ok", verdict="ACCEPT", text="REVIEW: ACCEPT")) as claude_call:
             result = graph_commands._real_review("Review this card", cwd=root, space=space, task_id="T1")
-        self.assertFalse(result.ok)
-        self.assertNotEqual("ACCEPT", result.verdict)
+        self.assertEqual("ACCEPT", result.verdict)
         self.assertEqual(2, codex_call.call_count)
-        claude_call.assert_not_called()
+        self.assertEqual(["claude-opus-5"],
+                         [call.args[1].model for call in claude_call.call_args_list])
 
     def test_review_fallback_records_each_actual_model_and_effort(self):
         root, _, space = repo_with(task(builder_model="claude-sonnet-5", builder_agent="claude"))
