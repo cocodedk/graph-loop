@@ -2,8 +2,8 @@
 
 The two phases never mix. Planning used to happen at the top of every driver
 turn — `turn.turn_opens` called the slicer, so a campaign planned and built at
-the same moment, by construction. It does not any more: `run` only builds, and
-this is the whole of the planning, run on its own with the driver stopped.
+the same moment. Now planning runs with no builds in flight: either the
+`plan` command calls this phase, or `run` does before standing down.
 
 Exhaustion is read from the backlog, never from what a slicer call said about
 itself: the phase ends on the round that changes NOTHING there. That is the same

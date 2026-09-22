@@ -12,10 +12,10 @@
     graph-goal.py stop [--now]
     graph-goal.py cuts [--state off|observe|act --by <name>]
 
-`plan` and `run` are the two phases, and they never overlap: `plan` writes every
-card the slicer can cut and builds nothing; `run` builds the cards and writes
-none. A card that fails a build parks, and the next `plan` re-slices it against
-the code as it then stands.
+`plan` and building never overlap: `plan` writes every card the slicer can cut
+and builds nothing. When `run` has nothing startable and nobody building, it
+runs the same plan phase before standing down. A card that fails a build parks
+and is re-sliced against the code as it then stands.
 
 The campaign lives in `graph/campaign/` unless `--workspace` says
 otherwise: an append-only record of everything the loop did, the claims of what
@@ -41,6 +41,7 @@ from driver_turn import after_lanes, before_turn, rollup_nodes
 from finishing import ENDED_WITH_GAPS, stand_down
 from loop import Loop
 from loop_environment import environment_stop
+from plan_phase import plan
 from remember import command_remember  # a hand-run command, never a step of the loop
 from throttle import Throttle
 from turn_plan import code_first, width_against_lanes
@@ -114,11 +115,11 @@ def _run(args, space) -> int:
             if args.dry_run:
                 break        # a dry run says what it would do; a stand-down WRITES
             if not left or not running:
-                # Nothing is startable and nobody else holds a claim, so no card
-                # here becomes startable by waiting: every one that is left is
-                # parked, and a parked card's next actor is the plan phase, which
-                # is a different command. The driver hands back to the supervisor
-                # rather than idling on a queue that cannot move on its own.
+                if not running:
+                    plan(book, space)
+                    if book.startable():
+                        continue
+                    left = [row["id"] for row in book.unfinished()]
                 code = stand_down(space, book)   # 0 only when the campaign is really finished
                 return stood_down(space, code, f"nothing startable; unfinished: {left or 'none'}")
             # Another agent holds a claim, and finishing it can release a
