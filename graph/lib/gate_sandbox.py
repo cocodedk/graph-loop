@@ -72,7 +72,7 @@ def environment(home: str) -> dict[str, str]:
     return out
 
 
-def argv(command: str, cwd: str, home: str) -> list[str]:
+def argv(command: str, cwd: str, home: str, paths=None) -> list[str]:
     """The command line that runs `command` in the box, or plainly if this
     machine has no bubblewrap — said out loud rather than pretended."""
     if not BWRAP:
@@ -96,8 +96,13 @@ def argv(command: str, cwd: str, home: str) -> list[str]:
             line += ["--ro-bind", "/dev/null", masked]
     line += ["--bind", tree, tree,          # the work, writable
              "--bind", "/tmp", "/tmp",      # where tests put their scratch
-             "--bind", home, home,          # a home with nothing in it
-             "--chdir", tree,
+             "--bind", home, home]          # a home with nothing in it
+    for path in (paths or {}).get("read_only", []):
+        line += ["--ro-bind", path, path]
+    cache = (paths or {}).get("cache")
+    if cache:
+        line += ["--bind", cache, cache]
+    line += ["--chdir", tree,
              "bash", "-c", command]
     return line
 

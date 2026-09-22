@@ -56,7 +56,7 @@ class Loop:
         self.lock = stack_lock()   # the STACK's lock, not this campaign's
         # Accepted work is committed on a campaign branch, and the next task
         # starts from that tip — never from a HEAD that predates it.
-        self.keeper = Keeper(repo, branch, base=commit) if branch else None
+        self.keeper = Keeper(repo, branch, base=commit, workspace=space.root) if branch else None
 
     def run_task(self, task: dict) -> TaskOutcome:
         task_id = task["id"]

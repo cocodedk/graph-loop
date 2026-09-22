@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime
 
+import gate_paths
 from backlog_status import REBUILD_ROUNDS, is_live  # noqa: F401 — loop.py names it here
 from gates import run_gate
 from keep import CombinedGateFailed
@@ -42,7 +43,8 @@ def judge(loop, task: dict, tree: Worktree, gate: str, rebuild: int) -> TaskOutc
     with loop.space.step(task_id, "gate") as note:
         # A live gate performs the work it measures: it needs Docker and the
         # database, and its text is the commander's, never a planner's.
-        result = run_gate(gate, tree.path, confine=not is_live(task))
+        result = run_gate(gate, tree.path, confine=not is_live(task),
+                          **({} if is_live(task) else gate_paths.options(loop.space.root)))
         note(passed=result.passed, code=result.code)
     loop.space.artifact(task_id, "gate-output", result.output)
     if not result.passed:

@@ -12,6 +12,7 @@ import os
 import pathlib
 import subprocess
 
+import gate_paths
 from keep_failure import (  # noqa: F401 — public front door
     CombinedGateFailed,
     GateFailure,
@@ -123,7 +124,7 @@ def _state(checkout: str, repo: str, watched: set[str]) -> list[str]:
                for path in changed_outside(checkout, [])])
 
 
-def combined_tree_red(repo: str, task_id: str, commit: str, gates: list):
+def combined_tree_red(repo: str, task_id: str, commit: str, gates: list, workspace=None):
     """The first failing gate on the tree this commit would publish, as
     a GateFailure with its full result — None when every gate passes.
 
@@ -157,7 +158,8 @@ def combined_tree_red(repo: str, task_id: str, commit: str, gates: list):
         # One shell each: joining raw gate strings with && let a `;` in one of
         # them swallow an earlier gate's failure.
         for one in gates:
-            result = run_gate(one, checkout)
+            result = run_gate(one, checkout,
+                              **(gate_paths.options(workspace) if workspace else {}))
             changed = set(_state(checkout, repo, watched)) ^ set(before)
             if changed:
                 # A gate that edits the tree it judges judges its own work: the
