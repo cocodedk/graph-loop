@@ -60,7 +60,7 @@ def judge(loop, task: dict, tree: Worktree, gate: str, rebuild: int) -> TaskOutc
             return ending
     evidence = not is_live(task) and not task.get("files")
     if not result.passed:
-        why = result.output[-2000:]
+        why = result.why
         loop.space.attempt(task_id, account="gate", kind="ok", failed_gate=True)
         # The watchdog reads endings, not attempts: without this event a task
         # that fails its gate the same way for ever is invisible to it. It is

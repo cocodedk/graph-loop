@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from backlog_reach import overlap
 from backlog_status import is_live, settled
+from gate_reports import excerpt
 from gates import GREEN_ALREADY, prove_red
 from loop_contract import contract
 from loop_environment import environment_ending
@@ -94,8 +95,8 @@ def red_first(loop, task: dict, tree: Worktree, gate: str, rebuild: int,
                 return TaskOutcome("done", why)
             loop.backlog.set_status(
                 task_id, "green_already" if why == GREEN_ALREADY else "unprovable",
-                refused_why=why[:2000])
-        loop.space.event("refused", task=task_id, step="red_first", why=why[:2000])
+                refused_why=excerpt(why, tail=False))
+        loop.space.event("refused", task=task_id, step="red_first", why=excerpt(why, tail=False))
         tree.keep(f"gate not proved red: {why[:200]}")
         return TaskOutcome("refused", why, tree.path)
     return None
