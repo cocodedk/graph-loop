@@ -135,7 +135,9 @@ def is_wall(row: dict) -> bool:
         # rather than the end of a ladder, and without this line a
         # green_already card with a contract verdict had no next actor at all.
         return verdict in ("work", "contract")
-    if status in ("needs_slice", "out_of_scope", "quarantined"):
+    if status == "needs_slice":
+        return verdict in ("work", "contract")
+    if status in ("out_of_scope", "quarantined"):
         # `out_of_scope`: the builder or the gate wrote outside the card's
         # files. Cutting it smaller is the answer only when the card really
         # does reach further than it was cut, and the fence cannot see that —
