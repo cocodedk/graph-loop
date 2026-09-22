@@ -124,13 +124,13 @@ class ReplanTest(unittest.TestCase):
 
     def test_an_unparseable_answer_refuses_with_the_yaml_error(self):
         book = book_with()
-        text = "goal: add a function: with an argument\nfiles: [a.py]"
+        text = 'goal: "unterminated\nfiles: [a.py]'
         with self.assertRaises(yaml.YAMLError) as error:
             yaml.safe_load(text)
         out = replan(book, book.task("T1"), lambda prompt: answer(text))
         self.assertFalse(out.rewritten)
         self.assertEqual("the planner's answer was not a task contract: " + str(error.exception), out.why)
-        self.assertIn("line 1, column 21", out.why)
+        self.assertIn("line 1, column 7", out.why)
         self.assertEqual(out.why, book.task("T1")["refused_why"])
 
     def test_six_rewrites_are_the_hard_ceiling(self):
