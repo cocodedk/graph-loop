@@ -22,8 +22,8 @@ proof that medium failed. Higher effort becomes eligible only after the
 campaign records a medium build for this contract followed by a failed work
 gate; an outage or a different card's failure is insufficient. The route record
 binds the choice to `contract_digest(task)`. Review candidates exclude the
-builder's family, including configured CLI aliases and fallback; no eligible independent reviewer means
-no accepted review, never self-review: `choose` raises `LookupError`, and
+builder's model, including fallback (configured names are model identities).
+No eligible independent reviewer means no accepted review, never self-review: `choose` raises `LookupError`, and
 the call site returns an unavailable review without invoking any provider.
 
 Record each decision as a `routed` event with task, purpose, agent, model,
@@ -42,3 +42,10 @@ profile successfully; deterministic tests remain the acceptance verdict.
 medium fallback; the default is Jev routing. Test process fixtures select
 offline mode, and the router gates explicitly enable their mocked transport,
 so running either repository suite never contacts the decision service.
+
+The build list starts with `gpt-6-astra`; `gpt-*` builders use Codex once per
+model, and other names use Claude on its configured accounts. Codex builds
+use `workspace-write` rooted at the card worktree, with no extra writable
+roots, temporary-directory access, network access or approval escalation.
+Reviews remain read-only. Planning and guarded live builds retain their
+Claude tool restrictions. The router still chooses among eligible builders.

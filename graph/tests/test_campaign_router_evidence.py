@@ -51,15 +51,15 @@ class RouterEvidenceTest(unittest.TestCase):
         result = self.choose(Decisions(effort="high"), space)
         self.assertEqual(("medium", "fallback"), (result.effort, result.source))
 
-    def test_configured_cli_aliases_do_not_bypass_family_independence(self):
-        probe = Decisions(model="gpt-5.6-sol")
+    def test_distinct_configured_models_can_review_each_other(self):
+        probe = Decisions(model="opus")
         with patch.dict("os.environ", {"GRAPH_BUILDERS": "sonnet,opus", "GRAPH_CLAUDE_REVIEWERS": "opus"}), \
              patch("urllib.request.urlopen", side_effect=probe):
             result = self.router.choose(CARD, "review", builder_model="sonnet")
-        self.assertEqual("codex", result.resource.agent)
+        self.assertEqual(("claude", "opus"), (result.resource.agent, result.resource.model))
         for question in probe.requests[0]["questions"].values():
             for description in question["criteria"].values():
-                self.assertNotIn("agent claude", description.lower())
+                self.assertNotIn("model sonnet,", description.lower())
 
     def route(self, space, digest):
         space.event("routed", task=CARD["id"], purpose="build", model="claude-sonnet-5",
