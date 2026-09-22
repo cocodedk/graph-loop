@@ -11,6 +11,9 @@ again, which is the one ordering in `before_turn` that is not free to move.
 
 from __future__ import annotations
 
+import cardfile
+import durable
+import where
 from backlog_status import settled
 from doctor import as_text as doctor_text
 from doctor import diagnose
@@ -95,3 +98,25 @@ def _park(book, space, verdict, taking: list[dict]) -> None:
             # spin forever.
             space.event("spin_spent", task=spinner, why=verdict.why[:400])
     draft_stalls(space, book, repeated=spinner)
+
+
+def rollup_nodes(book, space) -> None:
+    """A source node is done exactly when none of its cards is unfinished."""
+    rows = book.tasks()
+    finished = settled(rows)
+    nodes: dict[str, list[dict]] = {}
+    for row in rows:
+        sources = row.get("source") or []
+        for source in [sources] if isinstance(sources, str) else sources:
+            nodes.setdefault(source.rsplit(":", 1)[0], []).append(row)
+    if not nodes:
+        return
+    repo = where.repo(space)
+    for name, cards in nodes.items():
+        status = "done" if all(row["id"] in finished for row in cards) else "pending"
+        path = repo / name
+        was = path.read_bytes().decode("utf-8")
+        text = was if cardfile.FRONT.match(was) else "---\n\n---\n" + was
+        text = cardfile.patch(text, "build_status", status)
+        if text != was:
+            durable.replace(path, text)
