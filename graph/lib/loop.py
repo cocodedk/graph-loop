@@ -100,7 +100,7 @@ class Loop:
 
             out = self._through(task, tree, in_place)
             if is_live(task) and out is not None \
-                    and out.state not in ("done", "blocked", "held"):
+                    and out.state not in ("done", "blocked", "held", "environment"):
                 # Whatever went wrong after the call — the gate, the review, an
                 # exception — the next turn must not repeat it on a moved stack.
                 # Never over `held`: another writer decided this card while the

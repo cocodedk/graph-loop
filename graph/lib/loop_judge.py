@@ -14,6 +14,7 @@ from gates import run_gate
 from keep import CombinedGateFailed
 from loop_contract import contract  # noqa: F401 — loop.py imports it from here
 from loop_diff_review import review_change
+from loop_environment import environment_ending
 from loop_judge_gates import (
     _gate_is_defective,
     _gate_owner,
@@ -44,6 +45,10 @@ def judge(loop, task: dict, tree: Worktree, gate: str, rebuild: int) -> TaskOutc
         result = run_gate(gate, tree.path, confine=not is_live(task))
         note(passed=result.passed, code=result.code)
     loop.space.artifact(task_id, "gate-output", result.output)
+    if not result.passed:
+        ending = environment_ending(loop, task, tree, result.output, gate, "gate")
+        if ending is not None:
+            return ending
     if not is_live(task):
         # Never for a live gate: it performs the work it measures, and it
         # runs alone. `gate_left_its_lane` is this run's own check, whether
@@ -151,6 +156,10 @@ def _keep(loop, task: dict, tree, rebuild: int):
                     publishing=loop.backlog.only_writer)
             except CombinedGateFailed as clash:
                 note(commit=None, clash=str(clash))
+                output = clash.failure.result.output if clash.failure else str(clash)
+                ending = environment_ending(loop, task, tree, output, clash.gate, "combined_gate")
+                if ending is not None:
+                    return ending
                 owner = _gate_owner(loop, task, clash.gate)
                 defective = _gate_is_defective(loop, task, clash) if owner else False
                 if defective is None:

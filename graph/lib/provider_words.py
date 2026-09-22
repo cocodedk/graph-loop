@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import re
 
+from gate_programs import programs
+
 LIMIT_MARKS = ("hit your weekly limit", "hit your session limit",
                "usage limit", "resets ", "quota", "http 429", "status 429",
                "rate limit", "rate_limit", "too many requests")
@@ -27,6 +29,30 @@ AUTH_MARKS = ("invalid api key", "please run /login", "not logged in",
               # the exact words a session that has expired answers with; without
               # it the loop filed an expired account as a crash for a whole night
               "failed to authenticate")
+
+# The machine, like an unavailable provider, cannot reject the work.
+ENVIRONMENT_MARKS = (
+    (("sdk location not found", "android_home"),
+     "set ANDROID_HOME to the Android SDK, or provision local.properties with sdk.dir"),
+    (("java_home", "unable to locate a java runtime", "could not find tools.jar"),
+     "install a JDK and set JAVA_HOME to it"),
+    (("command not found",), "install the missing command and set PATH for the gate"),
+)
+MISSING_RUNNER = re.compile(
+    r"(?:^|:\s+)(?P<runner>[^\s:'\"]+): No such file or directory", re.IGNORECASE | re.MULTILINE)
+
+
+def environment_hint(text: str, gate: str) -> str:
+    """A failed gate's missing toolchain, never a missing input or test fixture."""
+    low = text.lower()
+    for marks, remedy in ENVIRONMENT_MARKS:
+        if any(mark in low for mark in marks):
+            return remedy
+    runners = programs(gate)
+    for found in MISSING_RUNNER.finditer(text):
+        if found["runner"].rsplit("/", 1)[-1] in runners:
+            return "restore the gate's runner and set PATH to its toolchain"
+    return ""
 
 
 def _classify_text(text: str) -> str | None:
