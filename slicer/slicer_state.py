@@ -7,6 +7,7 @@ import pathlib
 import sys
 
 import yaml  # type: ignore[import-untyped]
+from source_files import missing_files, named_files
 
 GRAPH_LIB = pathlib.Path(__file__).resolve().parents[1] / "graph" / "lib"
 sys.path.insert(0, str(GRAPH_LIB))
@@ -40,8 +41,13 @@ def close(backlog: pathlib.Path, sources: list[pathlib.Path], verdict: str,
     shown. `rows` is the caller's own list — the one the coverage prompt was
     built from — never re-read here, or a card that changed while the review ran
     would be recorded as covered by a verdict about a backlog it was not in."""
-    state = {"source_digest": digest(sources, root), "backlog_digest": backlog_digest(rows),
-             "review": verdict}
+    names = named_files(files(sources))
+    missing = missing_files(names, rows)
+    if missing:
+        forget(backlog)
+        raise ValueError("source files without cards: " + ", ".join(missing))
+    state = {"named_files": names, "source_digest": digest(sources, root),
+             "backlog_digest": backlog_digest(rows), "review": verdict}
     with Backlog(backlog).only_writer():
         beside = backlog / f"{STATE}.new"
         beside.write_text(yaml.safe_dump(state, sort_keys=False), "utf-8")
@@ -67,7 +73,11 @@ def accepted(backlog: pathlib.Path, rows: list[dict]) -> bool:
     that hashed them from another root — the driver's working tree, with
     somebody's uncommitted edit in it — would disagree with the record and
     delete a verdict that was right."""
-    return _record(backlog).get("backlog_digest") == backlog_digest(rows)
+    state = _record(backlog)
+    names = state.get("named_files")
+    return (isinstance(names, list) and all(isinstance(name, str) for name in names)
+            and not missing_files(names, rows)
+            and state.get("backlog_digest") == backlog_digest(rows))
 
 
 def _record(backlog: pathlib.Path) -> dict:

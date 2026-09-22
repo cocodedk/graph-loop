@@ -59,7 +59,10 @@ def run_answer(text: str, *, repo: pathlib.Path, backlog: pathlib.Path,
         trace(backlog, "coverage_review_answered", ok=bool(verdict.ok))
         if not verdict.ok:
             return ("review_unavailable" if verdict.down else "coverage_refused"), verdict.why
-        close(backlog, sources, verdict.text, repo, rows)
+        try:
+            close(backlog, sources, verdict.text, repo, rows)
+        except ValueError as error:
+            return "coverage_refused", str(error)
         return "covered", answer["reason"]
     if checker is not None:
         answer = _checked(answer, checker, backlog, {"repo": repo, "sources": sources,
