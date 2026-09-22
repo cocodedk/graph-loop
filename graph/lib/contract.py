@@ -9,14 +9,12 @@ from __future__ import annotations
 import hashlib
 import json
 
+import distress
 from backlog_status import is_live
 from contract_fixtures import question as fixture_question
 from contract_uses import question as uses_question
 
-# The rest of the contract: what the card waits for, the names it reads and
-# writes, the phrase its red proof must print, and the card it was cut from.
-# Shown only when the card carries one, always in this order, so one contract
-# has one digest however the card was written.
+# The remaining contract fields, always shown in this order.
 REST = (("waits for", "needs"), ("uses", "uses"), ("creates", "creates"),
         ("gate_until_kept", "gate_until_kept"), ("gate_when_kept", "gate_when_kept"),
         ("red proof must contain", "expect_red"), ("sliced from", "sliced_from"))
@@ -116,9 +114,10 @@ def contract_prompt(task: dict) -> str:
            if task.get("gate_until_kept") is True else "")
         + writes_its_test + uses_question(task) + fixture_question(task) + "\n"
         + contract_text(task)
-        + "Answer with one line of JSON and nothing after it:\n  "
+        + "Answer with one review JSON line, followed by the distress line:\n  "
         '{"review": "ACCEPT|REJECT", "accept": true|false, '
-        '"findings": ["one line each, at most three"]}')
+        '"findings": ["one line each, at most three"]}'
+        + "\n" + distress.INSTRUCTION + distress.TEMPLATE)
 
 
 def contract_digest(task: dict) -> str:

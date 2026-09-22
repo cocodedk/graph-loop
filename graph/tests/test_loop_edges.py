@@ -134,10 +134,15 @@ class BlockedTest(unittest.TestCase):
     def test_a_builder_that_says_blocked_is_believed_and_a_person_is_told(self):
         blocked = ('{"result": "BLOCKED", "blocked": true, "needs_person": true, '
                    '"why": "the fix needs a new verb"}')
+        from distress import INSTRUCTION, TEMPLATE
         fakes = Fakes(build=[Outcome("ok", text=blocked)], edit=None)
         loop, book, space = loop_for(task(), fakes)
         out = loop.run_task(book.task("T1"))
         self.assertEqual("blocked", out.state)
+        self.assertEqual("blocked_by_agent", book.task("T1")["status"])
+        self.assertTrue(book.task("T1")["blocked_by_human"])
+        self.assertFalse(book.startable())
+        self.assertIn(INSTRUCTION + TEMPLATE, fakes.prompts[0])
         self.assertEqual("blocked_by_agent", book.task("T1")["status"])
         self.assertEqual(1, len([r for r in space.events()
                                  if r["kind"] == "needs_a_person"]))

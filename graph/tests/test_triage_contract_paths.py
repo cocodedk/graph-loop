@@ -34,6 +34,27 @@ def stalled(**changes):
 
 
 class ContractPathsTest(unittest.TestCase):
+    def test_blocked_text_fallback_parks_instead_of_replanning(self):
+        import resources
+        from distress import INSTRUCTION, TEMPLATE
+        from test_distress import BLOCKED
+        book, space = stalled()
+        planner = mock.Mock()
+        with mock.patch("triage_jev.ask", return_value=Outcome("harness")), \
+                mock.patch("resources.belt", return_value=[resources.Resource("claude", "work", "opus")]), \
+                mock.patch("triage_intelligence._call", return_value=Outcome("ok", text=
+                    '{"verdict":"probe_in_gate","why":"rewrite"}\n' + BLOCKED)) as fallback:
+            replan_pending(book, space, planner)
+            self.assertFalse(replan_pending(book, space, planner))
+        self.assertEqual("blocked_by_agent", book.task("T1")["status"])
+        self.assertFalse(book.startable())
+        self.assertEqual(book.task("T1")["refused_why"], next(e["why"] for e in space.events()
+                                          if e["kind"] == "needs_a_person"))
+        fallback.assert_called_once()
+        planner.assert_not_called()
+        self.assertIn(INSTRUCTION + TEMPLATE, fallback.call_args.args[0])
+
+
     def test_probe_runs_the_existing_replanner_with_the_probe_instruction(self):
         book, space = stalled()
         planner = mock.Mock(return_value=Outcome("ok", text=GOOD))

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 
+import distress
 import review_scope
 from backlog_status import is_live
 from loop_judge_retry import _send_back, back_in_place
@@ -36,9 +37,13 @@ def review_change(loop, task: dict, tree, rebuild: int):
         verdict = loop.review(prompt, cwd=tree.path, space=loop.space, task_id=task_id)
         note(verdict=verdict.verdict, outcome=verdict.kind)
     loop.space.artifact(task_id, "diff-review-answer", verdict.raw or verdict.text)
+    text, said = distress.answer(verdict.text)
+    ending = distress.stop(loop, task, tree, said)
+    if ending is not None:
+        return ending
     if verdict.ok:
         try:
-            body = review_scope.validate(verdict.text, diff)
+            body = review_scope.validate(text, diff)
         except ValueError as error:
             verdict = Outcome("malformed", text=str(error), raw=verdict.raw)
         else:
