@@ -27,7 +27,7 @@ from replan_budget import alert_stopped
 from triage import triage_pending
 from triage_paths import contract_path
 from turn_plan import taking_now  # noqa: F401 — the driver's door
-from workspace_claims import _now
+from workspace_claims import say
 from workspace_flags import RESTART_EXIT
 
 
@@ -106,7 +106,7 @@ def replan_pending(book, space, planner=None) -> bool:
         # seconds twice. The outcome is still recorded once, below, as a
         # plain event rather than a second step.
         fixed = replan_until_planned(book, task, recorded, space=space)
-        print(f"{_now()} " + (f"  replan {task['id']}: {fixed.why[:160]}").replace("\n", f"\n{_now()} "), flush=True)
+        say(f"  replan {task['id']}: {fixed.why[:160]}")
         space.event("replanned" if fixed.rewritten else "replan_refused", task=task["id"], why=fixed.why[:300])
         return True
     return False
@@ -126,7 +126,7 @@ def turn_opens(space, book, args, started_at: str, started: int = 0):
     if not flag and not args.dry_run and space.code_changed(started_at):
         # No flag, no person: the code changed under this driver, so it stands
         # down between tasks and the supervisor starts one on the new code.
-        print(f"{_now()} " + "the loop's code changed — restarting on it", flush=True)
+        say("the loop's code changed — restarting on it")
         return stood_down(space, RESTART_EXIT, "the loop's code changed under this driver")
     if not flag and not args.dry_run:
         # One refused contract rewritten, and nothing else. A turn does not
@@ -135,9 +135,9 @@ def turn_opens(space, book, args, started_at: str, started: int = 0):
         replan_pending(book, space)
         flag = space.stop_or_restart()   # a flag raised during the planner call is not crossed
     if flag == "stop":
-        print(f"{_now()} " + "stop requested — leaving the rest of the backlog untouched", flush=True)
+        say("stop requested — leaving the rest of the backlog untouched")
         return stood_down(space, 0, "a person asked it to stop")
     if flag == "restart":
-        print(f"{_now()} " + "restart requested — the supervisor starts the next driver", flush=True)
+        say("restart requested — the supervisor starts the next driver")
         return stood_down(space, RESTART_EXIT, "a person asked for a restart")
     return None

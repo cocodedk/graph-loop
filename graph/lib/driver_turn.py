@@ -21,7 +21,7 @@ from issue_drafts import draft_stalls
 from publishing import reconcile, settle_superseded
 from watchdog import already_said
 from watchdog import check as watchdog_check
-from workspace_claims import _now
+from workspace_claims import say
 
 
 def before_turn(loop, book, space, args) -> None:
@@ -46,7 +46,7 @@ def after_lanes(book, space, args, taking: list[dict]) -> None:
     """
     complaints = diagnose(book, space)
     if complaints:
-        print(f"{_now()} " + str(doctor_text(complaints)).replace("\n", f"\n{_now()} "), flush=True)
+        say(doctor_text(complaints))
         space.event("doctor", complaints=[f"{one.about}: {one.what}" for one in complaints])
     verdict = watchdog_check(space, attempt_ceiling=args.attempt_ceiling,
                              hours_ceiling=args.hours_ceiling)
@@ -55,7 +55,7 @@ def after_lanes(book, space, args, taking: list[dict]) -> None:
         # the only ceiling here, and a stopped loop at the weekend is a queue
         # for a person (the owner, 2026-08-29: never leave it stopped). Only
         # stop.flag stops the campaign.
-        print(f"{_now()} " + (f"FUTILE: {verdict.why}").replace("\n", f"\n{_now()} "), flush=True)
+        say(f"FUTILE: {verdict.why}")
         # The alert first: the blocked event is what `already_said` reads, so a
         # crash between the two must leave the alert, not swallow it.
         space.alert("the campaign", verdict.why)
@@ -68,7 +68,7 @@ def after_lanes(book, space, args, taking: list[dict]) -> None:
         # count in the message grew every turn and so did the alerts.
         space.alert("the campaign", verdict.why)
         space.event("blocked", why=verdict.why)
-        print(f"{_now()} " + (f"  note: {verdict.why[:160]}").replace("\n", f"\n{_now()} "), flush=True)
+        say(f"  note: {verdict.why[:160]}")
 
 
 def _park(book, space, verdict, taking: list[dict]) -> None:
@@ -90,7 +90,7 @@ def _park(book, space, verdict, taking: list[dict]) -> None:
         if spinner not in settled(fresh) and card.get("status") != "sliced":
             book.set_status(spinner, "quarantined", refused_why=verdict.why[:400])
             space.event("quarantined", task=spinner, why=verdict.why[:400])
-            print(f"{_now()} " + (f"  quarantined {spinner}: {verdict.why[:160]}").replace("\n", f"\n{_now()} "), flush=True)
+            say(f"  quarantined {spinner}: {verdict.why[:160]}")
         else:
             # The card moved on (done/dropped/sliced) before this write landed,
             # so the quarantine is skipped — but the spin still happened. Name

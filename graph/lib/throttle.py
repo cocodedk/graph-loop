@@ -28,7 +28,7 @@ from machine_load import Watch
 from throttle_guard import ONE, Guarded
 from throttle_state import STATE  # the campaign file both of them name
 from turn_plan import MOST_LANES
-from workspace_claims import _now
+from workspace_claims import say
 
 
 class Throttle(Guarded):
@@ -96,8 +96,8 @@ class Throttle(Guarded):
             # Said once, out loud: three is the keeper's own limit — it gives
             # up after three rebuilds of a branch that moved under it — so a
             # higher ceiling is taken as three rather than quietly obeyed.
-            print(f"{_now()} " + (f"--lanes-max {self.ceiling} is above the keeper's "
-                  f"{MOST_LANES}: taking {MOST_LANES}").replace("\n", f"\n{_now()} "), flush=True)
+            say(f"--lanes-max {self.ceiling} is above the keeper's "
+                  f"{MOST_LANES}: taking {MOST_LANES}")
             self.space.event("lanes_ceiling_lowered", asked=self.ceiling,
                              most=MOST_LANES)
 
@@ -127,7 +127,7 @@ class Throttle(Guarded):
             self.allow, self.state = out.allow, raised
             self._record(width, out)
             self._save()
-        print(f"{_now()} " + (f"  lanes: {out.lanes} — {out.why}").replace("\n", f"\n{_now()} "), flush=True)
+        say(f"  lanes: {out.lanes} — {out.why}")
         return out.lanes
 
     def _record(self, width: int, out) -> None:

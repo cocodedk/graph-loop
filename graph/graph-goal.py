@@ -45,7 +45,7 @@ from plan_phase import plan
 from remember import command_remember  # a hand-run command, never a step of the loop
 from throttle import Throttle
 from turn_plan import code_first, width_against_lanes
-from workspace_claims import _now, _started
+from workspace_claims import _started, say
 from workspace_repo import alert_cwd
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -111,7 +111,7 @@ def _run(args, space) -> int:
         ready = book.startable(running=running)
         if not ready:
             left = [row["id"] for row in book.unfinished()]
-            print(f"{_now()} " + (f"nothing to start; unfinished: {left or 'none'}").replace("\n", f"\n{_now()} "), flush=True)
+            say(f"nothing to start; unfinished: {left or 'none'}")
             if args.dry_run:
                 break        # a dry run says what it would do; a stand-down WRITES
             if not left or not running:
@@ -132,7 +132,7 @@ def _run(args, space) -> int:
         taking = taking_now(ready, args, started, chosen)
         if args.dry_run:
             for row in taking:
-                print(f"{_now()} " + (f"would run {row['id']}: {row['goal']}").replace("\n", f"\n{_now()} "), flush=True)
+                say(f"would run {row['id']}: {row['goal']}")
             break
         turn_id = f"turn-{started}-{int(time.time())}"
         # What the graph offered against what the loop could run, before it
@@ -151,14 +151,14 @@ def _run(args, space) -> int:
         # what they find into the log nobody is here to read (lib/driver_turn.py).
         after_lanes(book, space, args, taking)
         if args.max_tasks and started >= args.max_tasks:
-            print(f"{_now()} " + (f"reached --max-tasks {args.max_tasks}").replace("\n", f"\n{_now()} "), flush=True)
+            say(f"reached --max-tasks {args.max_tasks}")
             stood_down(space, 0, f"reached --max-tasks {args.max_tasks}")
             break
         if outside:
             # A usage limit, an expired account, a provider down: it resets
             # without anybody doing anything, so the loop waits for it. This is
             # the one thing the driver waits on, and it never waits on a person.
-            print(f"{_now()} " + "  the fault is outside the tasks", flush=True)
+            say("  the fault is outside the tasks")
             space.alert("the campaign", f"the fault is outside the tasks; cooling down for "
                         f"{args.idle_seconds} seconds before retrying")
             space.event("pause", tasks=[row["id"] for row in taking], sleep=args.idle_seconds)

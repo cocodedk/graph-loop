@@ -15,10 +15,10 @@ hold is a person's decision and the loop does not schedule around it.
 
 from __future__ import annotations
 
+import workspace_claims
 from backlog_status import runs_alone, settled
 from frontier import startable
 from turn_plan import MOST_LANES
-from workspace_claims import _now
 
 
 def project(rows: list[dict], running: list[str] | None = None) -> list[list[dict]]:
@@ -97,4 +97,4 @@ def as_text(rows: list[dict], running: list[str] | None = None,
 
 def say(rows: list[dict], running: list[str] | None = None,
         cap: int = MOST_LANES) -> None:
-    print(f"{_now()} " + str(as_text(rows, running, cap)).replace("\n", f"\n{_now()} "), flush=True)
+    workspace_claims.say(as_text(rows, running, cap))

@@ -14,7 +14,7 @@ import pathlib
 import shlex
 import sys
 
-from workspace_claims import _now
+from workspace_claims import say
 
 # Appended, never inserted: the graph's own lib keeps first claim on every name.
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "slicer"))
@@ -110,14 +110,14 @@ def stand_down(space, book) -> int:
             if gaps is None:
                 latest = next((row for row in reversed(space.events())
                                if row.get("task") == SOURCE_GAP and row.get("why")), {})
-                print(f"{_now()} " + (f"not finished: source gap: {latest.get('why') or 'coverage not reviewed'}; "
-                      f"sources: {', '.join(declared_sources(space))}").replace("\n", f"\n{_now()} "), flush=True)
+                say(f"not finished: source gap: {latest.get('why') or 'coverage not reviewed'}; "
+                      f"sources: {', '.join(declared_sources(space))}")
                 _plan_again(space)
                 return 1
             return _ended_with(gaps, space)
         if not accepted(book.path, book.tasks()):
-            print(f"{_now()} " + ("not finished: no accepted coverage stands for the backlog as it is; "
-                  f"source gap: {', '.join(declared_sources(space))}").replace("\n", f"\n{_now()} "), flush=True)
+            say("not finished: no accepted coverage stands for the backlog as it is; "
+                  f"source gap: {', '.join(declared_sources(space))}")
             _plan_again(space)
             return 1
     # Everything else says the campaign is finished — and work the loop never
@@ -130,7 +130,7 @@ def stand_down(space, book) -> int:
 
 
 def _ended_with(gaps: dict, space) -> int:
-    print(f"{_now()} " + (f"ended with gaps: {gaps['gaps'] or gaps['why']}").replace("\n", f"\n{_now()} "), flush=True)
+    say(f"ended with gaps: {gaps['gaps'] or gaps['why']}")
     _plan_again(space)
     return ENDED_WITH_GAPS
 
@@ -140,5 +140,5 @@ def _plan_again(space) -> None:
     if sources:
         command = ["python3", "graph/graph-goal.py", "--workspace", str(space.root)]
         reopen = command + ["sources"] + [arg for source in sources for arg in ("--source", source)]
-        print(f"{_now()} " + ("To close this gap, resolve the named claim, then obtain accepted coverage with: "
-              f"{shlex.join(reopen)} && {shlex.join(command + ['plan'])}").replace("\n", f"\n{_now()} "), flush=True)
+        say("To close this gap, resolve the named claim, then obtain accepted coverage with: "
+              f"{shlex.join(reopen)} && {shlex.join(command + ['plan'])}")
