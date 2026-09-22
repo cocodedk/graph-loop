@@ -110,8 +110,7 @@ def requeue_faults(book, space) -> int:
 
 
 # A campaign is planned in tens of molecules, not thousands. The ceiling is a
-# runaway guard, not a budget: the phase normally ends because a round added
-# nothing, and the slicer has its own per-card caps under this.
+# runaway guard: the phase normally ends when a round adds nothing.
 MAX_ROUNDS = 200
 
 
@@ -186,6 +185,7 @@ def command_plan(args) -> int:
     if not (space.root / "approved").exists():
         raise SystemExit("not approved — run `graph-goal.py approve` first")
     space.only_driver()          # planning and building never overlap on one campaign
+    where.repo(space)
     book = Backlog(backlog_of(space))
     added = plan(book, space, rounds=args.rounds)
     print(f"the plan added {added} card{'' if added == 1 else 's'}")

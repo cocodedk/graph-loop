@@ -29,9 +29,7 @@ def branch_of(space) -> str:
 
 def backlog_of(space) -> str:
     """The backlog path named in the campaign's own init event. A relative
-    path is read against the repository when it lives there (this campaign's
-    does, and `status` from another directory used to fail on it); otherwise
-    it is returned as recorded, so an init made elsewhere keeps its meaning.
+    path is read against the workspace's repository, never the caller's cwd.
     `""` when there is no init event yet — a fresh, unstarted campaign.
 
     That empty answer is a real path to nowhere, and it must never reach
@@ -45,6 +43,5 @@ def backlog_of(space) -> str:
     for row in space.events():
         if row.get("kind") == "init":
             path = pathlib.Path(row["backlog"])
-            in_repo = where.repo() / path
-            return str(in_repo if not path.is_absolute() and in_repo.exists() else path)
+            return str(path if path.is_absolute() else where.repo(space, persist=False) / path)
     return ""

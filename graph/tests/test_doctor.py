@@ -23,7 +23,7 @@ from doctor import (
 from workspace import Workspace
 
 EXPECTED_TESTS = 22
-from doctor import REPO  # never hardcoded: the test must not pass by accident
+REPO = "/srv/example-repo"  # a checkout path, independent of the launch directory
 
 
 def book(**changes) -> Backlog:

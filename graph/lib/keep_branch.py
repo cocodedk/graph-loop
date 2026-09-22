@@ -192,4 +192,4 @@ def tip_of(space) -> str:
     """
     branch = next((str(row.get("branch") or "") for row in space.events()
                    if row.get("kind") == "init"), "") or where.branch()
-    return resolve(str(where.repo()), branch)
+    return resolve(str(where.repo(space)), branch)
