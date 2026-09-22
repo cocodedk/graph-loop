@@ -17,6 +17,9 @@ import tempfile
 # loop knows where a second one's configuration lives. The belt that walks to
 # another account when one runs out needs two, independent of the local environment.
 os.environ["GRAPH_ACCOUNTS"] = "work,second=/cfg/second"
+# Legacy fake-provider campaigns exercise Claude accounts; mixed belts have
+# their own explicit catalog in test_codex_builders.py.
+os.environ["GRAPH_BUILDERS"] = "claude-sonnet-5,claude-opus-5"
 
 # The card router (lib/model_router.py, docs/ROUTER.md) asks a live decision
 # service by default. A fake-provider test never routes for real, so this

@@ -12,10 +12,11 @@ import os
 import pathlib
 
 import model_router
+import models
 import resources
 from backlog import Backlog
 from campaign_of import backlog_of
-from providers import Outcome, claude, codex
+from providers import BUILD_TIMEOUT, EFFORT, Outcome, claude, codex, codex_text
 
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
@@ -27,6 +28,11 @@ def _real_build(prompt, *, account, cwd, files, tools, denies, guard, effort="",
     allows (lib/tools.py): a live task's builder has no shell, only the helper.
     `resume` continues the previous round's session — the same work, so what it
     already read is not paid for twice."""
+    if models.builder_agent(model) == "codex":
+        if guard:
+            return Outcome("harness", text="guarded live builds require Claude")
+        return codex_text(CODEX_BIN, prompt, model=model, effort=effort or EFFORT,
+                          cwd=cwd, timeout=BUILD_TIMEOUT, write=True)
     return claude(CLAUDE_BIN, prompt, account=account, model=model, cwd=cwd, effort=effort,
                   resume=resume,
                   allowed_tools=tools, disallowed_tools=denies, guard=guard,
@@ -36,7 +42,7 @@ def _real_build(prompt, *, account, cwd, files, tools, denies, guard, effort="",
 def _real_review(prompt, *, cwd="", effort="", space=None, task_id=""):
     """A review from the router's own pick, walked through the same
     builder-independent belt it offered (docs/ROUTER.md). No candidate at all
-    — every reviewer is the builder's own family — ends here, before any
+    — every reviewer is the builder's own model — ends here, before any
     provider is asked, never a self-review.
 
     `cwd` is the worktree the diff or contract belongs to — never the
