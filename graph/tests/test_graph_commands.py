@@ -3,6 +3,8 @@ refused contracts the top-of-turn replan may touch."""
 
 from __future__ import annotations
 
+import contextlib
+import io
 import pathlib
 import sys
 import tempfile
@@ -24,7 +26,7 @@ from graph_commands import replan_pending
 from providers import Outcome
 from workspace import Workspace
 
-EXPECTED_TESTS = 8
+EXPECTED_TESTS = 9
 
 
 def book(**changes) -> Backlog:
@@ -151,6 +153,22 @@ class RealReviewLedgerTest(unittest.TestCase):
         self.assertEqual([("T1", "second", 0.4, 900, "review")],
                          [(row["task"], row["account"], row["cost"], row["tokens"], row.get("purpose"))
                           for row in rows])
+
+
+class TimestampedOutputTest(unittest.TestCase):
+    def test_every_report_line_has_a_utc_timestamp_and_is_flushed(self):
+        output = io.StringIO()
+        stamp = "2026-09-22T12:34:56Z"
+        with contextlib.redirect_stdout(output), \
+             unittest.mock.patch.object(output, "flush") as flushed, \
+             unittest.mock.patch.object(graph_commands, "_now", return_value=stamp), \
+             unittest.mock.patch.object(graph_commands, "_space"), \
+             unittest.mock.patch.object(graph_commands, "report"), \
+             unittest.mock.patch.object(graph_commands, "as_text", return_value="first\n\nlast\n"):
+            self.assertEqual(0, graph_commands.command_report(None))
+        self.assertEqual([f"{stamp} first", f"{stamp} ", f"{stamp} last", f"{stamp} "],
+                         output.getvalue().splitlines())
+        flushed.assert_called_once()
 
 
 class CountTest(unittest.TestCase):

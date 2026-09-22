@@ -15,6 +15,7 @@ import urllib.parse
 
 import durable
 from keep_branch import plain
+from workspace_claims import _now
 
 
 def _quoted(branch: str) -> str:
@@ -60,8 +61,8 @@ def pending(repo: str, branch: str) -> list[tuple[str, str]]:
         elif ancestor.returncode == 1:
             note.unlink(missing_ok=True)
         else:
-            print(f"keep_pending_unreadable: {note.name} stays: git could not say whether "
-                  f"{branch} holds {sha[:8]}: {ancestor.stderr.strip()}", file=sys.stderr)
+            print(f"{_now()} " + (f"keep_pending_unreadable: {note.name} stays: git could not say whether "
+                  f"{branch} holds {sha[:8]}: {ancestor.stderr.strip()}").replace("\n", f"\n{_now()} "), file=sys.stderr, flush=True)
     return found
 
 

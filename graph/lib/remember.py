@@ -34,6 +34,7 @@ from remember_events import dated
 from remember_note import ours, render
 from remember_safe import still, unsafe
 from workspace import Workspace
+from workspace_claims import _now
 
 FOLDER = "relatives"
 PREFIX = "memory-"
@@ -45,24 +46,24 @@ def command_remember(args) -> int:
     rows, lost = remember_log.rows(space)
     named = remember_log.backlog(rows)
     if not named:
-        print("this campaign's log holds no init event that names a backlog; run "
-              f"`init` first. {len(rows)} events read, {lost} lines could not be read")
+        print(f"{_now()} " + ("this campaign's log holds no init event that names a backlog; run "
+              f"`init` first. {len(rows)} events read, {lost} lines could not be read").replace("\n", f"\n{_now()} "), flush=True)
         return 1
     root = pathlib.Path(named)
     if not root.is_dir():
-        print(f"{root} is one file, not a tree of molecules: a memory relative lives "
-              "in a molecule's own relatives/ folder, and this backlog has none")
+        print(f"{_now()} " + (f"{root} is one file, not a tree of molecules: a memory relative lives "
+              "in a molecule's own relatives/ folder, and this backlog has none").replace("\n", f"\n{_now()} "), flush=True)
         return 0
     counts = write_memory(root, rows)
-    print(f"remember: {counts['written']} memory notes written, "
+    print(f"{_now()} " + (f"remember: {counts['written']} memory notes written, "
           f"{counts['unchanged']} already saying it, {counts['untouched']} not written "
-          f"at all, under {root}")
+          f"at all, under {root}").replace("\n", f"\n{_now()} "), flush=True)
     for name, concern in sorted(counts["said"].items()):
-        print(f"  {name}: {concern}")
-    print(f"  from {counts['events']} events — {counts['no_section']} of a kind this "
+        print(f"{_now()} " + (f"  {name}: {concern}").replace("\n", f"\n{_now()} "), flush=True)
+    print(f"{_now()} " + (f"  from {counts['events']} events — {counts['no_section']} of a kind this "
           f"note has no section for, {counts['not_a_card']} sections about a node the "
           f"backlog does not hold, {counts['unreadable']} it could not read"
-          + (f", and {lost} log lines that could not be read at all" if lost else ""))
+          + (f", and {lost} log lines that could not be read at all" if lost else "")).replace("\n", f"\n{_now()} "), flush=True)
     return 0
 
 

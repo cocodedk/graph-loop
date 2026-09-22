@@ -19,6 +19,7 @@ import sys
 import tempfile
 
 import runner
+from workspace_claims import _now
 
 
 def _run(argv: list[str], stdin: str, env: dict | None = None, timeout: int = 3600,
@@ -48,4 +49,4 @@ def _run(argv: list[str], stdin: str, env: dict | None = None, timeout: int = 36
             # go is said out loud and named; it never leaves this `finally`,
             # because an exception raised here replaces whichever of those two
             # the call was about to hand back.
-            print(f"[the call's scratch is left behind: {error}]", file=sys.stderr)
+            print(f"{_now()} " + (f"[the call's scratch is left behind: {error}]").replace("\n", f"\n{_now()} "), file=sys.stderr, flush=True)
