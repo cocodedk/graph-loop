@@ -19,10 +19,12 @@ own configuration directory, and name it in GRAPH_ACCOUNTS.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import pathlib
 
 _DEFAULT = (("work", None),)
+_retired: frozenset[str] = frozenset()
 
 
 def table() -> tuple[tuple[str, str | None], ...]:
@@ -44,6 +46,22 @@ def table() -> tuple[tuple[str, str | None], ...]:
 
 def names() -> tuple[str, ...]:
     return tuple(name for name, _ in table())
+
+
+def available() -> tuple[str, ...]:
+    """Configured accounts still eligible for this run."""
+    return tuple(name for name in names() if name not in _retired)
+
+
+@contextlib.contextmanager
+def without(retired):
+    """Share one fixed retirement set across the driver's lanes, only for this run."""
+    global _retired
+    before, _retired = _retired, frozenset(retired)
+    try:
+        yield available()
+    finally:
+        _retired = before
 
 
 def home(account: str) -> pathlib.Path:

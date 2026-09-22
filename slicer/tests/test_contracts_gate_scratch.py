@@ -20,6 +20,7 @@ import tmp_root  # noqa: F401 — every temp file of this process under one root
 HERE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE))
 from contracts import validate
+from git_fixture import commit
 
 EXPECTED_TESTS = 6
 
@@ -31,6 +32,7 @@ class GateScratchTest(unittest.TestCase):
         (self.repo / "specs" / "greeting.md").write_text(
             "# Greeting\nA greeting is returned.\n", "utf-8")
         (self.repo / "app.py").write_text("present = True\n", "utf-8")
+        commit(self.repo)
 
     def check(self, gate: str) -> dict:
         atom = {"result": "MOLECULE", "reason": "one gap", "molecule": {

@@ -24,6 +24,7 @@ import tmp_root  # noqa: F401 — every temp file of this process under one root
 HERE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE))
 from contracts import validate
+from git_fixture import commit
 
 EXPECTED_TESTS = 1
 
@@ -35,6 +36,7 @@ class OneLeafRewriteTest(unittest.TestCase):
         (self.repo / "specs" / "a.md").write_text("# A\nOne claim.\n", "utf-8")
         for name in ("Fetcher.java", "FetchTest.java"):
             (self.repo / name).write_text("class X {}\n", "utf-8")
+        commit(self.repo)
 
     def test_the_refusal_names_the_two_atoms_to_write(self):
         target = {"id": "old", "status": "needs_slice", "triage": "work",

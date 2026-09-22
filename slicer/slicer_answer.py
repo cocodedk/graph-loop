@@ -26,7 +26,8 @@ from tree import CardMoved, publish
 
 def run_answer(text: str, *, repo: pathlib.Path, backlog: pathlib.Path,
                sources: list[pathlib.Path], target_id: str = "",
-               started: dict | None = None, reviewer=None, checker=None) -> tuple[str, str]:
+               started: dict | None = None, reviewer=None, checker=None,
+               tip: str = "HEAD") -> tuple[str, str]:
     # every review reads the checkout the planner read (`ask(question, repo)`)
     judge = reviewer or (lambda question: review(question, repo))
     book = Backlog(backlog)
@@ -43,7 +44,7 @@ def run_answer(text: str, *, repo: pathlib.Path, backlog: pathlib.Path,
         moved = moved_under(target, started)
         if moved:
             raise CardMoved(moved)
-    answer = validate(mapping(text), repo=repo, sources=sources, rows=rows, target=target)
+    answer = validate(mapping(text), repo=repo, sources=sources, rows=rows, target=target, tip=tip)
     trace(backlog, "validated", result=answer["result"],
           atoms=len((answer.get("molecule") or {}).get("atoms") or []))
     if answer["result"] == "NEEDS_PERSON":
@@ -62,7 +63,7 @@ def run_answer(text: str, *, repo: pathlib.Path, backlog: pathlib.Path,
         return "covered", answer["reason"]
     if checker is not None:
         answer = _checked(answer, checker, backlog, {"repo": repo, "sources": sources,
-                                                     "rows": rows, "target": target})
+                                                     "rows": rows, "target": target, "tip": tip})
     if target:
         trace(backlog, "progress_review_call", target=target_id)
         verdict = judge(asking.progress_prompt(repo, target, answer["molecule"]))

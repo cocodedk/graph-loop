@@ -35,19 +35,19 @@ class AlertsMixin:
     def only_writer(self):                        # provided by Workspace
         raise NotImplementedError
 
-    def alert(self, task_id: str, what: str) -> str:
+    def alert(self, task_id: str, what: str, *, limit: int | None = 300) -> str:
         """Something a person has to read. One line per alert, newest last.
 
         The loop cannot message anyone itself; it writes here, and whoever is
         watching — the commander's next round, or `watch.sh` — reads it out.
         """
-        line = f"{_now()}  {task_id}  {' '.join(str(what).split())[:300]}\n"
+        line = f"{_now()}  {task_id}  {' '.join(str(what).split())[:limit]}\n"
         with self.only_writer(), (self.root / "ALERTS.txt").open("a", encoding="utf-8") as handle:
             handle.write(line)
         # event() takes only_writer itself; flock is per open file description, not
         # re-entrant, so calling it while the block above still held the lock would
         # deadlock the process against itself. It runs after the lock is released.
-        self.event("alert", task=task_id, why=str(what)[:300])
+        self.event("alert", task=task_id, why=str(what)[:limit])
         return line
 
     def alerts(self, unread_only: bool = True) -> list[str]:

@@ -71,7 +71,7 @@ def safe_name(value: object, what: str = "name") -> str:
 
 
 def validate(answer: dict, *, repo: pathlib.Path, sources: list[pathlib.Path],
-             rows: list[dict], target: dict | None = None) -> dict:
+             rows: list[dict], target: dict | None = None, tip: str = "HEAD") -> dict:
     """Return a valid closed answer or raise without touching the backlog."""
     if target:
         assert_wall(target)
@@ -130,7 +130,7 @@ def validate(answer: dict, *, repo: pathlib.Path, sources: list[pathlib.Path],
         _task(atom, repo, known, siblings=siblings)
     assert_order(name, made, rows, target)
     assert_one_owner(name, made, rows, target)
-    available(leaves, repo)
+    available(leaves, repo, tip)
     if target:
         old = {signature(row) for row in lineage(target, rows)}
         if any(signature(atom) in old for atom in leaves):

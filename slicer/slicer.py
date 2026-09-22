@@ -14,10 +14,12 @@ sys.path.insert(0, str(GRAPH_LIB))
 
 from asking import prompt
 from backlog import Backlog  # type: ignore[import-not-found]
+from campaign_of import branch_of
 from cut_hook import make_checker
 from cut_record import recording
 from decisions import ask as decide
 from intelligence import ask
+from keep_branch import qualified
 from repair import AGAIN, REPAIRABLE
 from slicer_answer import run_answer  # this file stays the one door for it
 from slicer_law import assert_wall
@@ -29,6 +31,7 @@ from workspace import Workspace  # type: ignore[import-not-found]
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=pathlib.Path, required=True)
+    parser.add_argument("--tip", default="", help="campaign commit to validate against")
     parser.add_argument("--backlog", type=pathlib.Path, required=True)
     parser.add_argument("--source", type=pathlib.Path, action="append", required=True)
     parser.add_argument("--target", default="")
@@ -38,6 +41,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--answer", type=pathlib.Path)
     args = parser.parse_args(argv)
     repo, backlog = args.repo.resolve(), args.backlog.resolve()
+    tip = args.tip or (qualified(branch_of(Workspace(args.campaign)))
+                       if args.campaign else "HEAD")
     sources = [(repo / path).resolve() if not path.is_absolute() else path.resolve()
                for path in args.source]
     evidence = [(repo / path).resolve() if not path.is_absolute() else path.resolve()
@@ -143,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             state, detail = run_answer(answer, repo=repo, backlog=backlog,
                                        sources=sources, target_id=args.target,
-                                       started=target, checker=checker)
+                                       started=target, checker=checker, tip=tip)
         except CardMoved as moved:
             # A person decided while this planned: the molecule was planned
             # against the older card. Nothing is written and nothing is
