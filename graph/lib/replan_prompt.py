@@ -63,12 +63,16 @@ def prompt_for(task: dict) -> str:
            "literal, to len(...), or to a value read from HEAD: the runner's EXPECTED counts "
            "test cases and moves as tests land, so assert it only against what the runner "
            "collects (`countTestCases()`/`run_all.EXPECTED`).\n\n")
-        + "When the refusal names a concrete bypass that a frozen judge test misses, add an "
+        + ("For this judge card, a named wrong implementation becomes one more test case "
+        "in the card's own test file, which the frozen judge then keeps; never a "
+        "mutant implementation or a probe in the gate.\n\n"
+        if task.get("gate_until_kept") is True else
+        "When the refusal names a concrete bypass that a frozen judge test misses, add an "
         "executed probe to THIS card's gate: the gate writes a small test file beside the project's "
         "tests, runs it with the project's test command, and removes it with a trap on exit. "
         "Assert exactly the named case so the bypass fails the gate; keep this card's files "
         "unchanged, with the probe only in the gate text. Never substitute greps or regexes "
-        "on the source for a behavioural gap, and never ask for the judge to change.\n\n"
+        "on the source for a behavioural gap, and never ask for the judge to change.\n\n")
         + "A gate must never hide or delete the output a builder needs: no quiet flags "
         "that drop compiler errors, no deleting the log it greps. A stub's acceptance checks "
         "compilation/interface availability, never continued non-implementation.\n\n"

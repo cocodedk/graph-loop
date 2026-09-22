@@ -15,10 +15,23 @@ from replan import prompt_for, replan, replan_until_planned
 from test_keep import repo
 from test_replan import GOOD, answer, book_with
 
-EXPECTED_TESTS = 7
+EXPECTED_TESTS = 8
 
 
 class ReplanStallsTest(unittest.TestCase):
+    def test_judge_replan_puts_a_named_wrong_implementation_in_its_own_test_file(self):
+        rule = ("For this judge card, a named wrong implementation becomes one more test case "
+                "in the card's own test file, which the frozen judge then keeps; never a "
+                "mutant implementation or a probe in the gate.")
+        judge = prompt_for({"gate_until_kept": True})
+        self.assertIn(rule, judge)
+        self.assertNotIn("executed probe to THIS card's gate", judge)
+        for task in ({}, {"gate_until_kept": False}):
+            with self.subTest(task=task):
+                code = prompt_for(task)
+                self.assertNotIn(rule, code)
+                self.assertIn("executed probe to THIS card's gate", code)
+
     def test_replan_and_contract_review_close_a_judge_gap_with_a_gate_probe(self):
         task = book_with().task("T1")
         for make in (prompt_for, contract_prompt):
