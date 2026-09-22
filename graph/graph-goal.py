@@ -37,7 +37,7 @@ from campaign_of import branch_of
 from cli_args import build_parser
 from cuts_command import command_cuts
 from doctor_auth import run_accounts
-from driver_turn import after_lanes, before_turn
+from driver_turn import after_lanes, before_turn, rollup_nodes
 from finishing import ENDED_WITH_GAPS, stand_down
 from loop import Loop
 from loop_environment import environment_stop
@@ -142,6 +142,7 @@ def _run(args, space) -> int:
             ran, outside = run_lanes(loop, book, space, taking, turn_id=turn_id)
         finally:
             throttle.closes(turn_id, len(taking))
+            rollup_nodes(book, space)
         started += ran
         if why := environment_stop(space):
             return stood_down(space, ENDED_WITH_GAPS, why)
