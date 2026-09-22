@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import pathlib
+import subprocess
 import sys
 import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import lane_closing
+from keep import Keeper
 from lanes import run_lanes
 from loop_tree import for_this_round
 from loop_types import TaskOutcome
@@ -68,6 +70,31 @@ class ClosingTest(unittest.TestCase):
             run_lanes(loop, book, space, book.tasks())
         self.assertNotEqual(*paths)
         self.assertFalse(book.task("T1").get("finished"))
+
+    def test_kept_work_survives_removal_of_private_branches_and_records(self):
+        loop, book, space = loop_for(task(), Fakes())
+        keeper = Keeper(loop.repo, "campaign")
+        paths = []
+
+        def run(card):
+            tree, _ = for_this_round(loop, card)
+            paths.append(pathlib.Path(tree.path))
+            subprocess.run(["git", "-C", tree.path, "-c", "core.hooksPath=",
+                            "branch", "private"], check=True, capture_output=True)
+            (paths[-1] / "a.py").write_text("two\n")
+            keeper.keep(card["id"], tree.path, "accepted", files=["a.py"])
+            return TaskOutcome("done", "")
+
+        loop.run_task = run
+        with patch("lane_closing.capacity", return_value=""):
+            run_lanes(loop, book, space, book.tasks())
+        self.assertFalse(paths[0].exists())
+        kept = subprocess.check_output(["git", "-C", loop.repo, "show", "campaign:a.py"], text=True)
+        self.assertEqual("two\n", kept)
+        refs = subprocess.check_output(["git", "-C", loop.repo, "branch", "--list"], text=True)
+        self.assertNotIn("private", refs)
+        records = subprocess.check_output(["git", "-C", loop.repo, "worktree", "list"], text=True)
+        self.assertNotIn(str(paths[0]), records)
 
     def test_creation_failure_is_still_closed(self):
         loop, book, space = loop_for(task(), Fakes())

@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from unittest.mock import patch
 
@@ -89,6 +90,34 @@ class ChildrenTest(unittest.TestCase):
             run_lanes(loop, book, space, book.tasks())
         self.assertTrue(closed.is_set())
         self.assertEqual([0, 0], results)
+
+    def test_driver_death_reaches_detached_descendants(self):
+        with tempfile.TemporaryDirectory() as directory:
+            marker = pathlib.Path(directory) / "child"
+            script = (
+                "import sys, threading; "
+                f"sys.path.insert(0, {str(pathlib.Path(runner.__file__).parent)!r}); "
+                "import runner; runner.owned.processes = []; "
+                "runner.owned.stopping = threading.Event(); "
+                f"runner.run([sys.executable, '-c', {DETACH!r}, {str(marker)!r}, 'wait'], timeout=30)"
+            )
+            driver = subprocess.Popen([sys.executable, "-c", script])
+            try:
+                deadline = time.monotonic() + 10
+                while not marker.exists() and time.monotonic() < deadline:
+                    time.sleep(0.02)
+                self.assertTrue(marker.exists())
+                child = pathlib.Path(f"/proc/{marker.read_text()}")
+                driver.kill()
+                driver.wait(timeout=10)
+                deadline = time.monotonic() + 10
+                while child.exists() and time.monotonic() < deadline:
+                    time.sleep(0.02)
+                self.assertFalse(child.exists())
+            finally:
+                if driver.poll() is None:
+                    driver.terminate()
+                    driver.wait(timeout=10)
 
     def test_unrelated_process_is_not_a_cleanup_target(self):
         # The test itself owns this sentinel; the card must never signal it.
