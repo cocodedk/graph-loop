@@ -1,35 +1,15 @@
-"""Whether a gate's own output lands inside the repository it judges.
+"""Refuse gate output without an owner: the driver or an EXIT cleanup trap.
 
-A gate that tees or redirects into a bare filename writes into the tree it
-is meant to judge -- the fault that cost a 20-minute build (2026-09-03)
-before the graph loop's own lane guard caught it (`loop_judge_retry.py`,
-`gate_left_its_lane`), after the build was already paid for. The slicer
-refuses what the driver would refuse, before anything is spent.
+The driver owns `$TMPDIR` and bare `mktemp` output. A gate can also own a
+probe beside the project's tests by removing that same target on EXIT.
+Other repository output is refused before the driver's lane guard sees it.
+Quote, comment, heredoc and nested-substitution scanning lives in gate_text.py.
 
-Scratch has an owner, and the owner is the driver: `run_gate` gives a gate
-a home, points `$TMPDIR` at it and removes it when the gate ends. What a
-gate wrote to the host's own `/tmp` stayed instead, and /tmp filling on
-2026-09-03 killed every process on the host, so literal `/tmp` is refused
-here too.
-
-Text scanning (quotes, comments, heredoc bodies, tee's operand list, a
-nested $(...)/`...`) lives in gate_text.py, split out at the 200-line cap.
-The rules this module applies to what it finds, after six Codex review
-rounds: a target is safe only as `/dev/null`, `$TMPDIR`/`${TMPDIR}`, a
-bare unquoted `$(mktemp)` / `$(mktemp -d)` call (both follow `$TMPDIR`,
-falling back to /tmp only in a shell that has none, such as the builder's
-own), or a `$VAR` this same gate assigns, alone, from one of those two
-calls (a directory only as `$NAME/sub`, and never with a `..` segment
-walking back out). A gate that assigns `TMPDIR`, in any form, is trusted
-with none of it: `TMPDIR=. mktemp` and `TMPDIR=$(mktemp -d ./leak.XXXXXX)`
-both steer the write into the repository. A single-quoted target (`'$OUT'`,
-`'$(mktemp)'`) is literal text, never an expansion. `>&word` writes a real
-file unless word is bare digits or `-` (a descriptor duplication, e.g.
-`2>&1`); every operand `tee` is given is checked, not just its first, and
-only when `tee` is itself in command position (never a plain word, as in
-`grep -q tee app.py`). A substitution nested inside a live span (a
-double-quoted string, an unquoted heredoc's body) is itself extracted and
-scanned the same way, recursively.
+The existing scratch rules stay: variables must be assigned only from bare
+`mktemp` or `mktemp -d`; directory suffixes must not escape via `..`.
+Assigning TMPDIR revokes that trust. Single-quoted variables are literals.
+Every tee operand and redirect target is checked; descriptor duplication
+writes no file. Live nested substitutions are scanned recursively.
 """
 
 # ponytail: this is a scanner over masked shell text, not a bash parser --
@@ -150,10 +130,26 @@ def _targets(match: re.Match) -> list[str]:
     return tee_targets(match.string, match.end())
 
 
+def _exit_cleanup_targets(text: str, spans: list[tuple[int, int, bool]]) -> set[str]:
+    """Exact targets of a quoted `rm [-f] [--] target` EXIT trap."""
+    targets = set()
+    for match in re.finditer(r"\btrap\s+(['\"])(.*?)\1\s+EXIT(?=\s|[;&)]|$)", text):
+        if not _outside(match.start(), spans) or not _command_position(text, match.start()):
+            continue
+        command = match.group(2)
+        remove = re.match(r"rm\s+(?:-f\s+)?(?:--\s+)?", command)
+        if remove:
+            target = redirect_target(command, remove.end())
+            if target and command[remove.end():].strip() == target:
+                targets.add(target.strip('"'))
+    return targets
+
+
 def _sinks(text: str, safe: dict[str, bool]) -> list[str]:
     """Sink targets in `text`'s own top-level shell, plus -- recursively --
     every command substitution bash still executes inside a live span."""
     spans = quoted_spans(text)
+    cleaned = _exit_cleanup_targets(text, spans)
     found = []
     for match in _SINK.finditer(text):
         if not _outside(match.start(), spans):
@@ -164,7 +160,7 @@ def _sinks(text: str, safe: dict[str, bool]) -> list[str]:
         for target in _targets(match):
             literal = target[:1] == "'" and target[-1:] == "'"
             bare = target.strip("'\"")
-            if _rooted_safely(bare):
+            if target.strip('"') in cleaned or _rooted_safely(bare):
                 continue
             if not literal:
                 call = _MKTEMP_INLINE.match(bare)
@@ -196,5 +192,6 @@ def unsafe_gate_sinks(gate: str) -> list[str]:
     that is not `/dev/null`, the driver-owned `$TMPDIR`, a bare unquoted
     `$(mktemp)`/`$(mktemp -d)` call, or a variable assigned only from one
     (a directory only as `$NAME/...`, and never with a `..` segment in the
-    suffix). A gate that assigns TMPDIR itself keeps none of that trust."""
+    suffix), or a target removed by this shell's EXIT trap. Assigning
+    TMPDIR itself revokes the driver-owned scratch trust."""
     return _sinks(gate, _mktemp_names(gate, quoted_spans(gate)))
