@@ -41,7 +41,7 @@ def close(backlog: pathlib.Path, sources: list[pathlib.Path], verdict: str,
     shown. `rows` is the caller's own list — the one the coverage prompt was
     built from — never re-read here, or a card that changed while the review ran
     would be recorded as covered by a verdict about a backlog it was not in."""
-    names = named_files(files(sources))
+    names = [name for name in named_files(files(sources)) if (root / name).is_file()]
     missing = missing_files(names, rows)
     if missing:
         forget(backlog)
