@@ -33,10 +33,11 @@ from keep_tree import merged, staged_names
 class Keeper:
     """One campaign branch, and the commits the loop puts on it."""
 
-    def __init__(self, repo: str, branch: str, base: str = "HEAD"):
+    def __init__(self, repo: str, branch: str, base: str = "HEAD", workspace=None):
         self.repo = str(repo)
         self.branch = checked_destination(self.repo, branch)
         self.base = base
+        self.workspace = workspace
 
     def exists(self) -> bool:
         return bool(resolve(self.repo, self.branch))
@@ -172,7 +173,8 @@ class Keeper:
     def _combined_tree_red(self, task_id: str, commit: str, gates: list):
         """The first failing gate on the tree this commit would publish, as
         a GateFailure with its full result — None when every gate passes. Body lives in `keep_gate.py`."""
-        return combined_tree_red(self.repo, task_id, commit, gates)
+        return combined_tree_red(self.repo, task_id, commit, gates,
+                                 **({"workspace": self.workspace} if self.workspace else {}))
 
     def push(self, remote: str = "origin") -> str:
         """Push the campaign branch. Body lives in `keep_remote.py`."""

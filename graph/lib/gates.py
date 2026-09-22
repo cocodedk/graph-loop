@@ -44,7 +44,7 @@ class GateResult:
 GREEN_ALREADY = "the gate already passes, so it proves nothing"   # the one wording red_first matches exactly
 
 def run_gate(command: str, cwd: str, timeout: int = DEFAULT_TIMEOUT,
-             confine: bool = True) -> GateResult:
+             confine: bool = True, paths=None) -> GateResult:
     """One gate, in its own shell, inside `gate_sandbox`'s box. Both streams are
     kept: a failure the builder cannot read does not exist.
 
@@ -53,7 +53,8 @@ def run_gate(command: str, cwd: str, timeout: int = DEFAULT_TIMEOUT,
     """
     home = tempfile.mkdtemp(prefix="gate-home-")
     boxed = confine and gate_sandbox.works()
-    argv = gate_sandbox.argv(command, cwd, home) if boxed else ["bash", "-c", command]
+    argv = (gate_sandbox.argv(command, cwd, home, **({"paths": paths} if paths else {}))
+            if boxed else ["bash", "-c", command])
     # The scrub does not need the box: it is the environment this call is given,
     # so a host without bubblewrap still keeps its credentials out of the gate.
     env = gate_sandbox.environment(home) if confine else None
@@ -81,14 +82,15 @@ def run_gate(command: str, cwd: str, timeout: int = DEFAULT_TIMEOUT,
 
 
 def prove_red(command: str, cwd: str, expect: str = "",
-              timeout: int = DEFAULT_TIMEOUT, confine: bool = True) -> tuple[bool, str]:
+              timeout: int = DEFAULT_TIMEOUT, confine: bool = True, paths=None) -> tuple[bool, str]:
     """Refuse the task unless its gate fails now, for the stated reason.
 
     Returns (proved, why). `expect` is a phrase the refusal must contain — the
     guard against a gate that is red for somebody else's reason, which is how two
     packages burned four attempts on rows they were not allowed to touch.
     """
-    result = run_gate(command, cwd, timeout, confine=confine)
+    result = run_gate(command, cwd, timeout, confine=confine,
+                      **({"paths": paths} if paths else {}))
     if result.passed:
         return False, GREEN_ALREADY
     if environment_hint(result.output, command):

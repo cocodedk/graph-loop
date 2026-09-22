@@ -9,6 +9,7 @@ proving it red first would just run it for no reason.
 
 from __future__ import annotations
 
+import gate_paths
 from backlog_reach import overlap
 from backlog_status import is_live, settled
 from gate_reports import excerpt
@@ -46,7 +47,8 @@ def red_first(loop, task: dict, tree: Worktree, gate: str, rebuild: int,
         proved, why = True, f"red-first skipped: {why}"
     else:
         with loop.space.step(task_id, "red_first") as note:
-            proved, why = prove_red(gate, tree.path, task.get("expect_red") or "")
+            proved, why = prove_red(gate, tree.path, task.get("expect_red") or "",
+                                    **gate_paths.options(loop.space.root))
             note(proved=proved)
         stopped = environment_ending(loop, task, tree, why, gate, "red_first")
         if stopped is not None:
