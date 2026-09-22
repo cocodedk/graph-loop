@@ -22,7 +22,7 @@ EXPECTED_TESTS = 6
 # A refused-contract wall: is_wall requires replans already AT the human cap
 # (backlog_status.is_wall) before the slicer ever sees it.
 WALL = {"id": "T1", "status": "refused_contract", "goal": "g", "files": ["app.py"],
-        "triage": "contract", "replans": 2, "refused_why": "the gate said why"}
+        "triage": "contract", "replans": 6, "refused_why": "the gate said why"}
 
 
 class OneFailureTest(unittest.TestCase):
@@ -37,7 +37,7 @@ class OneFailureTest(unittest.TestCase):
         self.assertEqual("refused_contract", row.get("status"))
         self.assertFalse(row.get("blocked_by_human"))
         self.assertEqual(1, int(row.get("slices") or 0))
-        self.assertEqual(2, int(row.get("replans") or 0))       # untouched
+        self.assertEqual(WALL["replans"], int(row.get("replans") or 0))  # untouched
 
 
 class CappedTest(unittest.TestCase):
@@ -54,7 +54,7 @@ class CappedTest(unittest.TestCase):
         row = book.task("T1")
         self.assertTrue(row.get("blocked_by_human"))
         self.assertEqual(3, int(row.get("slices") or 0))
-        self.assertEqual(2, int(row.get("replans") or 0))       # still untouched
+        self.assertEqual(WALL["replans"], int(row.get("replans") or 0))  # still untouched
         said = [line for line in s.alerts() if "a person decides" in str(line)]
         self.assertEqual(1, len(said))
 

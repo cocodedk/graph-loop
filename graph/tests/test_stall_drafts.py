@@ -115,7 +115,8 @@ class StallDraftsTest(unittest.TestCase):
         stood_down(self.space, 78, "nothing startable")
         body = self.drafts()[0].read_text()
         self.assertIn("Loop step: diff_review", body)
-        self.assertIn("new diff finding " * 60, body)
+        self.assertIn("new diff finding", body)
+        self.assertNotIn("new diff finding " * 60, body)
         self.assertNotIn("old gate failure", body)
 
     def test_an_unreadable_artifact_still_drafts_the_recorded_reason(self):

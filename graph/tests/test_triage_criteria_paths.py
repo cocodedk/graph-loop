@@ -98,7 +98,7 @@ class CriteriaPathsTest(unittest.TestCase):
                 self.assertEqual(1, planner.call_count)
 
     def test_other_replan_refusals_and_budget_limits_do_not_ask(self):
-        for changes in ({"diff_review_refusal": None, "rejections": None}, {"replans": 1},
+        for changes in ({"diff_review_refusal": None, "rejections": None}, {"replans": 5},
                         {"blocked_by_human": True}, {"gate_has_side_effects": True}):
             with self.subTest(changes=changes):
                 _, book, space, _ = stalled()

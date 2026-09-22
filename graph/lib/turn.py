@@ -22,6 +22,7 @@ from issue_drafts import draft_stalls
 from lanes import run_lanes  # noqa: F401 — run_lanes' front door stays here
 from providers import PLAN_TIMEOUT, claude
 from replan import replan_until_planned
+from replan_budget import alert_stopped
 from triage import triage_pending
 from triage_paths import contract_path
 from turn_plan import taking_now  # noqa: F401 — the driver's door
@@ -64,6 +65,7 @@ def replan_pending(book, space, planner=None) -> bool:
         # `backlog_decision.can_replan` is this condition's one home, so the
         # plan phase and this path cannot both claim the same card.
         if not can_replan(task):
+            alert_stopped(space, task)
             continue
         if contract_path(book, space, task):
             return True

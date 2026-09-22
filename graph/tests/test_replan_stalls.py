@@ -89,7 +89,7 @@ class ReplanStallsTest(unittest.TestCase):
         book = book_with(refused_why=why)
         out = replan(book, book.task("T1"), lambda prompt: answer(GOOD))
         self.assertTrue(out.rewritten, out.why)
-        self.assertEqual([why], book.task("T1")["replan_history"])
+        self.assertEqual([why.strip()], book.task("T1")["replan_history"])
 
 
 class CountTest(unittest.TestCase):

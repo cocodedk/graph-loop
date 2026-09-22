@@ -9,9 +9,11 @@ from __future__ import annotations
 import resources
 from accepted_contract import criteria
 from contract import frozen_requirement
+from ending_reason import review_reason
 from loop_judge_retry import moved_first
 from loop_types import TaskOutcome
 from prompts import contract_digest, contract_prompt
+from replan_budget import alert_stopped
 from worktree import Worktree
 
 
@@ -73,8 +75,9 @@ def contract(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOu
         tree.remove()
         return TaskOutcome("harness", why, tree.path)
     if verdict.verdict != "ACCEPT":
+        reason = review_reason(verdict.text)
         loop.space.event("refused", task=task_id, step="contract",
-                         why=verdict.text[:400])
+                         why=reason)
         # The review took minutes, and the card it was asked about can have been
         # dropped, held or rewritten in them: the same guard every other ending
         # passes, with the write in the same lock hold. Nothing is paid on a
@@ -84,7 +87,8 @@ def contract(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOu
             if ended is not None:
                 return ended
             loop.backlog.set_status(task_id, "refused_contract",
-                                    refused_why=verdict.text)
+                                    refused_why=reason)
+            alert_stopped(loop.space, loop.backlog.task(task_id))
         tree.keep(f"contract refused after paid work: {verdict.text[:200]}") if in_place else tree.remove()
         return TaskOutcome("refused", verdict.text, tree.path)
     # remember WHICH contract was accepted: a later edit must be read again.

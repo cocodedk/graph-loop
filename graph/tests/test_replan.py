@@ -122,11 +122,11 @@ class ReplanTest(unittest.TestCase):
         self.assertFalse(out.rewritten)
         self.assertEqual("refused_contract", book.task("T1")["status"])
 
-    def test_a_task_is_only_rewritten_twice_before_it_waits(self):
-        book = book_with(replans=2)
+    def test_six_rewrites_are_the_hard_ceiling(self):
+        book = book_with(replans=6)
         out = replan(book, book.task("T1"), lambda prompt: answer(GOOD))
         self.assertFalse(out.rewritten)
-        self.assertIn("twice", out.why)
+        self.assertIn("the ceiling", out.why)
 
     def test_each_rewrite_is_counted_and_kept(self):
         book = book_with()

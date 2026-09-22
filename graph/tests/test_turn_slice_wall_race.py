@@ -19,7 +19,7 @@ from test_turn_slice import routed, router, space, tree_with
 EXPECTED_TESTS = 4
 
 WALL = {"id": "T1", "status": "refused_contract", "goal": "g", "files": ["app.py"],
-        "triage": "contract", "replans": 2, "refused_why": "the gate said why"}
+        "triage": "contract", "replans": 6, "refused_why": "the gate said why"}
 
 # validation_refused's own form: contracts.validate's re-read, after a repair round.
 PREFIXED_ANSWER = "validation_refused: T1 is not a stuck CODE card the slicer may take\n"

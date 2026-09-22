@@ -147,10 +147,10 @@ def is_wall(row: dict) -> bool:
     if status == "rejected":
         # never before the rebuild rounds are spent: the loop retries first
         return verdict == "work" and spent_its_rounds(row)
-    from replan import MAX_REPLANS
+    from replan_budget import stop_reason
     # A contract still wrong after its replans is the slicer's — but only once a
     # judge has SAID so. Without that verdict the slicer was handed two cards
     # whose blocker was a decision and a wrong contract (2026-09-01): it produced
     # no plan, and held them for hours. No verdict, no slicing.
     return (status == "refused_contract" and verdict == "contract"
-            and int(row.get("replans") or 0) >= MAX_REPLANS)
+            and bool(stop_reason(row)))

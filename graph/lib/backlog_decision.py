@@ -12,7 +12,7 @@ ends the campaign with its gap named (`finishing`). Nothing here calls a model.
 from __future__ import annotations
 
 from backlog_status import is_live, settled
-from replan import MAX_REPLANS
+from replan_budget import stop_reason
 
 
 def can_replan(card: dict) -> bool:
@@ -25,7 +25,7 @@ def can_replan(card: dict) -> bool:
     live contract is not the planner's to rewrite.
     """
     return bool(card.get("status") == "refused_contract"
-                and int(card.get("replans") or 0) < MAX_REPLANS
+                and not stop_reason(card)
                 and not card.get("blocked_by_human") and not is_live(card))
 
 

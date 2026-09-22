@@ -135,7 +135,7 @@ def _after_cursor(rows: list[dict], close: int, cursor: dict | None) -> bool:
     return str(rows[close].get("at") or "") >= str(cursor.get("closed_at") or "")
 
 
-def _read(raw, root: pathlib.Path) -> str | None:
+def _read(raw, root: pathlib.Path, *, tail: bool = True) -> str | None:
     if not raw:
         return None
     try:
@@ -143,7 +143,7 @@ def _read(raw, root: pathlib.Path) -> str | None:
         path.relative_to(pathlib.Path(root).resolve())
         with path.open("rb") as handle:
             handle.seek(0, 2)
-            handle.seek(max(0, handle.tell() - MAX_ARTIFACT_BYTES))
+            handle.seek(max(0, handle.tell() - MAX_ARTIFACT_BYTES) if tail else 0)
             return handle.read(MAX_ARTIFACT_BYTES).decode("utf-8", "replace")
     except (OSError, RuntimeError, ValueError):
         return None
