@@ -32,6 +32,8 @@ def alert_stopped(backlog, space, task: dict) -> None:
     from backlog_status import is_live
     from slice_outcome import MAX_SLICES
 
+    if task.get("status") != "refused_contract" or not stop_reason(task):
+        return
     with backlog.only_writer():
         task = backlog.task(task["id"])
         shape = stop_reason(task) if task and task.get("status") == "refused_contract" else ""

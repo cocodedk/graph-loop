@@ -30,7 +30,8 @@ class StallReasonsTest(unittest.TestCase):
         self.assertNotIn("jvmTarget", body)
         self.assertNotIn("aload_0", body)
         self.assertEqual(reason, book.task("T1")["refused_why"])
-        self.assertIn("the same complaint twice", space.alerts(unread_only=False)[0])
+        self.assertEqual("needs_slice", book.task("T1")["status"])
+        self.assertFalse(space.alerts(unread_only=False))
 
     def test_old_mixed_records_prefer_the_short_verdict_field(self):
         _, book, space = loop_for(task(status="refused_contract"), Fakes())
