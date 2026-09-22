@@ -17,6 +17,7 @@ from __future__ import annotations
 import os
 
 import resources
+import where
 from backlog_decision import can_replan
 from issue_drafts import draft_stalls
 from lanes import run_lanes  # noqa: F401 — run_lanes' front door stays here
@@ -45,12 +46,12 @@ def stood_down(space, code: int, why: str) -> int:
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 
 
-def plan_with_claude(prompt: str, resource=None):
-    """One planner call on one resource: no tools, and a planner's own, shorter
+def plan_with_claude(prompt: str, resource=None, *, cwd: str | None = None):
+    """One planner call on one resource: read-only tools and a planner's own, shorter
     timeout. The caller walks the belt, so every call leaves its own record."""
     resource = resource or resources.belt("plan")[0]
     return claude(CLAUDE_BIN, prompt, account=resource.account, model=resource.model,
-                  no_tools=True, timeout=PLAN_TIMEOUT)
+                  read_only=True, timeout=PLAN_TIMEOUT, cwd=cwd)
 
 
 def replan_pending(book, space, planner=None) -> bool:
@@ -60,7 +61,8 @@ def replan_pending(book, space, planner=None) -> bool:
     asked again next turn instead of stranding the task. A call that was paid
     for and did not finish spends its round like any other answered refusal.
     A rejected diff is not a contract problem and never comes here."""
-    planner = planner or plan_with_claude
+    planner = planner or (lambda prompt, resource: plan_with_claude(
+        prompt, resource, cwd=str(where.repo(space))))
     for task in book.tasks():
         # `backlog_decision.can_replan` is this condition's one home, so the
         # plan phase and this path cannot both claim the same card.
