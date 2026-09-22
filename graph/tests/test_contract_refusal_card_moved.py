@@ -14,6 +14,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 
+import tmp_root  # noqa: F401 — keep temporary files under the test root
 from providers import Outcome
 from test_loop import Fakes, loop_for, task
 
