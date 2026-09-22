@@ -59,22 +59,20 @@ def campaign() -> tuple[Workspace, pathlib.Path]:
 
 
 def run(space: Workspace, backlog: pathlib.Path, said: str, rc: int) -> int:
-    """The plan phase's answer already on the record, then `command_run` for
-    real, with nothing that would reach the repository.
+    """Run the real driver and plan phase with a scripted slicer answer.
 
-    `turn_opens` is NOT patched. It used to be, by a stub that sliced the source
-    gap at the top of the turn — the pre-split driver — and that is why the
-    phase split could break `run` with this suite green: the fresh review's
-    finding 3. The slicer has one caller now (`plan_phase.plan`), it runs before
-    the driver, and `record_outcome` is the only writer that turns its exit into
-    a campaign record, so this writes it where the plan phase would."""
-    space.event("plan_started")
-    record_outcome(Backlog(backlog), space, "the sources", None, said, rc)
+    Record the answer inside the plan phase's fresh coverage window, through
+    the same outcome writer as a real slice. No repository or provider call.
+    """
+    def slicing(book, current):
+        record_outcome(book, current, "the sources", None, said, rc)
+
     args = types.SimpleNamespace(workspace=str(space.root), dry_run=False,
                                  lanes=3, max_tasks=0,
                                  idle_seconds=300, attempt_ceiling=12, hours_ceiling=2.0)
     with unittest.mock.patch.object(Keeper, "pending", lambda self: []), \
-         unittest.mock.patch("publishing.behind", return_value=False):
+         unittest.mock.patch("publishing.behind", return_value=False), \
+         unittest.mock.patch("plan_phase.slice_pending", side_effect=slicing):
         return graph_goal.command_run(args)
 
 
