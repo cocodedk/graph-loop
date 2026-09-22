@@ -15,12 +15,13 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import asking
 import asking_lists  # the ceiling lives with the listings it bounds
+import contracts
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 from tree import publish
 
 import slicer
 
-EXPECTED_TESTS = 8
+EXPECTED_TESTS = 9
 
 
 def rig():
@@ -46,6 +47,22 @@ class AncestryTest(unittest.TestCase):
         question = asking.prompt(repo, [source], [], None)
         self.assertIn("Ancestors of the target, nearest first (prior art, never to repeat):\nnone",
                       question)
+
+
+class AnswerShapeTest(unittest.TestCase):
+    def test_prompt_skeleton_passes_contract_key_checks(self):
+        repo, source = rig()
+        question = asking.prompt(repo, [source], [])
+        self.assertEqual(1, len(contracts.FENCE.findall(question)))
+        answer = contracts.mapping(question)
+        self.assertEqual("MOLECULE", answer["result"])
+        contracts._keys(answer, contracts.TOP, contracts.TOP, "answer")
+        made = answer["molecule"]
+        contracts._keys(made, contracts.BASE | {"note"}, contracts.BASE, "molecule")
+        self.assertEqual(1, len(made["atoms"]))
+        atom = made["atoms"][0]
+        contracts._keys(atom, contracts.ATOM, contracts.REQUIRED | {"name", "stage"}, "atom")
+        self.assertEqual(contracts.ATOM, set(atom))
 
 
 class CoveredWorkTest(unittest.TestCase):
