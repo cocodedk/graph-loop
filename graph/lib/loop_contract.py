@@ -88,7 +88,7 @@ def contract(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOu
                 return ended
             loop.backlog.set_status(task_id, "refused_contract",
                                     refused_why=reason)
-            alert_stopped(loop.space, loop.backlog.task(task_id))
+            alert_stopped(loop.backlog, loop.space, loop.backlog.task(task_id))
         tree.keep(f"contract refused after paid work: {verdict.text[:200]}") if in_place else tree.remove()
         return TaskOutcome("refused", verdict.text, tree.path)
     # remember WHICH contract was accepted: a later edit must be read again.

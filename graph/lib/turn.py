@@ -65,7 +65,7 @@ def replan_pending(book, space, planner=None) -> bool:
         # `backlog_decision.can_replan` is this condition's one home, so the
         # plan phase and this path cannot both claim the same card.
         if not can_replan(task):
-            alert_stopped(space, task)
+            alert_stopped(book, space, task)
             continue
         if contract_path(book, space, task):
             return True

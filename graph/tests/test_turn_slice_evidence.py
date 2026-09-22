@@ -72,8 +72,9 @@ class HarnessRejectionTest(unittest.TestCase):
         # ...but not before them, and not on a card the loop can still retry
         self.assertFalse(is_wall({"id": "T2", "status": "refused_contract",
                                   "files": ["app.py"], "replans": 1, "triage": "contract"}))
-        self.assertFalse(is_wall({"id": "T3", "status": "needs_slice",
-                                  "files": ["app.py"], "triage": "contract"}))
+        # An explicit needs_slice status hands the card to the slicer.
+        self.assertTrue(is_wall({"id": "T3", "status": "needs_slice",
+                                 "files": ["app.py"], "triage": "contract"}))
         # rejected + work slices only once the rebuild rounds are spent
         early = {"id": "T3", "status": "rejected", "files": ["app.py"],
                  "triage": "work", "rebuild_round": 1}

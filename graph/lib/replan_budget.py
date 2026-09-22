@@ -28,11 +28,25 @@ def stop_reason(task: dict) -> str:
     return ""
 
 
-def alert_stopped(space, task: dict) -> None:
-    shape = stop_reason(task) if task.get("status") == "refused_contract" else ""
-    if not shape:
+def alert_stopped(backlog, space, task: dict) -> None:
+    from backlog_status import is_live
+    from slice_outcome import MAX_SLICES
+
+    if task.get("status") != "refused_contract" or not stop_reason(task):
         return
-    why = f"replan stopped: {shape}; a person must look at this card"
-    if not any(row.get("kind") == "alert" and row.get("task") == task["id"]
-               and row.get("why") == why for row in space.events()):
-        space.alert(task["id"], why)
+    with backlog.only_writer():
+        task = backlog.task(task["id"])
+        shape = stop_reason(task) if task and task.get("status") == "refused_contract" else ""
+        if not shape:
+            return
+        if not is_live(task) and not task.get("blocked_by_human"):
+            if int(task.get("slices") or 0) < MAX_SLICES:
+                backlog.set_status(task["id"], "needs_slice")
+                return
+            backlog.note(task["id"], blocked_by_human=True, held_by="loop")
+        if space is None:
+            return
+        why = f"replan stopped: {shape}; a person must look at this card"
+        if not any(row.get("kind") == "alert" and row.get("task") == task["id"]
+                   and row.get("why") == why for row in space.events()):
+            space.alert(task["id"], why)

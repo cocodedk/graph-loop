@@ -68,8 +68,7 @@ def replan_until_planned(backlog, task: dict, planner, *, space=None) -> Replann
     while True:
         fresh = backlog.task(task["id"]) or task
         if fresh.get("status") != "refused_contract" or stop_reason(fresh):
-            if space is not None:
-                alert_stopped(space, fresh)
+            alert_stopped(backlog, space, fresh)
             if stop_reason(fresh):
                 out = Replanned(False, f"replan stopped: {stop_reason(fresh)}")
             break
