@@ -12,6 +12,7 @@ import hashlib
 import durable
 from backlog import Backlog
 from campaign_of import backlog_of
+from gate_reports import excerpt
 from issue_scrub import identities, scrub
 from triage_evidence import _read
 from watchdog_spin import ENDINGS, current_run, ending_signature
@@ -75,7 +76,7 @@ def draft_stalls(space, book=None, *, repeated: str = "") -> None:
         else:
             continue
         step, why = _evidence(space, rows, card)
-        safe_step, safe_why = scrub(step, names), scrub(why, names)[-2000:]
+        safe_step, safe_why = scrub(step, names), excerpt(scrub(why, names))
         key = ending_signature({"step": safe_step, "why": safe_why})[1:]
         signature = "stall-" + hashlib.sha256(repr(key).encode()).hexdigest()[:20]
         if (signature, card["id"]) in seen:

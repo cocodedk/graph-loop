@@ -44,7 +44,7 @@ def ending_signature(row: dict) -> tuple:
     """What makes two endings 'the same': the task, the step and the WHOLE
     reason, with its ticking counters blanked and its spacing collapsed.
 
-    The whole recorded reason includes up to 2000 characters of gate output.
+    The whole recorded reason includes the console tail and the JUnit digest.
     A 120-character prefix used to stand in for it, and it lied both ways:
     different failures sharing a prefix were parked as one spin, while a
     unittest tail's own elapsed time ("Ran 1028 tests in

@@ -135,7 +135,7 @@ class Keeper:
             # tree before the ref moves. A red combination is not published —
             # and the refusal carries the failing gate's own words: a mute
             # combined failure consumed T4.close's last two rounds telling nobody why.
-            gate, tail = red.gate, red.result.output[-2000:].strip()
+            gate, tail = red.gate, red.result.why.strip()
             raise CombinedGateFailed(
                 f"{task_id}: the gate fails on the branch with the work that landed first — "
                 f"the failing gate: {gate[:160]} — its last words: {tail or '(it printed nothing)'}",

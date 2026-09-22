@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import resources
 from backlog_status import REBUILD_ROUNDS
+from gate_reports import excerpt
 from loop_moved import moved_first, scope_fault  # the door stays here
 from loop_types import TaskOutcome
 from worktree import HeadMoved, changed_outside, save_and_go
@@ -134,13 +135,13 @@ def _send_back(loop, task: dict, tree, rebuild: int, why: str,
             # Back to the builder with the findings, same worktree, no new
             # contract review: the picker offers it again as todo.
             loop.space.event("rebuild_queued", task=task_id, round=rounds,
-                             why=why[:2000])
+                             why=excerpt(why, tail=False))
             loop.backlog.set_status(task_id, "todo", rebuild_round=rounds,
                                     rebuild_from=tree.path, rejections=findings,
                                     refused_why=None, **counters)
         else:
-            loop.space.event("rejected", task=task_id, why=why[:2000])
+            loop.space.event("rejected", task=task_id, why=excerpt(why, tail=False))
             loop.backlog.set_status(task_id, "rejected", rebuild_round=rounds,
-                                    rejections=findings, refused_why=why[:2000],
+                                    rejections=findings, refused_why=excerpt(why, tail=False),
                                     **counters)
         return TaskOutcome("rejected", why, tree.path)
