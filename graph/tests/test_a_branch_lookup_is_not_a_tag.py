@@ -74,7 +74,7 @@ class MissingBranchTest(unittest.TestCase):
 
     def test_a_tag_is_no_tip_to_bind_to(self):
         root, _tagged = tag_only()
-        space = Workspace(tempfile.mkdtemp()).init(goal="t", backlog="x", branch=BRANCH)
+        space = Workspace(tempfile.mkdtemp()).init(goal="t", backlog="x", branch=BRANCH, repo=root)
         with mock.patch.dict(os.environ, {"GRAPH_REPO": root}):
             self.assertEqual("", tip_of(space))
 
@@ -98,7 +98,7 @@ class KeeperTipTest(unittest.TestCase):
 class DeciderTipTest(unittest.TestCase):
     def test_the_decision_is_bound_to_the_branchs_own_tip(self):
         root, on_branch, _tagged = branch_and_tag()
-        space = Workspace(tempfile.mkdtemp()).init(goal="t", backlog="x", branch=BRANCH)
+        space = Workspace(tempfile.mkdtemp()).init(goal="t", backlog="x", branch=BRANCH, repo=root)
         with mock.patch.dict(os.environ, {"GRAPH_REPO": root}):
             self.assertEqual(on_branch, tip_of(space))
 
@@ -107,7 +107,7 @@ class SlicerCheckoutTest(unittest.TestCase):
     def test_the_slicer_resolves_the_branch_as_a_branch(self):
         """The tip it asks for becomes the clean checkout it plans against."""
         root, _on_branch, _tagged = branch_and_tag()
-        space = Workspace(tempfile.mkdtemp()).init(goal="t", backlog="x", branch=BRANCH)
+        space = Workspace(tempfile.mkdtemp()).init(goal="t", backlog="x", branch=BRANCH, repo=root)
         space.event("sources_declared", sources=["simulation/spec"])
         asked: list = []
 

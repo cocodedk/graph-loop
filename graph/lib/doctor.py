@@ -15,7 +15,6 @@ import os
 import re as _re
 import time
 
-import where
 from backlog_status import is_live
 from doctor_auth import check_auth
 from doctor_slices import check_orphan_slices
@@ -26,8 +25,6 @@ from doctor_words import operand_spans
 from gate_shell import has_pipefail_header
 from loop_scope import gate_files
 from worktree import stack_lock
-
-REPO = str(where.repo())
 
 
 def _tasks(backlog) -> list[dict]:

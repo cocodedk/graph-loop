@@ -9,8 +9,8 @@ variable first, so pointing the whole loop at other work is:
     export GRAPH_CAMPAIGN=$GRAPH_REPO/scratchpad/graph-campaigns/current
     export GRAPH_BACKLOG=$GRAPH_REPO/vault
 
-`GRAPH_REPO` defaults to the directory the loop is run from, because the loop
-lives in its own repository now and can never guess the one it is working on.
+`GRAPH_REPO` or the launch directory selects the repository at init. Once a
+workspace exists, its recorded repository is authoritative.
 """
 
 from __future__ import annotations
@@ -26,7 +26,10 @@ def loop() -> pathlib.Path:
     return _LOOP
 
 
-def repo() -> pathlib.Path:
+def repo(space=None, *, persist: bool = True) -> pathlib.Path:
+    if space is not None:
+        from workspace_repo import repository
+        return repository(space, persist=persist)
     return pathlib.Path(os.environ.get("GRAPH_REPO") or pathlib.Path.cwd())
 
 

@@ -31,8 +31,8 @@ from turn import (  # noqa: F401 — the door stays here
 )
 from waves import say as say_waves
 from workspace import Workspace
+from workspace_repo import initial_root
 
-REPO = where.repo()
 DEFAULT_WORKSPACE = where.campaign()
 # What a builder may run lives in lib/tools.py: a code task gets a shell, a
 # live task gets only the helper. BUILDER_TOOLS is the code task's list.
@@ -46,10 +46,13 @@ def _space(args) -> Workspace:
 
 
 def command_init(args) -> int:
-    book = Backlog(args.backlog)
-    branch = campaign_branch(str(REPO), args.branch or where.branch())
-    space = _space(args).init(goal=args.goal or "the backlog", backlog=str(book.path),
-                              branch=branch)
+    book = Backlog(pathlib.Path(args.backlog).resolve())
+    space = _space(args)
+    root = (where.repo(space) if any(row.get("kind") == "init" for row in space.events())
+            else initial_root())
+    branch = campaign_branch(str(root), args.branch or where.branch())
+    space.init(goal=args.goal or "the backlog", backlog=str(book.path),
+               branch=branch, repo=str(root))
     declare_sources(space, list(getattr(args, "source", None) or []))
     (space.root / "approved").unlink(missing_ok=True)
     # What the campaign RECORDS, never what this call asked for. An init that
@@ -69,7 +72,7 @@ def declare_sources(space, paths: list[str]) -> list[str]:
     Shared by `init --source` and the `sources` command, so an existing
     campaign can declare or move its sources without a new init."""
     good = []
-    root = pathlib.Path(REPO).resolve()
+    root = where.repo(space)
     for raw in paths:
         path = pathlib.Path(raw)
         if path.is_absolute():
@@ -135,6 +138,7 @@ def command_status(args) -> int:
 
 def command_doctor(args) -> int:
     space = _space(args)
+    where.repo(space)
     book = Backlog(_backlog_of(space))
     print(doctor_text(diagnose(book, space)))
     return 0

@@ -68,6 +68,7 @@ def spinning(since_accept: list[dict]) -> tuple[str, str] | None:
     come before it in the record. A global cut once let T1's boundary erase a
     T2 ending recorded before it too.
     """
+    since_accept = current_run(since_accept)
     last_boundary: dict[str, int] = {}
     for index, row in enumerate(since_accept):
         if spends_failures(row):
@@ -105,6 +106,7 @@ def needs_slice(rows: list[dict], task_id: str) -> bool:
     parked a rewritten card on its first new failure. The boundary spends its
     OWN task's failures, as `spinning`'s does.
     """
+    rows = current_run(rows)
     boundary = max((index for index, row in enumerate(rows)
                     if row.get("task") == task_id and spends_failures(row)),
                    default=-1)
@@ -113,3 +115,10 @@ def needs_slice(rows: list[dict], task_id: str) -> bool:
                and row.get("task") == task_id]
     counts = collections.Counter(ending_signature(row) for row in endings)
     return max(counts.values(), default=0) >= SLICE_AFTER
+
+
+def current_run(rows: list[dict]) -> list[dict]:
+    """An old ending is history, never an attempt by the current driver."""
+    start = next((index + 1 for index in range(len(rows) - 1, -1, -1)
+                  if rows[index].get("kind") == "driver_started"), 0)
+    return rows[start:]

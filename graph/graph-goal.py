@@ -31,6 +31,7 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "lib"))
 
+import where
 from backlog import Backlog
 from campaign_of import branch_of
 from cli_args import build_parser
@@ -42,6 +43,7 @@ from remember import command_remember  # a hand-run command, never a step of the
 from throttle import Throttle
 from turn_plan import code_first, width_against_lanes
 from workspace_claims import _started
+from workspace_repo import alert_cwd
 
 HERE = pathlib.Path(__file__).resolve().parent
 
@@ -51,7 +53,6 @@ HERE = pathlib.Path(__file__).resolve().parent
 # which repository and campaign — override with GRAPH_REPO / GRAPH_CAMPAIGN /
 # GRAPH_BACKLOG / GRAPH_BRANCH to point the loop at other work.
 from graph_commands import (
-    REPO,
     _backlog_of,
     _real_build,
     _real_review,
@@ -77,8 +78,11 @@ def command_run(args) -> int:
         raise SystemExit("not approved — run `graph-goal.py approve` first")
     if not args.dry_run:   # only a driver claims the campaign; a dry run writes nothing
         space.only_driver()
+    repo = where.repo(space, persist=not args.dry_run)
+    if not args.dry_run:
+        alert_cwd(space, repo)
     book = Backlog(_backlog_of(space))
-    loop = Loop(repo=str(REPO), backlog=book, space=space,
+    loop = Loop(repo=str(repo), backlog=book, space=space,
                 build=_real_build, review=_real_review,
                 branch=branch_of(space))   # the campaign's own reading, shared with the handoff
     started = 0

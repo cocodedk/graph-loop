@@ -88,13 +88,14 @@ def slice_pending(book, space, taking: Sequence[str] = ()) -> None:
     import subprocess
     branch = next((e.get("branch") for e in space.events()
                    if e.get("kind") == "init" and e.get("branch")), "") or where.branch()
-    tip = resolve(str(where.repo()), branch)
+    repo = where.repo(space)
+    tip = resolve(str(repo), branch)
     if not tip:
         # fail CLOSED: slicing an unrelated HEAD would plan against the wrong code
         space.event("slice_skipped", task=label,
-                    why=f"the campaign branch {branch} is not in {where.repo()}")
+                    why=f"the campaign branch {branch} is not in {repo}")
         return
-    with clean_tree.checkout(tip) as (clean, cannot):
+    with clean_tree.checkout(tip, repo) as (clean, cannot):
         if clean is None:
             space.event("slice_skipped", task=label,
                         why=f"no clean checkout of {where.branch()}: {cannot}")

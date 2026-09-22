@@ -39,7 +39,7 @@ def repo_with(task: dict, extra: list | None = None) -> tuple[str, Backlog, Work
     subprocess.run(("git", "commit", "-qm", "first"), cwd=root, capture_output=True,
                    check=True)
     book = Backlog(pathlib.Path(root) / "backlog.yaml")
-    space = Workspace(tempfile.mkdtemp()).init(goal="pilot", backlog=str(book.path))
+    space = Workspace(tempfile.mkdtemp()).init(goal="pilot", backlog=str(book.path), repo=root)
     return root, book, space
 
 

@@ -52,15 +52,14 @@ BRANCH = where.branch()
 def warnings(everything: bool = False) -> list[str]:
     """The section that says something is wrong, in words, before the detail.
 
-    Each line is a failure that really happened while the dashboard sat quiet: a
-    driver running code older than its own fixes, a loop with no pulse, complaints
-    only the doctor knew about. `everything` is the alarm path (`--check`): every
+    Each line is a failure that happened while the dashboard sat quiet.
+    `everything` is the alarm path (`--check`): every
     complaint, where the screen renders four — a capped alarm hid the fifth for
     ever. The cut is made AFTER `stamped`, or a complaint the screen left out
     loses its first-seen time and never reaches the 15-minute email."""
     lines = []
     last_word, seconds_ago = _supervisor_last_word()
-    rows = Workspace(CAMPAIGN).events()   # ONE snapshot for every check below: two reads
+    space = Workspace(CAMPAIGN); rows = space.events()   # one snapshot
     driver_pid = _driver_pid(events=rows)   # this campaign's own, by the pid it announced
     # and this campaign's own supervisor, by the pid it recorded: a matching
     # name is another campaign's as often as ours (round-4 finding 15)
@@ -70,10 +69,11 @@ def warnings(everything: bool = False) -> list[str]:
         lines.append(missing)
     base = recorded_branch(rows, BRANCH)  # could mix two campaign states in one board
     def git(argv: list[str]) -> tuple[int, str, str]:
-        done = subprocess.run(["git", "-C", str(where.repo()), *argv], capture_output=True,
+        done = subprocess.run(["git", "-C", str(where.repo(space, persist=False)), *argv], capture_output=True,
                               text=True, check=False)
         return done.returncode, done.stdout, done.stderr
-    behind = base_measure(base, git, established=has_kept_commit(rows))
+    behind = (base_measure(base, git, established=has_kept_commit(rows))
+              if any(row.get("kind") == "init" for row in rows) else "")
     if behind:
         lines.append(behind)
     started = _driver_start(None, rows)
@@ -159,8 +159,7 @@ SECTIONS = [("the loop", health), ("", warnings), ("", alerts),
 
 def red_flags() -> list[str]:
     """Only what is wrong: a dead supervisor or a stop flag, the warning lines,
-    and the alerts. Empty means the board has nothing to shout about and
-    `--check` exits 0 — the cheap first look before reading the whole screen."""
+    and the alerts. Empty means `--check` exits 0."""
     return health_failures() + warnings(everything=True) + alerts(everything=True)
 
 
