@@ -24,9 +24,16 @@ class NamedFileCoverageTest(unittest.TestCase):
         self.backlog.mkdir()
         self.source = self.repo / 'spec.md'
         self.names = [f'ui/screen{i}/Card.kt' for i in range(8)]
+        self.create_files(self.names)
         self.source.write_text('\n'.join(f'Build `{name}`.' for name in self.names))
         self.rows = [{'id': f'logic{i}', 'status': 'done', 'files': [f'logic/{i}.kt']}
                      for i in range(17)]
+
+    def create_files(self, names):
+        for name in names:
+            path = self.repo / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch()
 
     def answer(self):
         judge = mock.Mock(return_value=types.SimpleNamespace(ok=True, text='ACCEPT'))
@@ -36,7 +43,7 @@ class NamedFileCoverageTest(unittest.TestCase):
                 repo=self.repo, backlog=self.backlog, sources=[self.source], reviewer=judge)
         return result
 
-    def test_seventeen_green_cards_do_not_cover_eight_missing_files(self):
+    def test_seventeen_green_cards_do_not_cover_eight_ungranted_files(self):
         state, reason = self.answer()
         self.assertEqual('coverage_refused', state)
         for name in self.names:
@@ -59,17 +66,26 @@ class NamedFileCoverageTest(unittest.TestCase):
 
     def test_paths_in_prose_links_and_fences_including_absent_files(self):
         self.source.write_text('Build ./ui/New.kt:12, [screen](ui/Other.kt#view)\n'
-                               '```\nui/Third.kt\n```\nand `Root.py`.')
+                               '```\nui/Third.kt\n```\nand `Root.py`, `ui/Absent.kt`.')
         self.rows = [{'id': 'misleading', 'files': ['ui'], 'goal': 'ui/New.kt',
                       'uses': ['ui/Other.kt:view']}]
+        self.assertEqual('covered', self.answer()[0])
+        names = ('ui/New.kt', 'ui/Other.kt', 'ui/Third.kt', 'Root.py')
+        self.create_files(names)
         state, reason = self.answer()
         self.assertEqual('coverage_refused', state)
-        for name in ('ui/New.kt', 'ui/Other.kt', 'ui/Third.kt', 'Root.py'):
+        for name in names:
             self.assertIn(name, reason)
+        self.assertNotIn('ui/Absent.kt', reason)
+        self.rows.append({'id': 'screens', 'files': list(names)})
+        self.assertEqual('covered', self.answer()[0])
 
     def test_extensionless_paths_and_external_urls(self):
         self.source.write_text('Build `Dockerfile` and config/feature. '
                                'See https://example.test/help.html')
+        self.rows = []
+        self.assertEqual('covered', self.answer()[0])
+        self.create_files(['Dockerfile', 'config/feature'])
         self.rows = [{'id': 'build', 'files': ['Dockerfile', 'config/feature']}]
         self.assertEqual('covered', self.answer()[0])
         self.rows[0]['files'].remove('config/feature')
