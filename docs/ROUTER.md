@@ -17,6 +17,10 @@ Confidence must be a finite number in range, not a boolean; low confidence,
 invalid choices, malformed answers and unavailable transport select the first
 eligible configured resource at medium effort, with an explicit reason.
 
+When only one eligible model remains (even across accounts), take its first
+resource without calling Jev and record a fallback with that reason. Use medium,
+or high when the existing failed-medium-build evidence permits it.
+
 All first execution attempts use medium effort. A retry counter alone is not
 proof that medium failed. Higher effort becomes eligible only after the
 campaign records a medium build for this contract followed by a failed work
