@@ -20,6 +20,8 @@ import os
 # The Claude builders first, Astra behind them (issue #67: the belt "may hold" codex
 # rungs; the owner: "bigger models can plan and weaker models can execute").
 _BUILDERS = ("claude-sonnet-5", "claude-opus-5-5", "claude-opus-5", "gpt-6-astra")
+# Strong models shape the work; fast builders execute the resulting slices.
+_PLANNERS = ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5")
 # Checked against the binary, not guessed: gpt-6-astra answered `codex exec
 # -m gpt-6-astra` on 2026-09-08 (the owner: the account's upgrade, high effort,
 # strong at reasoning) and is the default reviewer; gpt-5.6-sol is the model

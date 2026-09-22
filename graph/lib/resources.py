@@ -12,7 +12,7 @@ reason there is more than one of each.
 Every job's belt is the product of what the job can use:
 
     build    each builder model, on its agent and eligible accounts
-    plan     Claude builders only: planners use its text-only tool restrictions
+    plan     each planner model, strong first, on every Claude account
     review   every reviewer model, then claude on every account — a review is
              read-only, so any agent that can read the repository can give one, so no account
     decide   the review belt: a decision reads the repository and answers with
@@ -69,8 +69,9 @@ def belt(job: str) -> list[Resource]:
         # must not go unmade while one model is at capacity.
         return belt("review")
     if job in ("build", "plan"):
+        candidates = models._PLANNERS if job == "plan" else models.builders()
         return [Resource(models.builder_agent(model), account, model)
-                for model in models.builders()
+                for model in candidates
                 if job == "build" or models.builder_agent(model) == "claude"
                 for account in ([None] if models.builder_agent(model) == "codex"
                                 else accounts.available())]

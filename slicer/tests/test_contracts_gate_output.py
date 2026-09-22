@@ -21,7 +21,7 @@ sys.path.insert(0, str(HERE))
 from contracts import validate
 from git_fixture import commit
 
-EXPECTED_TESTS = 16
+EXPECTED_TESTS = 17
 
 
 class GateOutputTest(unittest.TestCase):
@@ -113,6 +113,16 @@ class GateOutputTest(unittest.TestCase):
         gate = 'OUT=zone-claim.out; tee "$OUT"'
         with self.assertRaises(ValueError):
             self.check(gate)
+
+    def test_a_probe_beside_tests_requires_its_exit_cleanup(self):
+        trap = "trap 'rm -f -- \"$probe\"' EXIT\n"
+        gate = ('probe=tests/test_gate_probe.py\n' + trap +
+                'cat > "$probe" <<\'PY\'\n'
+                'def test_probe():\n    assert 1 + 1 == 2\nPY\n'
+                'python3 -m pytest "$probe"')
+        with self.assertRaisesRegex(ValueError, "nothing owns"):
+            self.check(gate.replace(trap, ""))
+        self.assertEqual("MOLECULE", self.check(gate)["result"])
 
     def test_a_pwd_prefixed_target_is_refused(self):
         # $PWD is a real shell variable, but never one this gate assigned
