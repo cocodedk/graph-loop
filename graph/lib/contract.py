@@ -111,7 +111,9 @@ def contract_prompt(task: dict) -> str:
            if task.get("requirement") else "")
         + ("For this judge card, ask what wrong implementation would still pass this judge "
            "and refuse the contract while such an implementation is named.\n"
-           if task.get("gate_until_kept") is True else "")
+           if task.get("gate_until_kept") is True else
+           "If this card's judge is already kept, judge this card's own files and gate, "
+           "not the judge's coverage, and do not require bypass probes or refuse this card for gaps in that judge.\n")
         + writes_its_test + uses_question(task) + fixture_question(task) + "\n"
         + contract_text(task)
         + "Answer with one review JSON line, followed by the distress line:\n  "
