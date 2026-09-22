@@ -26,8 +26,10 @@ TEXT_ANSWER = Outcome("ok", text='{"verdict":"gate","why":"mute check"}')
 
 
 def said(choice: str) -> Outcome:
-    return provider_jev._read(json.dumps({"answers": {"cause": {
-        "type": "choice", "choice": choice, "confidence": 0.9}}}), triage_jev.DECIDING)
+    return provider_jev._read(json.dumps({"answers": {f"cause__{i}": {
+        "type": "choice", "choice": choice, "confidence": 0.9,
+        "probabilities": {key: float(key == choice) for key in triage_jev.CAUSES}}
+        for i in range(4)}}), triage_jev.DECIDING, criteria=tuple(triage_jev.CAUSES))
 
 
 class TableTest(unittest.TestCase):

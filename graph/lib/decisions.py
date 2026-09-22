@@ -56,32 +56,31 @@ def _body(state: dict, questions: dict[str, dict]) -> str:
     where a YAML date is not worth a dead call."""
     if not questions:
         raise _Refused("no question to ask")
-    return json.dumps({"model": provider_jev.MODEL, "state": state, "questions": {
-        qid: {"type": "choice", "instructions": one["instructions"],
-              "criteria": one["criteria"]} for qid, one in questions.items()}},
-        ensure_ascii=False, default=str)
+    expanded = {}
+    for qid, one in questions.items():
+        expanded.update(json.loads(provider_jev.question(
+            state, one["criteria"], instructions=one["instructions"], qid=qid))["questions"])
+    return json.dumps({"model": provider_jev.MODEL, "state": state, "questions": expanded},
+                      ensure_ascii=False, default=str)
 
 
 def _read(whole, questions: dict[str, dict]) -> dict[str, dict]:
     if not isinstance(whole, dict) or "error" in whole:
         raise _Refused("the reply is not an answer object, or carries an error")
     said = whole.get("answers")
-    if not isinstance(said, dict) or set(said) != set(questions):
+    if not isinstance(said, dict) or set(said) != set(json.loads(_body({}, questions))["questions"]):
         raise _Refused("the reply does not answer exactly the questions asked")
-    return {qid: _choice(qid, said[qid], questions[qid]["criteria"]) for qid in questions}
+    return {qid: _choice(qid, {"answers": {
+        name: said[name] for name in json.loads(provider_jev.question(
+            {}, one["criteria"], qid=qid))["questions"]}}, one["criteria"])
+        for qid, one in questions.items()}
 
 
 def _choice(qid: str, one, criteria: dict[str, str]) -> dict:
-    if not isinstance(one, dict) or one.get("type") != "choice" \
-            or not set(one) <= provider_jev.ANSWER_FIELDS:
-        raise _Refused(f"{qid}: not a closed choice answer")
-    chosen = one.get("choice")
-    if not isinstance(chosen, str) or chosen not in criteria:
-        raise _Refused(f"{qid}: the choice is not one of its own criteria")
-    sure = provider_jev._number(one.get("confidence"))
-    if sure is not None and not 0 <= sure <= 1:   # false for NaN and both infinities too
-        raise _Refused(f"{qid}: the confidence is not a number from 0 to 1")
-    return {"choice": chosen, "confidence": sure}
+    answer = provider_jev._answer(one, tuple(criteria), qid)
+    if answer is None:
+        raise _Refused(f"{qid}: not a complete, unambiguous choice average")
+    return {"choice": answer["choice"], "confidence": answer["confidence"]}
 
 
 def _post(body: str) -> str:

@@ -36,7 +36,7 @@ class PathQuestionTest(unittest.TestCase):
                     self.assertEqual((path, .9), (row["path"], row["confidence"]))
                     body = json.loads(ask.call_args.args[0])
                     self.assertEqual(set(options) | {"unknown"},
-                                     set(body["questions"]["cause"]["criteria"]))
+                                     set(body["questions"]["cause__0"]["criteria"]))
                     attempts = [r for r in self.space.events() if r["kind"] == "attempt"]
                     self.assertEqual((.01, 20, "triage"),
                                      tuple(attempts[-1][k] for k in ("cost", "tokens", "purpose")))

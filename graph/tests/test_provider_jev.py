@@ -11,13 +11,14 @@ HERE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE / "lib"))
 from provider_jev import _read, ask, question
 
-EXPECTED_TESTS = 8
+EXPECTED_TESTS = 11
 ALLOWED = ("work", "gate")
 
 
 def body(**fields) -> str:
-    return json.dumps({"answers": {"cause": {
-        "type": "choice", "choice": "work", "confidence": 0.91, **fields}},
+    return json.dumps({"answers": {f"cause__{i}": {
+        "type": "choice", "choice": "work", "confidence": 0.91,
+        "probabilities": {"work": 0.9, "gate": 0.1}, **fields} for i in range(2)},
         "usage": {"input_tokens": 400, "output_tokens": 80, "cost": 1.9e-05}})
 
 
@@ -29,15 +30,13 @@ class ReadTest(unittest.TestCase):
         self.assertIn("confidence 0.91", out.text)
 
     def test_nothing_else_is_a_verdict(self):
-        for raw in ("not json", "{}", '{"answers":{"cause":{"noul":0.9}}}',
+        for raw in ("not json", "{}", body(noul=0.9),
                     '{"answers":[{"type":"choice","choice":"work"}]}',
                     body(type="noul"), body(choice="beats me"),
                     body(choice=["work"]), body(choice={"a": 1}),
                     body(veto="a field this loop does not know"),
-                    ('{"error":{"code":502},"answers":{"cause":'
-                     '{"type":"choice","choice":"work"}}}'),
-                    ('{"answers":{"cause":{"type":"choice","choice":"gate"}},'
-                     '"answers":{"cause":{"type":"choice","choice":"work"}}}')):
+                    body().replace('{"answers":', '{"error":{"code":502},"answers":', 1),
+                    body().replace('{"answers":', '{"answers":{},"answers":', 1)):
             with self.subTest(raw=raw):
                 out = _read(raw, ALLOWED)
                 self.assertFalse(out.ok)
@@ -51,6 +50,38 @@ class ReadTest(unittest.TestCase):
         strings = body().replace("1.9e-05", '"0.02"').replace("400", '"400"')
         out = _read(strings, ALLOWED)   # the same answer, priced as a vendor string
         self.assertEqual(("ok", None, 80), (out.kind, out.cost, out.tokens))
+
+    def test_the_mean_can_overrule_the_first_order_and_ties_are_refused(self):
+        whole = json.loads(body())
+        whole["answers"]["cause__1"]["confidence"] = 0.81
+        self.assertAlmostEqual(0.86, _read(json.dumps(whole), ALLOWED).confidence)
+        whole["answers"]["cause__1"].update(
+            choice="gate", confidence=0.81, probabilities={"gate": 1.0, "work": 0.0})
+        out = _read(json.dumps(whole), ALLOWED)
+        self.assertEqual("gate", out.verdict)
+        self.assertAlmostEqual(0.81, out.confidence)
+        whole["answers"]["cause__1"]["probabilities"] = {"gate": 0.9, "work": 0.1}
+        self.assertFalse(_read(json.dumps(whole), ALLOWED).ok)
+
+    def test_missing_or_invalid_distributions_refuse_with_cost(self):
+        for shares in (None, {}, {"work": 1}, {"work": True, "gate": 0},
+                       {"work": float("nan"), "gate": 0}, {"work": 0.4, "gate": 0.1},
+                       {"work": 0.1, "gate": 0.9}, {"work": 1.1, "gate": -0.1}):
+            out = _read(body(probabilities=shares), ALLOWED)
+            self.assertFalse(out.ok)
+            self.assertEqual(1.9e-05, out.cost)
+        for name in ("cause__0", "cause__1"):
+            whole = json.loads(body())
+            del whole["answers"][name]
+            self.assertFalse(_read(json.dumps(whole), ALLOWED).ok)
+
+    def test_orders_are_distinct_and_independent_of_insertion_order(self):
+        for size, count in ((1, 1), (2, 2), (3, 4), (5, 4)):
+            criteria = {str(i): str(i) for i in range(size)}
+            first = question({}, criteria)
+            self.assertEqual(first, question({}, dict(reversed(list(criteria.items())))))
+            orders = [tuple(q["criteria"]) for q in json.loads(first)["questions"].values()]
+            self.assertEqual(count, len(set(orders)))
 
 
 class CallTest(unittest.TestCase):
@@ -69,7 +100,7 @@ class CallTest(unittest.TestCase):
         self.assertEqual(("~typesafe/jev-latest", "Bearer k"),
                          (sent["body"]["model"], sent["auth"]))
         self.assertEqual("{'a.py'}", sent["body"]["state"]["record"]["files"])
-        asked = sent["body"]["questions"]["cause"]
+        asked = sent["body"]["questions"]["cause__0"]
         self.assertEqual("choice", asked["type"])
         self.assertEqual(["work"], sorted(asked["criteria"]))
 
