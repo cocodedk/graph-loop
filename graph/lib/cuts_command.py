@@ -7,6 +7,7 @@ import sys
 
 import where
 from workspace import Workspace
+from workspace_claims import say
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "slicer"))
 
@@ -21,14 +22,14 @@ from cut_states import (  # type: ignore[import-not-found]
 
 def command_cuts(args) -> int:
     if args.state and not args.by:
-        print("cuts: --state needs --by, so the history says who switched it", file=sys.stderr)
+        say("cuts: --state needs --by, so the history says who switched it", file=sys.stderr)
         return 2
     root = Workspace(args.workspace or where.campaign()).root
     if args.state:
         switch(root, args.state, args.by)
-        print(args.state)
+        say(args.state)
         return 0
-    print(load(root))
+    say(load(root))
     for entry in _read(root).get("history") or []:
-        print(f"{entry['to']} by {entry['by']} at {entry['at']}")
+        say(f"{entry['to']} by {entry['by']} at {entry['at']}")
     return 0

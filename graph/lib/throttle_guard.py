@@ -22,6 +22,7 @@ here when a fault lands on it.
 from __future__ import annotations
 
 from machine_load import Load
+from workspace_claims import say
 
 ONE = 1                    # what a throttler that is not sure runs
 SPOILT = Load(broke=True)  # and what it then knows about the turn: nothing
@@ -52,7 +53,7 @@ class Guarded:
 
     def _said(self, what: str, why: str) -> None:
         """Say it wherever anything will listen, and never mind what will not."""
-        self._tried(lambda: print(f"  the throttler could not manage {what}: {why}"))
+        self._tried(lambda: say(f"  the throttler could not manage {what}: {why}"))
         self._tried(lambda: self.space.event("throttle_fault", what=what, why=why))
 
     @staticmethod

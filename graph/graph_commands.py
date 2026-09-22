@@ -31,6 +31,7 @@ from turn import (  # noqa: F401 — the door stays here
 )
 from waves import say as say_waves
 from workspace import Workspace
+from workspace_claims import say
 from workspace_repo import initial_root
 
 DEFAULT_WORKSPACE = where.campaign()
@@ -59,11 +60,11 @@ def command_init(args) -> int:
     # finds an existing campaign changes nothing, and printing the argument
     # back read as confirmation that it had been recorded.
     kept = Backlog(backlog_of(space))
-    print(f"campaign at {space.root}\nbacklog {kept.path} — {len(kept.tasks())} tasks")
+    say(f"campaign at {space.root}\nbacklog {kept.path} — {len(kept.tasks())} tasks")
     if kept.path != book.path:
-        print(f"this campaign already existed: it still points at {kept.path}, "
+        say(f"this campaign already existed: it still points at {kept.path}, "
               f"not at {book.path}")
-    print("nothing runs until: graph-goal.py approve")
+    say("nothing runs until: graph-goal.py approve")
     return 0
 
 
@@ -92,7 +93,7 @@ def declare_sources(space, paths: list[str]) -> list[str]:
 def command_sources(args) -> int:
     space = _space(args)
     good = declare_sources(space, args.source)
-    print(f"approved sources recorded: {', '.join(good) or 'none'}")
+    say(f"approved sources recorded: {', '.join(good) or 'none'}")
     return 0
 
 
@@ -100,7 +101,7 @@ def command_approve(args) -> int:
     space = _space(args)
     (space.root / "approved").write_text("approved\n", "utf-8")
     space.event("approved")
-    print("approved — `run` will now start tasks")
+    say("approved — `run` will now start tasks")
     return 0
 
 
@@ -110,28 +111,28 @@ def command_status(args) -> int:
     rows = space.events()
     book = Backlog(_backlog_of(space))
     done = [row for row in book.tasks() if row.get("status") == "done"]
-    print(f"campaign {space.root}")
-    print(f"  approved: {(space.root / 'approved').exists()}   stopping: {space.stopping()}")
-    print(f"  tasks: {len(done)} done of {len(book.tasks())}")
+    say(f"campaign {space.root}")
+    say(f"  approved: {(space.root / 'approved').exists()}   stopping: {space.stopping()}")
+    say(f"  tasks: {len(done)} done of {len(book.tasks())}")
     say_nodes(book.tasks())
     running = space.running()
-    print(f"  running: {', '.join(running) or 'nothing'}")
+    say(f"  running: {', '.join(running) or 'nothing'}")
     held = [row['id'] for row in book.waiting_for_human()]
     if held:
         # The hold stays on the card as stored evidence; nothing takes it off
         # but a person, and the campaign ends naming it.
-        print(f"  held on the card: {', '.join(held)}")
+        say(f"  held on the card: {', '.join(held)}")
     ready = [row["id"] for row in book.startable(running=list(running))]
-    print(f"  ready now: {', '.join(ready) or 'nothing'}")
+    say(f"  ready now: {', '.join(ready) or 'nothing'}")
     say_waves(book.tasks(), running=list(running))
     out = report(space)
-    print(f"  attempts recorded: {sum(1 for r in rows if r.get('kind') == 'attempt')}"
+    say(f"  attempts recorded: {sum(1 for r in rows if r.get('kind') == 'attempt')}"
           f"   known spend: ${out['spend_known']:.2f}")
     if out["review_spend_known"] or out["review_calls_unknown_cost"]:
-        print(f"  reviews: ${out['review_spend_known']:.2f} known, "
+        say(f"  reviews: ${out['review_spend_known']:.2f} known, "
               f"{out['review_calls_unknown_cost']} calls with no figure")
     for row in rows[-5:]:
-        print(f"  {row['at']}  {row['kind']:<10} {row.get('task', '')} "
+        say(f"  {row['at']}  {row['kind']:<10} {row.get('task', '')} "
               f"{str(row.get('why', ''))[:60]}")
     return 0
 
@@ -140,13 +141,13 @@ def command_doctor(args) -> int:
     space = _space(args)
     where.repo(space)
     book = Backlog(_backlog_of(space))
-    print(doctor_text(diagnose(book, space)))
+    say(doctor_text(diagnose(book, space)))
     return 0
 
 
 def command_report(args) -> int:
     space = _space(args)
-    print(as_text(report(space)))
+    say(as_text(report(space)))
     return 0
 
 
@@ -155,9 +156,9 @@ def command_stop(args) -> int:
     space.stop()
     if args.now:
         stopped = space.kill_running()
-        print(f"stopped now; signalled {stopped or 'nothing'}; worktrees kept")
+        say(f"stopped now; signalled {stopped or 'nothing'}; worktrees kept")
     else:
-        print("stopping after the running tasks finish")
+        say("stopping after the running tasks finish")
     return 0
 
 
