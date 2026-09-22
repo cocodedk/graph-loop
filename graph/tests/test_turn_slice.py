@@ -62,7 +62,7 @@ def routed(route):
 
 
 def space(sources=("simulation/spec",)):
-    out = Workspace(tempfile.mkdtemp()).init(goal="t", backlog="x")
+    out = Workspace(tempfile.mkdtemp()).init(goal="t", backlog="x", repo=tempfile.gettempdir())
     if sources:
         out.event("sources_declared", sources=list(sources))
     return out
@@ -87,6 +87,7 @@ class SlicePendingTest(unittest.TestCase):
             slice_turn.slice_pending(book, s)
         self.assertEqual(1, len(route.slicer_calls))
         argv = route.slicer_calls[0]
+        self.assertEqual("deadbeef", argv[argv.index("--tip") + 1])
         self.assertIn("--target", argv)
         self.assertIn("T1", argv)
         finished = [e for e in s.events() if e.get("kind") == "slice_finished"]

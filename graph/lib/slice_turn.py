@@ -15,6 +15,7 @@ import clean_tree
 import runner
 import source_gap
 import where
+from campaign_of import branch_of
 from finishing import declared_sources
 from keep_branch import resolve
 from slice_outcome import MAX_SLICES, record_outcome
@@ -86,20 +87,20 @@ def slice_pending(book, space, taking: Sequence[str] = ()) -> None:
     # the slicer reads a CLEAN checkout of the campaign branch tip — the
     # main checkout is a working tree whose edits are nobody's record
     import subprocess
-    branch = next((e.get("branch") for e in space.events()
-                   if e.get("kind") == "init" and e.get("branch")), "") or where.branch()
-    tip = resolve(str(where.repo()), branch)
+    branch = branch_of(space)
+    repo = where.repo(space)          # the workspace's own repository, not the caller's cwd
+    tip = resolve(str(repo), branch)
     if not tip:
         # fail CLOSED: slicing an unrelated HEAD would plan against the wrong code
         space.event("slice_skipped", task=label,
-                    why=f"the campaign branch {branch} is not in {where.repo()}")
+                    why=f"the campaign branch {branch} is not in {repo}")
         return
-    with clean_tree.checkout(tip) as (clean, cannot):
+    with clean_tree.checkout(tip, repo) as (clean, cannot):
         if clean is None:
             space.event("slice_skipped", task=label,
                         why=f"no clean checkout of {where.branch()}: {cannot}")
             return
-        argv = [_sys.executable, str(slicer), "--repo", str(clean),
+        argv = [_sys.executable, str(slicer), "--repo", str(clean), "--tip", tip,
                 "--backlog", str(book.path), "--campaign", str(space.root)]
         goal = next((e.get("goal") for e in space.events() if e.get("kind") == "init"), "")
         if goal:

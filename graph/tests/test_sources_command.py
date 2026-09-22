@@ -33,7 +33,7 @@ class SourceEscapeTest(unittest.TestCase):
         (self.repo / "spec" / "a.md").write_text("x")
         self.outside = pathlib.Path(tempfile.mkdtemp())
         (self.outside / "b.md").write_text("y")
-        patch = unittest.mock.patch.object(graph_commands, "REPO", str(self.repo))
+        patch = unittest.mock.patch.object(graph_commands.where, "repo", return_value=self.repo)
         patch.start(); self.addCleanup(patch.stop)
 
     def test_a_dotdot_path_is_refused(self):

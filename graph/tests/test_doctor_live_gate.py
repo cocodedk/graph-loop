@@ -12,7 +12,7 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 os.environ.setdefault("GRAPH_HELPER", "/repo/bin/sc")   # the repository's own command tool
 
-from test_doctor import book
+from test_doctor import REPO, book
 
 EXPECTED_TESTS = 2
 
@@ -20,7 +20,7 @@ class LiveGateAbsolutePathTest(unittest.TestCase):
     def test_a_live_gate_may_name_the_helper_by_absolute_path(self):
         # the live guard forbids worktree copies of the helper, so the
         # absolute path is the law there, not a fault
-        from doctor import REPO, check_backlog
+        from doctor import check_backlog
         from tools import helper
         live = book(gate=f"{helper()} story run-x",
                     gate_has_side_effects=True)

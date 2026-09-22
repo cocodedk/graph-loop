@@ -6,6 +6,7 @@ import pathlib
 import sys
 
 from slicer_graph import _assert_no_cycle, _graph
+from tip_files import reader
 
 GRAPH_LIB = pathlib.Path(__file__).resolve().parents[1] / "graph" / "lib"
 sys.path.insert(0, str(GRAPH_LIB))
@@ -21,8 +22,8 @@ def assert_wall(task: dict) -> None:
         raise ValueError(f"{task.get('id')} is not a stuck CODE card the slicer may take")
 
 
-def available(leaves: list[dict], repo: pathlib.Path) -> None:
-    look, prior, prior_files = names.present(repo), set(), set()
+def available(leaves: list[dict], repo: pathlib.Path, tip: str = "HEAD") -> None:
+    read, prior, prior_files = reader(repo, tip), set(), set()
     staged: dict[int, list[dict]] = {}
     for leaf in leaves:
         staged.setdefault(int(leaf.get("stage") or 1), []).append(leaf)
@@ -31,7 +32,7 @@ def available(leaves: list[dict], repo: pathlib.Path) -> None:
         files_here: set[str] = set()
         for leaf in staged[stage]:
             missing = [path for path in leaf["files"]
-                       if path not in prior_files and not (repo / path).exists()]
+                       if path not in prior_files and read(path) is None]
             if missing and not leaf.get("may_add_files"):
                 raise ValueError("a task that creates a file requires may_add_files: true: "
                                  + ", ".join(missing))
@@ -39,8 +40,9 @@ def available(leaves: list[dict], repo: pathlib.Path) -> None:
             for name in own:
                 names.split(name)
             for name in leaf.get("uses") or []:
-                names.split(name)
-                if name not in prior and name not in own and not look(name):
+                path, text = names.split(name)
+                body = read(path)
+                if name not in prior and name not in own and (body is None or text not in body):
                     raise ValueError(f"{leaf.get('name', 'molecule')} uses unavailable name {name}")
             created_here |= own
             files_here |= set(leaf["files"])

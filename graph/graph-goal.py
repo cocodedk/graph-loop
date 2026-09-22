@@ -31,10 +31,12 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "lib"))
 
+import where
 from backlog import Backlog
 from campaign_of import branch_of
 from cli_args import build_parser
 from cuts_command import command_cuts
+from doctor_auth import run_accounts
 from driver_turn import after_lanes, before_turn
 from finishing import stand_down
 from loop import Loop
@@ -42,6 +44,7 @@ from remember import command_remember  # a hand-run command, never a step of the
 from throttle import Throttle
 from turn_plan import code_first, width_against_lanes
 from workspace_claims import _started
+from workspace_repo import alert_cwd
 
 HERE = pathlib.Path(__file__).resolve().parent
 
@@ -51,7 +54,6 @@ HERE = pathlib.Path(__file__).resolve().parent
 # which repository and campaign — override with GRAPH_REPO / GRAPH_CAMPAIGN /
 # GRAPH_BACKLOG / GRAPH_BRANCH to point the loop at other work.
 from graph_commands import (
-    REPO,
     _backlog_of,
     _real_build,
     _real_review,
@@ -77,13 +79,23 @@ def command_run(args) -> int:
         raise SystemExit("not approved — run `graph-goal.py approve` first")
     if not args.dry_run:   # only a driver claims the campaign; a dry run writes nothing
         space.only_driver()
+        space.event("driver_started", pid=os.getpid(), started=_started(os.getpid()))
+        with run_accounts(space) as remaining:
+            if not remaining:
+                return stood_down(space, 1, "no account can sign in")
+            return _run(args, space)
+    return _run(args, space)
+
+
+def _run(args, space) -> int:
+    repo = where.repo(space, persist=not args.dry_run)
+    if not args.dry_run:
+        alert_cwd(space, repo)
     book = Backlog(_backlog_of(space))
-    loop = Loop(repo=str(REPO), backlog=book, space=space,
+    loop = Loop(repo=str(repo), backlog=book, space=space,
                 build=_real_build, review=_real_review,
                 branch=branch_of(space))   # the campaign's own reading, shared with the handoff
     started = 0
-    if not args.dry_run:   # a dry run is not the driver: it announces nothing and reads no flag
-        space.event("driver_started", pid=os.getpid(), started=_started(os.getpid()))   # the board reads this
     started_at = space.code_digest()   # what the code IS, so a touched mtime is not a change
     # `--lanes auto` only: with a number, and in a dry run, this does nothing
     # at all — no reading of the machine, no file, no event.
@@ -142,6 +154,8 @@ def command_run(args) -> int:
             # without anybody doing anything, so the loop waits for it. This is
             # the one thing the driver waits on, and it never waits on a person.
             print("  the fault is outside the tasks")
+            space.alert("the campaign", f"the fault is outside the tasks; cooling down for "
+                        f"{args.idle_seconds} seconds before retrying")
             space.event("pause", tasks=[row["id"] for row in taking], sleep=args.idle_seconds)
             space.idle(args.idle_seconds)
     return 0

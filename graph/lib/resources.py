@@ -60,7 +60,7 @@ def belt(job: str) -> list[Resource]:
         # every change was reviewed by the model that wrote it.
         return ([Resource("codex", None, model) for model in models.reviewers()]
                 + [Resource("claude", account, model)
-                   for account in accounts.names()
+                   for account in accounts.available()
                    for model in models.claude_reviewers()])
     if job == "decide":
         # The same resources, for the same reason: a decision reads and writes
@@ -71,7 +71,7 @@ def belt(job: str) -> list[Resource]:
         return belt("review")
     if job in ("build", "plan"):
         return [Resource("claude", account, model)
-                for account in accounts.names() for model in models.builders()]
+                for account in accounts.available() for model in models.builders()]
     raise KeyError(f"no belt for {job!r}; the loop knows build, plan, review and decide")
 
 

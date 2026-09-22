@@ -13,6 +13,7 @@ import yaml  # type: ignore[import-untyped]
 HERE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE))
 from contracts import mapping, validate
+from git_fixture import commit
 
 EXPECTED_TESTS = 19
 
@@ -26,6 +27,7 @@ class Contracts(unittest.TestCase):
         (self.repo / "existing.py").write_text("present = True\n", "utf-8")
         (self.repo / "app.py").write_text("present = True\n", "utf-8")
         (self.repo / "reader.py").write_text("present = True\n", "utf-8")
+        commit(self.repo)
 
     def atom(self, **changes) -> dict:
         body = {"name": "greeting", "source": ["specs/greeting.md:2"],
@@ -162,6 +164,7 @@ class Contracts(unittest.TestCase):
     def test_a_gate_that_runs_an_owned_test_needs_the_flag(self):
         (self.repo / "tests").mkdir()
         (self.repo / "tests" / "test_app.py").write_text("present = True\n", "utf-8")
+        commit(self.repo)
         owned = self.atom(files=["app.py", "tests/test_app.py"],
                           gate="set -e -o pipefail\npython3 -m unittest tests.test_app")
         with self.assertRaises(ValueError) as caught:

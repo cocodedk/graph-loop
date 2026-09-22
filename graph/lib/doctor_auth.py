@@ -13,6 +13,7 @@ has not expired, or can refresh itself.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import pathlib
 import time
@@ -26,15 +27,35 @@ from doctor_types import Complaint
 
 def check_auth(_campaign: pathlib.Path | None = None, homes=None) -> list[Complaint]:
     """Every account whose stored credential cannot answer a call right now."""
+    dead = _dead(homes)
+    return [_complaint(dead)] if dead else []
+
+
+def _dead(homes=None) -> list[tuple[str, str]]:
     homes = homes if homes is not None else [(name, str(accounts.home(name)))
                                              for name in accounts.names()]
-    dead = [name for name, home in homes if not _can_sign_in(pathlib.Path(home).expanduser())]
-    if not dead:
-        return []
-    return [Complaint(
-        "an account", f"{', '.join(dead)} cannot sign in: the stored session has expired and carries no "
+    return [(name, home) for name, home in homes
+            if not _can_sign_in(pathlib.Path(home).expanduser())]
+
+
+def _complaint(dead) -> Complaint:
+    return Complaint(
+        "an account", f"{', '.join(name for name, _ in dead)} cannot sign in: the stored session has expired and carries no "
         "refresh token, so every call on it is refused",
-        " and ".join(f"`{_login(name, home)}`" for name, home in homes if name in dead))]
+        " and ".join(f"`{_login(name, home)}`" for name, home in dead))
+
+
+@contextlib.contextmanager
+def run_accounts(space):
+    """Retire known unusable accounts before routing, with one alert for the run."""
+    dead = _dead()
+    if dead:
+        complaint = _complaint(dead)
+        why = f"{complaint.what}; retired for this run. Sign in with {complaint.do}"
+        space.alert(complaint.about, why, limit=None)  # keep every account's login command
+        print(why)
+    with accounts.without(name for name, _ in dead) as remaining:
+        yield remaining
 
 
 def _login(name: str, home: str) -> str:

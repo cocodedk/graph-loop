@@ -19,15 +19,13 @@ import subprocess
 import tempfile
 from collections.abc import Iterator
 
-import where
-
 # The name the slicer's own leak test knows (`test_turn_slice_tmp`); every
 # checkout this cuts is one planning or deciding call's, whoever asked.
 PREFIX = "slice-repo-"
 
 
 @contextlib.contextmanager
-def checkout(tip: str) -> Iterator[tuple[pathlib.Path | None, str]]:
+def checkout(tip: str, repo: pathlib.Path) -> Iterator[tuple[pathlib.Path | None, str]]:
     """The checkout of `tip`, or None and why there is none.
 
     Fail CLOSED is the caller's job and every caller does it: reading an
@@ -47,7 +45,7 @@ def checkout(tip: str) -> Iterator[tuple[pathlib.Path | None, str]]:
     parent = None
     try:
         parent = pathlib.Path(tempfile.mkdtemp(prefix=PREFIX))
-        made = subprocess.run(["git", "-C", str(where.repo()), "worktree", "add",
+        made = subprocess.run(["git", "-C", str(repo), "worktree", "add",
                                "--detach", "-f", str(parent / "tree"), tip],
                               capture_output=True, text=True, check=False)
         cut = (None, made.stderr.strip()[:200]) if made.returncode else (parent / "tree", "")
@@ -58,7 +56,7 @@ def checkout(tip: str) -> Iterator[tuple[pathlib.Path | None, str]]:
     finally:
         if parent is not None:
             try:
-                subprocess.run(["git", "-C", str(where.repo()), "worktree", "remove",
+                subprocess.run(["git", "-C", str(repo), "worktree", "remove",
                                 "--force", str(parent / "tree")],
                                capture_output=True, check=False)
             except OSError:

@@ -30,6 +30,7 @@ from workspace_flags import (  # noqa: F401 — STOP is this module's name too
 )
 from workspace_lock import LockMixin
 from workspace_log import repair_tail
+from workspace_repo import initial_root
 
 
 class Workspace(ClaimsMixin, FlagsMixin, AlertsMixin, LockMixin):
@@ -46,9 +47,7 @@ class Workspace(ClaimsMixin, FlagsMixin, AlertsMixin, LockMixin):
         self._events_key: tuple | None = None    # (path, size, mtime_ns) per part
         self._events_rows: list[dict] = []
 
-    # ------------------------------------------------------------------ setup
-
-    def init(self, *, goal: str, backlog: str, branch: str = "") -> Workspace:
+    def init(self, *, goal: str, backlog: str, branch: str = "", repo: str = "") -> Workspace:
         """Record what this campaign is pointed at, once.
 
         The guard asks whether an init event is HERE, not whether the events
@@ -59,7 +58,8 @@ class Workspace(ClaimsMixin, FlagsMixin, AlertsMixin, LockMixin):
         the driver's own directory (2026-09-18).
         """
         if not any(row.get("kind") == "init" for row in self.events()):
-            self.event("init", goal=goal, backlog=backlog, branch=branch)
+            self.event("init", goal=goal, backlog=backlog, branch=branch,
+                       repo=repo or str(initial_root()))
         return self
 
     # ----------------------------------------------------------------- events
