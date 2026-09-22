@@ -9,6 +9,8 @@ complaint twice or six actual rounds end replanning.
 from __future__ import annotations
 
 import dataclasses
+import pathlib
+import sys
 
 import distress
 import yaml  # type: ignore[import-untyped]  # no stubs in this environment
@@ -27,16 +29,16 @@ from replan_budget import (  # noqa: F401 — public constant
 from replan_prompt import prompt_for
 from resources import refused_before_reading
 
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "slicer"))
+from contract_yaml import quote_plain_values
+
 # What a rewrite keeps: identity, lineage, place in the graph, what it has spent.
 KEEP = ("id", "why", "needs", "status", "sliced_from", "blocked_by_human",
         "gate_has_side_effects", "replans", "replan_history")
 WANTED = ("goal", "files", "done_when", "gate")
-# The gate is in here because 142 of 153 contract refusals were ABOUT the gate —
-# "it can pass without the work" — and a repair step forbidden to touch the gate
-# hands back the same card the reviewer just refused, for ever. Proving a gate
-# red RUNS it, so a rewritten one is marked `gate_reviewed_first` and the loop
-# reviews the contract before anything executes it. A LIVE gate performs the work
-# itself and stays the commander's.
+# 142 of 153 contract refusals concerned gates that could pass without the work.
+# Rewritten gates get gate_reviewed_first before execution; LIVE gates stay
+# the commander's.
 
 
 @dataclasses.dataclass
@@ -52,7 +54,10 @@ def _parse(text: str, *, strict: bool = False) -> dict | None:
         body = body.split("```")[1]
         body = body.split("\n", 1)[1] if body.lstrip().startswith("yaml") else body
     try:
-        loaded = yaml.safe_load(body)
+        try:
+            loaded = yaml.safe_load(body)
+        except (yaml.scanner.ScannerError, yaml.parser.ParserError):
+            loaded = yaml.safe_load(quote_plain_values(body))
     except yaml.YAMLError:
         if strict:
             raise
@@ -115,14 +120,8 @@ def replan(backlog, task: dict, planner, *, space=None) -> Replanned:
         return Replanned(False, f"replan stopped: {stopped}; it waits for a person")
     out = planner(prompt_for(task))
     with backlog.only_writer():
-        # The planner call takes minutes. A hold raised in that window, or a
-        # contract edited in it, is a person's decision newer than everything
-        # this rewrite was decided from: storing it would clear the hold or
-        # bury the edit — and so would charging it a round. Asked FIRST, and
-        # read and written as one, or the person's write lands between the
-        # two. No round is spent — nobody judged the contract as it now
-        # stands, and `replan_until_planned` stops on a spent-nothing answer
-        # rather than asking again.
+        # Under the lock, honor holds or contract edits made during planning.
+        # No round is spent on the changed card; replan_until_planned stops.
         moved = moved_under(backlog.task(task["id"]), task)
         if moved:
             return Replanned(False, moved)
