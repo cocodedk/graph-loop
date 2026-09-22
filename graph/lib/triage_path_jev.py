@@ -13,6 +13,8 @@ INSTRUCTIONS = ("Which prepared path should this stalled card take? Choose exact
                 "Use needs_person only when the evidence cannot support another path.")
 OPTIONS = {
     "judge_gap": {
+        "slice": "no rewrite of this card can satisfy the refusal (its judge is kept, "
+                 "or the card holds more than one idea); send it to the slicer now",
         "probe_in_gate": "the refusal names a concrete bypass or case the frozen judge misses; "
                          "default for a named case: replan with an executed probe in this card's gate",
         "accept_with_observation": "the refusal is an opinion, not a concrete bypass; "
