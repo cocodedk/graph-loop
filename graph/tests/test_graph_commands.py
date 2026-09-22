@@ -161,7 +161,7 @@ class TimestampedOutputTest(unittest.TestCase):
         stamp = "2026-09-22T12:34:56Z"
         with contextlib.redirect_stdout(output), \
              unittest.mock.patch.object(output, "flush") as flushed, \
-             unittest.mock.patch.object(graph_commands, "_now", return_value=stamp), \
+             unittest.mock.patch("workspace_claims._now", return_value=stamp), \
              unittest.mock.patch.object(graph_commands, "_space"), \
              unittest.mock.patch.object(graph_commands, "report"), \
              unittest.mock.patch.object(graph_commands, "as_text", return_value="first\n\nlast\n"):
