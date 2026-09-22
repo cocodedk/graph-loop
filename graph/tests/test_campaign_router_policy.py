@@ -13,7 +13,7 @@ from contract import contract_digest
 from resources import Resource
 from router_probe import CARD, CATALOG, Decisions
 
-EXPECTED_TESTS = 16
+EXPECTED_TESTS = 18
 
 
 class RouterPolicyTest(unittest.TestCase):
@@ -134,6 +134,47 @@ class RouterPolicyTest(unittest.TestCase):
         self.choose(Decisions(), space=space)
         record = [row for row in space.events() if row["kind"] == "routed"][-1]
         self.assertEqual(0.001, record["cost"])
+
+    def test_single_model_skips_jev_and_records_the_first_eligible_resource(self):
+        one = Resource("claude", "work", "claude-opus-5")
+        other_account = Resource("claude", "personal", one.model)
+        builder = Resource("codex", None, "gpt-6-astra")
+        for job, belt, built_by in (("build", [one], ""), ("review", [one], ""),
+                                   ("build", [one, other_account], ""),
+                                   ("review", [builder, one], builder.model)):
+            with self.subTest(job=job, belt=belt):
+                _, space = campaign([CARD])
+                with patch("resources.belt", return_value=belt), \
+                     patch("model_router.ask") as ask:
+                    result = self.router.choose(CARD, job, space=space, builder_model=built_by)
+                ask.assert_not_called()
+                self.assertEqual((one, "medium", "fallback"),
+                                 (result.resource, result.effort, result.source))
+                record = [row for row in space.events() if row["kind"] == "routed"][-1]
+                self.assertEqual((one.model, "medium", "fallback", contract_digest(CARD)),
+                                 (record["model"], record["effort"], record["source"],
+                                  record["contract_digest"]))
+                self.assertEqual("only one eligible model", record["why"])
+                self.assertIsNone(record["cost"])
+
+    def test_single_model_effort_uses_recorded_failure_and_respects_router_off(self):
+        one = Resource("codex", None, "gpt-6-astra")
+        _, space = campaign([CARD])
+        space.event("routed", task=CARD["id"], purpose="build", effort="medium",
+                    contract_digest=contract_digest(CARD))
+        space.event("step", task=CARD["id"], step="build", outcome="ok", effort="medium")
+        space.event("failed", task=CARD["id"], step="gate", why="regression fails")
+        for card, job, mode, effort in ((CARD, "build", "jev", "high"),
+                                       ({**CARD, "goal": "changed"}, "build", "jev", "medium"),
+                                       (CARD, "review", "jev", "medium"),
+                                       (CARD, "build", "off", "medium")):
+            with self.subTest(job=job, mode=mode, effort=effort):
+                with patch("resources.belt", return_value=[one]), \
+                     patch.dict("os.environ", {"GRAPH_ROUTER": mode}), \
+                     patch("model_router.ask") as ask:
+                    result = self.router.choose(card, job, space=space)
+                ask.assert_not_called()
+                self.assertEqual(effort, result.effort)
 
     def test_count(self):
         self.assertEqual(EXPECTED_TESTS, unittest.defaultTestLoader.loadTestsFromModule(

@@ -46,6 +46,10 @@ def choose(task: dict, job: str, *, space=None, builder_model: str = "") -> Choi
     if os.environ.get("GRAPH_ROUTER", "jev") == "off":
         return _record(space, task, job, belt[0], "medium", "fallback", "GRAPH_ROUTER=off")
 
+    if len({resource.model for resource in belt}) == 1:
+        return _record(space, task, job, belt[0], _efforts(task, job, space)[-1],
+                       "fallback", "only one eligible model")
+
     offer = _offer(belt, _efforts(task, job, space))
     state = {"task": task.get("id"), "job": job, "goal": task.get("goal")}
     criteria = {key: _describe(*pair) for key, pair in offer.items()}
