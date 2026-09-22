@@ -79,9 +79,11 @@ class TransientLoopTest(unittest.TestCase):
             self.assertEqual(2, len(calls))
             self.assertEqual([("todo", 2)] * 2,
                              [(row["status"], row["rebuild_round"]) for row in book.tasks()])
-            alerts = [row for row in space.events() if row["kind"] == "alert"]
+            # The cooldown's own alert, not every alert this run may carry: a
+            # launch directory in another repository writes one of its own.
+            alerts = [row for row in space.events()
+                      if row["kind"] == "alert" and row["task"] == "the campaign"]
             self.assertEqual(1, len(alerts))
-            self.assertEqual("the campaign", alerts[0]["task"])
             pauses.append(seconds)
 
         loop.build = builder

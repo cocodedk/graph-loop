@@ -65,7 +65,10 @@ class DriverRepositoryTest(unittest.TestCase):
             self.assertEqual(0, graph_goal.main(self.argv + ["run", "--lanes", "1", "--max-tasks", "1"]))
         self.assertEqual("done", self.book.task("T1")["status"],
                          [row.get("why") for row in self.space.events() if row["kind"] == "failed"])
-        self.assertIn("build:work", fakes.calls)
+        # Whichever account survives this machine's sign-in check builds it:
+        # this card's subject is the repository, not the account it was routed to.
+        self.assertTrue([call for call in fakes.calls if call.startswith("build:")],
+                        fakes.calls)
         self.assertEqual("two", git(self.repo, "show", "campaign/test:a.py"))
         self.assertEqual(other_head, git(self.other, "rev-parse", "HEAD"))
         alerts = [row for row in self.space.events()
