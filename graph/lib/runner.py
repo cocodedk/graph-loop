@@ -1,35 +1,21 @@
-"""The one place a gate or model-provider child process is started, and the
-only place it is killed.
+"""Start commands and close their process groups on every ending.
 
-`subprocess.run(..., timeout=...)` kills only the process it started
-directly. A background job that child spawned — a gate's trailing `&`, a
-model CLI's own helper — keeps its own pid, survives that kill, and keeps
-writing after the caller has already read the output and moved on. A
-reviewer's proof showed exactly that.
-
-`start_new_session=True` makes the child the leader of its own process
-group, so any ending can signal the whole group by one pid instead of the
-one process Python happened to fork.
-
-That same detachment is why the driver's own death reaches nothing: a
-SIGKILL — a person's, the OOM killer's, the full disk of 2026-09-03 — runs
-no `finally`, and every builder, gate, planner and slicer keeps running and
-keeps spending, with a restarted driver free to hand the same worktree to a
-second builder. Linux binds a child's life to its parent's for us:
-`PR_SET_PDEATHSIG` asks the kernel to signal the child the moment the
-process that forked it dies. It reaches the DIRECT child only — a job that
-child started with `&` outlives its own leader — and containing a whole
-group in a scope that dies with its owner (a cgroup, `systemd-run`) is not
-built here.
+Card commands run through a parent that also reaps detached descendants.
+The driver holds their actual child handles until turn-end cleanup.
 """
 
 from __future__ import annotations
 
 import ctypes
 import os
+import pathlib
 import signal
 import subprocess
+import sys
+import threading
 import time
+
+owned = threading.local()  # actual child handles, held by the driver turn
 
 GRACE_SECONDS = 5   # how long a group gets to die from SIGTERM before SIGKILL
 PR_SET_PDEATHSIG = 1
@@ -64,6 +50,11 @@ def run(argv: list[str], *, stdin: str = "", env: dict[str, str] | None = None,
         for name in drop:
             environment.pop(name, None)
     driver = os.getpid()
+    card = hasattr(owned, "processes")
+    if card and owned.stopping.is_set():
+        raise InterruptedError("the driver turn is closing")
+    command = ([sys.executable, str(pathlib.Path(__file__).with_name("command_owner.py")),
+                str(driver), *argv] if card else argv)
 
     def die_with_the_driver() -> None:
         """In the child, after `setsid`, before `exec`. A refusal here is a
@@ -72,12 +63,12 @@ def run(argv: list[str], *, stdin: str = "", env: dict[str, str] | None = None,
         rather than starting it. The kernel clears the request when the
         parent is ALREADY gone, so the pid is read back — a driver killed
         between the fork and this line would otherwise leave it unbound."""
-        if _prctl(PR_SET_PDEATHSIG, signal.SIGKILL) != 0:
+        if _prctl(PR_SET_PDEATHSIG, signal.SIGTERM if card else signal.SIGKILL) != 0:
             raise OSError(ctypes.get_errno(), "PR_SET_PDEATHSIG")
         if os.getppid() != driver:
             os._exit(1)
 
-    with subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+    with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE, text=True, env=environment,
                           cwd=cwd, start_new_session=True,
                           # ruff PLW1509: this driver runs lanes on threads, and a
@@ -90,14 +81,22 @@ def run(argv: list[str], *, stdin: str = "", env: dict[str, str] | None = None,
                           # caller. ponytail: preexec_fn, a cgroup or an execed
                           # binary wrapper if it ever hangs a lane.
                           preexec_fn=die_with_the_driver) as proc:   # noqa: PLW1509
+        if card:
+            owned.processes.append(proc)
         try:
+            if card and owned.stopping.is_set():
+                raise InterruptedError("the driver turn closed while the command started")
             out, err = proc.communicate(input=stdin, timeout=timeout)
+            # 125 is reserved for an ownership/startup failure. A command that
+            # itself returns it is conservatively treated as a harness fault.
+            if card and (proc.returncode == 125 or proc.returncode < 0):
+                raise OSError(f"command could not close safely: {err}")
             # The command returned, but a job it started with `&` and detached
             # these pipes from is still in its group, still able to write while
             # the caller reviews the output. Costs one `ESRCH` when there is
             # nothing left, which is the ordinary case. Inside the `try`, so a
             # Ctrl-C landing here is still the interrupt path's to finish.
-            if not terminate_group(proc.pid):
+            if not card and not terminate_group(proc.pid):
                 raise OSError(f"{argv[0]}: the process group survived SIGKILL")
         except subprocess.TimeoutExpired:
             out, err = _kill_group(proc)
@@ -108,8 +107,11 @@ def run(argv: list[str], *, stdin: str = "", env: dict[str, str] | None = None,
             # terminal's own SIGINT never reached this group, so without this
             # an interrupted driver leaves a two-hour builder call running and
             # spending, unseen.
-            _signal_group(proc.pid, signal.SIGKILL)
-            group_gone(proc.pid, GRACE_SECONDS)
+            if card and proc.poll() is None:
+                _kill_group(proc)  # let the parent reap detached children first
+            elif not card:
+                _signal_group(proc.pid, signal.SIGKILL)
+                group_gone(proc.pid, GRACE_SECONDS)
             raise
     return subprocess.CompletedProcess(argv, proc.returncode, out, err)
 

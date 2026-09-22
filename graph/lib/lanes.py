@@ -9,6 +9,9 @@ from __future__ import annotations
 import os
 import threading
 
+import lane_closing
+import runner
+import worktree
 from prompts import moved_under
 
 
@@ -54,8 +57,14 @@ def run_lanes(loop, book, space, tasks: list[dict], turn_id: str = "") -> tuple:
     """
     states: list = []
     unrecorded: list = []
+    trees = {task["id"]: [] for task in tasks}
+    processes = {task["id"]: [] for task in tasks}
+    stopping = threading.Event()
 
     def lane(task: dict) -> None:
+        worktree.owned.trees = trees[task["id"]]
+        runner.owned.processes = processes[task["id"]]
+        runner.owned.stopping = stopping
         print(f"→ {task['id']}: {task['goal']}")
         # `claim` writes the claims file under its own lock and records the
         # `claimed` event after releasing it, so a failure in that second step
@@ -123,15 +132,31 @@ def run_lanes(loop, book, space, tasks: list[dict], turn_id: str = "") -> tuple:
             print(f"  {task['id']} failed twice the same way — it needs re-slicing")
             book.set_status(task["id"], "needs_slice")
 
-    threads = [threading.Thread(target=lane, args=(task,), name=task["id"]) for task in tasks]
+    threads = []
     space.turn_id = turn_id
     try:
-        for thread in threads:
+        for task in tasks:
+            why = lane_closing.capacity(getattr(loop, "repo", os.getcwd()))
+            if why:
+                space.event("waiting", task=task["id"], why=why)
+                states.append("waiting")
+                break
+            thread = threading.Thread(target=lane, args=(task,), name=task["id"])
             thread.start()
+            threads.append(thread)
         for thread in threads:
             thread.join()
+    except BaseException:
+        stopping.set()
+        lane_closing.interrupt(processes)
+        raise
     finally:
-        space.turn_id = ""
+        try:
+            for thread in threads:
+                thread.join()
+            unrecorded.extend(lane_closing.close(trees, processes, book, space))
+        finally:
+            space.turn_id = ""
     if unrecorded:
         # Every lane has released what it held and parked what it could, and
         # what is left is a record with holes in it. The log is the product: a
