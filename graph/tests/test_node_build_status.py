@@ -6,6 +6,8 @@ import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
+import tmp_root  # noqa: F401 — keep temporary test files under the shared root
+
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 
 import cardfile
