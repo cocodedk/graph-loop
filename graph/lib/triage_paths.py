@@ -47,7 +47,9 @@ def contract_path(book, space, task: dict) -> bool:
             return True
         if decision["path"] == "probe_in_gate":
             return False  # replan_prompt already carries the executed-probe instruction
-        if decision["path"] == "accept_with_observation":
+        if decision["path"] == "slice":
+            book.set_status(task["id"], "needs_slice")
+        elif decision["path"] == "accept_with_observation":
             fresh["requirement"] = fresh.get("requirement") or frozen_requirement(fresh)
             book.set_status(task["id"], "todo", refused_why=None,
                             requirement=fresh["requirement"], accepted_criteria=criteria(fresh),

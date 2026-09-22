@@ -34,6 +34,15 @@ def stalled(**changes):
 
 
 class ContractPathsTest(unittest.TestCase):
+    def test_slice_answer_sets_needs_slice(self):
+        book, space = stalled()
+        planner = mock.Mock()
+        with mock.patch("triage_jev.ask", return_value=Outcome(
+                "ok", verdict="slice", confidence=.9)):
+            self.assertTrue(replan_pending(book, space, planner))
+        self.assertEqual("needs_slice", book.task("T1")["status"])
+        planner.assert_not_called()
+
     def test_blocked_text_fallback_parks_instead_of_replanning(self):
         import resources
         from distress import INSTRUCTION, TEMPLATE
