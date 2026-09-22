@@ -15,6 +15,12 @@ from asking import prompt
 
 
 class AttemptEvidenceTest(unittest.TestCase):
+    def test_gate_prompt_follows_repository_rules(self):
+        self.assertIn(
+            "Read and follow this repository's own written rules, CLAUDE.md first "
+            "and the files it links, before writing a gate.",
+            prompt(pathlib.Path.cwd(), [], []))
+
     def test_attempt_paths_and_diffs_are_not_the_completion_baseline(self):
         repo = pathlib.Path(tempfile.mkdtemp())
         source = repo / "goal.md"

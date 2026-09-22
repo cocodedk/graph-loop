@@ -37,6 +37,8 @@ def prompt(repo: pathlib.Path, sources: list[pathlib.Path], rows: list[dict],
     family = lineage(target, rows)[1:] if target else []
     ancestry = yaml.safe_dump(family, sort_keys=False) if family else "none"
     return (
+        "Read and follow this repository's own written rules, CLAUDE.md first "
+        "and the files it links, before writing a gate.\n\n"
         "Read the approved sources AND the code before planning. Emit the smallest buildable "
         "CODE molecule. One idea, one gate per atom, dependencies only when real. Every name "
         "in uses/creates is path:text, like `src/main/Link.java:parseLink` — the file AND the text in it. A "

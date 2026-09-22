@@ -32,6 +32,8 @@ def _attempt_context(task: dict) -> str:
 
 def prompt_for(task: dict) -> str:
     return (
+        "Read and follow this repository's own written rules, CLAUDE.md first "
+        "and the files it links, before writing a gate.\n\n"
         "A reviewer refused this task's contract. Rewrite the contract so the "
         "objection cannot be made again. Keep the same intent and the same files "
         "— you may drop a file, never add one — and keep it one idea. You may "
