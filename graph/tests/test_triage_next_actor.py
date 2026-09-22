@@ -36,7 +36,7 @@ from backlog import Backlog
 from backlog_decision import can_replan
 from backlog_status import is_wall
 from plan_phase import FAULTS, requeue_faults
-from replan import MAX_REPLANS
+from replan_budget import MAX_ROUNDS
 from triage_effect import repair_effect
 from workspace import Workspace
 
@@ -74,7 +74,7 @@ PAIRS = [
 EXTRA = [
     ({"status": "refused_contract", "triage": "contract", "replans": 0},
      "loop_contract refuses; the replan path has both rounds"),
-    ({"status": "refused_contract", "triage": "contract", "replans": MAX_REPLANS},
+    ({"status": "refused_contract", "triage": "contract", "replans": MAX_ROUNDS},
      "loop_contract refuses; the replan rounds are spent"),
     ({"status": "rejected", "triage": "work", "rebuild_round": 3},
      "loop_judge writes `rejected` only at the round cap"),

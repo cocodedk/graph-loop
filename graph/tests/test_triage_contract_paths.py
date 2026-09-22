@@ -82,7 +82,7 @@ class ContractPathsTest(unittest.TestCase):
 
     def test_other_endings_and_exhausted_or_held_cards_never_ask(self):
         variants = ({"triage": "work"}, {"refused_why": "a file is missing"},
-                    {"needs": []}, {"replans": 2}, {"rebuild_round": 3},
+                    {"needs": []}, {"replans": 6}, {"rebuild_round": 3},
                     {"blocked_by_human": True}, {"gate_has_side_effects": True})
         for changes in variants:
             with self.subTest(changes=changes):

@@ -8,6 +8,7 @@ from accepted_contract import accepted_criteria, changed_criteria, criteria
 from backlog_decision import can_replan
 from backlog_status import spent_its_rounds
 from contract import contract_digest, frozen_requirement, moved_under
+from ending_reason import review_reason
 from loop_resume import finished
 from triage_evidence import _read
 from triage_path_jev import choose
@@ -84,8 +85,12 @@ def criteria_path(book, space, task: dict) -> bool:
             return True
         path = decision["path"]
         if path == "reopen_contract":
+            # This choice answers the guard refusal. Restoring the original
+            # finding is not a second reviewer making the same complaint.
             book.note(task["id"], accepted_criteria=None, contract_seen=None,
                       contract_observation=None, accepted_diff=None, finished=None,
+                      replan_history=list(fresh.get("replan_history") or [])
+                      + [review_reason(fresh.get("refused_why"))],
                       refused_why=refusal["findings"], refused_rewrite=None, gate_reviewed_first=True)
             return False  # the remaining bounded replan must face contract review again
         receipt = refusal.get("finished") or {}

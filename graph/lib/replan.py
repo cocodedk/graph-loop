@@ -2,8 +2,8 @@
 
 The planner may repair goal, files, done-when and gate within the card's
 authority. A changed gate is reviewed before red-first executes it. A LIVE
-task's contract stays the commander's. Every answered refusal costs one of
-the two rounds and is written where the next planner reads it.
+task's contract stays the commander's. New reasons buy progress; the same
+complaint twice or six actual rounds end replanning.
 """
 
 from __future__ import annotations
@@ -13,14 +13,19 @@ import dataclasses
 import yaml  # type: ignore[import-untyped]  # no stubs in this environment
 from backlog_status import is_live
 from contract import frozen_requirement
+from ending_reason import review_reason
 from gate_shell import pins_a_count
 from prompts import moved_under
+from replan_budget import (  # noqa: F401 — public constant
+    MAX_REPLANS,
+    alert_stopped,
+    stop_reason,
+)
 
 # the words themselves live next door; `replan.prompt_for` stays the name callers use
 from replan_prompt import prompt_for
 from resources import refused_before_reading
 
-MAX_REPLANS = 2
 # What a rewrite keeps: identity, lineage, place in the graph, what it has spent.
 KEEP = ("id", "why", "needs", "status", "sliced_from", "blocked_by_human",
         "gate_has_side_effects", "replans", "replan_history")
@@ -62,7 +67,11 @@ def replan_until_planned(backlog, task: dict, planner, *, space=None) -> Replann
     out = Replanned(False, "no rounds left")
     while True:
         fresh = backlog.task(task["id"]) or task
-        if fresh.get("status") != "refused_contract" or int(fresh.get("replans") or 0) >= MAX_REPLANS:
+        if fresh.get("status") != "refused_contract" or stop_reason(fresh):
+            if space is not None:
+                alert_stopped(space, fresh)
+            if stop_reason(fresh):
+                out = Replanned(False, f"replan stopped: {stop_reason(fresh)}")
             break
         if fresh.get("blocked_by_human"):
             break
@@ -91,7 +100,7 @@ def _refuse(backlog, task: dict, why: str, proposed: dict | None = None) -> Repl
                        requirement=task.get("requirement") or frozen_requirement(task),
                        replans=int(task.get("replans") or 0) + 1,
                        replan_history=list(task.get("replan_history") or [])
-                       + [str(task.get("refused_why") or "")[:2000]])   # the reason this rewrite answered
+                       + [review_reason(task.get("refused_why"))])
     return Replanned(False, why)
 
 
@@ -100,9 +109,8 @@ def replan(backlog, task: dict, planner) -> Replanned:
     if is_live(task):
         return Replanned(False, "a live task's contract is the commander's: a refusal waits for a person, "
                                 "never for a planner")
-    if int(task.get("replans") or 0) >= MAX_REPLANS:
-        return Replanned(False, "this task has been rewritten twice already and "
-                                "still refused; it waits for a person")
+    if stopped := stop_reason(task):
+        return Replanned(False, f"replan stopped: {stopped}; it waits for a person")
     out = planner(prompt_for(task))
     with backlog.only_writer():
         # The planner call takes minutes. A hold raised in that window, or a
@@ -149,8 +157,7 @@ def _store(backlog, task: dict, text: str) -> Replanned:
     # through: the grant is a list of names, it only narrows, and a card that
     # changes code is never handed back changing none (astra round 3, finding 7 —
     # `files: []` here made an evidence card that skipped the builder, the red
-    # proof and the diff review). Imported here, not at the top: it reaches
-    # `backlog_decision`, which reads MAX_REPLANS back out of this module.
+    # proof and the diff review).
     from rewrite_guard import check_rewrite
     refused = check_rewrite(task, backlog.tasks(), fresh)
     if refused:
@@ -182,7 +189,7 @@ def _store(backlog, task: dict, text: str) -> Replanned:
         row["gate_reviewed_first"] = True
     row["replans"] = int(task.get("replans") or 0) + 1
     row["replan_history"] = list(task.get("replan_history") or []) + [
-        str(task.get("refused_why") or "")[:2000]]
+        review_reason(task.get("refused_why"))]
     fields = {key: value for key, value in row.items() if key not in ("id", "status")}
     backlog.set_status(task["id"], "todo", refused_why=None, refused_rewrite=None, **fields)
     return Replanned(True, "rewritten from the reviewer's findings", backlog.task(task["id"]))

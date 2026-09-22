@@ -56,7 +56,7 @@ class HarnessRejectionTest(unittest.TestCase):
         harness = {"id": "T1", "status": "rejected", "files": ["app.py"],
                    "rebuild_round": 3, "refused_why": "the diff review did not happen 3 rounds running"}
         self.assertFalse(is_wall(harness))
-        contract = {"id": "T2", "status": "refused_contract", "files": ["app.py"], "replans": 2}
+        contract = {"id": "T2", "status": "refused_contract", "files": ["app.py"], "replans": 6}
         self.assertFalse(is_wall(contract))            # no verdict, no slicing
         self.assertTrue(is_wall(dict(contract, triage="contract")))
 
@@ -65,10 +65,10 @@ class HarnessRejectionTest(unittest.TestCase):
         # a verdict naming something other than the work or its contract routes
         # elsewhere, whatever the status
         self.assertFalse(is_wall({"id": "T2", "status": "refused_contract",
-                                  "files": ["app.py"], "replans": 2, "triage": "environment"}))
+                                  "files": ["app.py"], "replans": 6, "triage": "environment"}))
         # a contract still wrong after its replans is the slicer's...
         self.assertTrue(is_wall({"id": "T2", "status": "refused_contract",
-                                 "files": ["app.py"], "replans": 2, "triage": "contract"}))
+                                 "files": ["app.py"], "replans": 6, "triage": "contract"}))
         # ...but not before them, and not on a card the loop can still retry
         self.assertFalse(is_wall({"id": "T2", "status": "refused_contract",
                                   "files": ["app.py"], "replans": 1, "triage": "contract"}))

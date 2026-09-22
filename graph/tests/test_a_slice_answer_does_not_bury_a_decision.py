@@ -23,7 +23,7 @@ from test_turn_slice import routed, space, tree_with
 EXPECTED_TESTS = 1
 
 WALL = {"id": "T1", "status": "refused_contract", "goal": "g", "files": ["app.py"],
-        "triage": "contract", "replans": 2, "refused_why": "the gate said why"}
+        "triage": "contract", "replans": 6, "refused_why": "the gate said why"}
 
 
 def dropping(book, said: str):
