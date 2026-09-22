@@ -18,6 +18,9 @@ passes, when nothing can move, or when you say so.
     python3 graph/graph-goal.py stop        # after the running tasks
     python3 graph/graph-goal.py stop --now  # kill the recorded groups, keep the worktrees
 
+A builder that reports `BLOCKED` leaves a scrubbed report in
+`<workspace>/issues/` when the driver stops.
+
 Rules it enforces, each bought with a failure:
 
 - The backlog is the only task source. The planner selects and may slice; it

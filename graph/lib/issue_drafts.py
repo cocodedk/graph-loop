@@ -19,7 +19,7 @@ from triage_evidence import _read
 from watchdog_spin import ENDINGS, current_run, ending_signature
 
 PERSON = {"refused_contract", "rejected", "needs_slice", "quarantined",
-          "partial_by_agent", "blocked_by_human", "lane_failed"}
+          "partial_by_agent", "blocked_by_agent", "blocked_by_human", "lane_failed"}
 CAUSES = ENDINGS + ("needs_a_person", "review_unavailable", "held")
 ARTIFACTS = {"gate": "gate-output", "red_first": "red-first",
              "contract": "contract-answer", "diff_review": "diff-review-answer"}
