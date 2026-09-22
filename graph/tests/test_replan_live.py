@@ -17,13 +17,19 @@ from backlog import Backlog
 from providers import Outcome
 from replan import prompt_for, replan, replan_until_planned
 
-EXPECTED_TESTS = 8
+EXPECTED_TESTS = 9
 
 
 class LiveReplanTest(unittest.TestCase):
     """A live task's contract — its gate, verbs, files and wording — is the
     commander's. A planner rewrote T2's three times (files dropped, anchors
     the gate never had); a refused live contract now waits for a person."""
+
+    def test_gate_prompt_follows_repository_rules(self):
+        self.assertIn(
+            "Read and follow this repository's own written rules, CLAUDE.md first "
+            "and the files it links, before writing a gate.",
+            prompt_for({}))
 
     def test_no_rewrite_may_change_the_gate_red_first_would_run_it(self):
         path = pathlib.Path(tempfile.mkdtemp()) / "b.yaml"

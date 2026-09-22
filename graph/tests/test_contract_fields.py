@@ -23,7 +23,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 
 from prompts import already_read, contract_digest, contract_prompt
 
-EXPECTED_TESTS = 9
+EXPECTED_TESTS = 10
 
 # The requirement is on the card because every accepted card carries one: without
 # it `already_read` refuses on that ground alone, and the two edit tests below
@@ -43,6 +43,12 @@ def edited_after_acceptance(**edits: object) -> dict:
 
 
 class ContractFieldsTest(unittest.TestCase):
+    def test_gate_prompt_follows_repository_rules(self):
+        self.assertIn(
+            "Read and follow this repository's own written rules, CLAUDE.md first "
+            "and the files it links, before judging a gate.",
+            contract_prompt(CARD))
+
     def test_a_kept_judges_coverage_is_not_the_code_cards_review(self):
         sentence = ("If this card's judge is already kept, judge this card's own files and gate, "
                     "not the judge's coverage, and do not require bypass probes or refuse "

@@ -1,8 +1,6 @@
 """The card's contract, digest and checks for edits during a round.
-
 Split from `prompts.py`, which re-exports these names; `loop_contract.py`
-is the step that asks a reviewer to read the contract.
-"""
+is the step that asks a reviewer to read the contract."""
 
 from __future__ import annotations
 
@@ -91,6 +89,8 @@ def contract_prompt(task: dict) -> str:
         "\nRefuse it if the builder can edit the test its gate runs: the builder "
         "must not touch what judges it unless gate_files_are_the_work.\n")
     return (
+        "Read and follow this repository's own written rules, CLAUDE.md first "
+        "and the files it links, before judging a gate.\n\n"
         "Review this task contract before anyone edits a file. Can this gate pass without "
         "the work being done, and do the files cover what the gate can fail on? "
         "Name a concrete bypass or a blocking file. Refuse those defects, work broader "
