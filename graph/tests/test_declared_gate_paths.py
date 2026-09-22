@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
+
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import gate_paths
 import gate_sandbox
