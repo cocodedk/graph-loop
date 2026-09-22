@@ -75,14 +75,14 @@ class StallDraftsTest(unittest.TestCase):
     def test_every_named_person_status_and_the_boolean_hold_are_drafted(self):
         self.book.set_status("T2", "done")
         for status in ("refused_contract", "rejected", "needs_slice", "quarantined",
-                       "partial_by_agent", "blocked_by_human"):
+                       "partial_by_agent", "blocked_by_agent", "blocked_by_human"):
             self.book.set_status("T1", status, refused_why=status)
             self.space.event("needs_a_person", task="T1", step="build", why=status)
             stood_down(self.space, 78, "nothing startable")
         self.book.set_status("T1", "todo", blocked_by_human=True)
         self.space.event("held", task="T1", why="a human holds this card")
         stood_down(self.space, 78, "nothing startable")
-        self.assertEqual(7, len(self.drafts()))
+        self.assertEqual(8, len(self.drafts()))
 
     def test_clean_stand_down_writes_no_draft_or_directory(self):
         for name in ("T1", "T2"):
