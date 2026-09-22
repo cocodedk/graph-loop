@@ -75,8 +75,8 @@ If it fails, fix the file. Never the check.
 
 ## KISS repair rule
 
-- Before coding, use `jev-decisions` to score the plan's simplicity: **at least 0.90**.
-  Confidence is a separate value. A missing score is not approval.
+- Before coding, use `jev-decisions`: **simplicity at least 0.80 and confidence
+  at least 0.80**. Both must pass. A missing score is not approval.
 - Reuse existing code. Add only what the fix needs. Keep docs and updates short.
 - Keep the short plan and Jev result in the PR. Do not reroll an unchanged plan.
 - Fix, test, commit, push and merge one issue before starting the next.
