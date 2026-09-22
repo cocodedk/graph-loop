@@ -84,6 +84,8 @@ def run(argv: list[str], *, stdin: str = "", env: dict[str, str] | None = None,
         if card:
             owned.processes.append(proc)
         try:
+            if card and owned.stopping.is_set():
+                raise InterruptedError("the driver turn closed while the command started")
             out, err = proc.communicate(input=stdin, timeout=timeout)
             # 125 is reserved for an ownership/startup failure. A command that
             # itself returns it is conservatively treated as a harness fault.

@@ -135,7 +135,7 @@ class Worktree:
         try:
             if parent.name.startswith("graph-") and not any(parent.iterdir()):
                 parent.rmdir()
-        except OSError:
+        except FileNotFoundError:
             pass
         self.path = ""
 
