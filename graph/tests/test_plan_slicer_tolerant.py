@@ -41,7 +41,7 @@ molecule:
       goal: read feedback
       files: [reader.py]
       may_add_files: true
-      needs: [feedback.schema]
+      needs: [schema]
       gate: |
         set -e -o pipefail
         false
@@ -58,7 +58,7 @@ class PlanSlicerTolerantTest(unittest.TestCase):
         backlog.mkdir()
         book, space = Backlog(backlog), Workspace(repo / "campaign")
         replies = iter([ANSWER, ANSWER.replace("feedback", "missing").replace(
-            "needs: [missing.schema]", "needs: [unknown]")])
+            "needs: [schema]", "needs: [unknown]")])
         refusals = []
 
         def slice_once(book, space):
@@ -71,7 +71,7 @@ class PlanSlicerTolerantTest(unittest.TestCase):
             added = plan_phase.plan(book, space)
         self.assertEqual(3, added)
         self.assertEqual(2, call.call_count)
-        self.assertEqual(["an atom needs a task that does not exist"], refusals)
+        self.assertEqual(["an atom needs a task that does not exist: ['unknown']"], refusals)
         self.assertEqual({"feedback", "feedback.schema", "feedback.reader"},
                          {row["id"] for row in book.tasks()})
         planned = [event for event in space.events() if event["kind"] == "planned"]
