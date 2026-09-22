@@ -33,6 +33,11 @@ def build_parser(description: str, commands: dict) -> argparse.ArgumentParser:
     for name in ("approve", "status", "report", "doctor", "remember"):
         sub.add_parser(name).set_defaults(run=commands[name])
 
+    answer = sub.add_parser("answer")
+    answer.add_argument("card_id")
+    answer.add_argument("decision")
+    answer.set_defaults(run=commands["answer"])
+
     ahead = sub.add_parser("plan")
     ahead.add_argument("--rounds", type=int, default=0,
                        help="stop after this many slicer rounds; 0 runs until the "

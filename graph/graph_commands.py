@@ -105,6 +105,14 @@ def command_approve(args) -> int:
     return 0
 
 
+def command_answer(args) -> int:
+    book = Backlog(_backlog_of(_space(args)))
+    book.set_status(args.card_id, "refused_contract", refused_why=args.decision,
+                    blocked_by_human=None, held_by=None,
+                    accepted_criteria=None, contract_seen=None)
+    return 0
+
+
 def command_status(args) -> int:
     from node_status import say as say_nodes
     space = _space(args)

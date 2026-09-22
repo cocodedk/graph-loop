@@ -3,6 +3,7 @@
 
     graph-goal.py init --backlog <file> [--goal "..."] [--branch <name>] [--source <path>]...
     graph-goal.py approve
+    graph-goal.py answer <card-id> "<decision>"
     graph-goal.py plan [--rounds N]
     graph-goal.py run [--lanes 3|auto [--lanes-max N]] [--max-tasks N] [--dry-run]
     graph-goal.py status
@@ -60,6 +61,7 @@ from graph_commands import (
     _real_build,
     _real_review,
     _space,
+    command_answer,
     command_approve,
     command_doctor,
     command_init,
@@ -170,6 +172,7 @@ def main(argv=None) -> int:
     parser = build_parser(__doc__.splitlines()[0], {
         "init": command_init, "sources": command_sources,
         "approve": command_approve, "status": command_status,
+        "answer": command_answer,
         "report": command_report, "doctor": command_doctor,
         "remember": command_remember, "cuts": command_cuts,
         "plan": command_plan, "run": command_run, "stop": command_stop})
