@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+import distress
 from accepted_contract import accepted_criteria, changed_criteria, criteria
 from backlog_decision import can_replan
 from backlog_status import spent_its_rounds
@@ -52,7 +53,7 @@ def contract_path(book, space, task: dict) -> bool:
                             requirement=fresh["requirement"], accepted_criteria=criteria(fresh),
                             contract_seen=contract_digest(fresh), contract_observation=said)
         else:
-            hold(book, task, decision)
+            hold(book, task, decision, space)
     return True
 
 
@@ -100,7 +101,7 @@ def criteria_path(book, space, task: dict) -> bool:
                             finished=receipt, accepted_diff=receipt,
                             review_observation=refusal["findings"])
         else:
-            hold(book, task, decision)
+            hold(book, task, decision, space)
     return True
 
 
@@ -128,7 +129,8 @@ def prior_diff_refusal(space, task: dict) -> dict:
     return refusal
 
 
-def hold(book, task: dict, decision: dict) -> None:
+def hold(book, task: dict, decision: dict, space=None) -> None:
     """The person sees exactly the question and evidence the model saw."""
+    distress.park(book, space, task["id"], decision["why"])
     book.note(task["id"], blocked_by_human=True, held_by="needs_person",
               path_question=decision["question"], path_reason=decision["why"])

@@ -24,6 +24,10 @@ STUCK_WORDS = ("i cannot", "i can not", "unable to", "am stuck", "ambiguous",
                "unclear", "permission denied", "not allowed", "i stopped",
                "cannot proceed", "needs a decision", "out of scope")
 
+INSTRUCTION = ("Say BLOCKED at once when your tools or inputs are not enough to do "
+               "the job correctly, never guess. End your answer with one JSON line "
+               "and nothing after it:\n")
+
 TEMPLATE = ('{"result": "DONE|BLOCKED|PARTIAL", "blocked": true|false, '
             '"needs_person": true|false, "why": "one line, empty when DONE"}')
 
@@ -95,3 +99,36 @@ def read_result(text: str) -> Result:
 def tail(text: str, keep: int = 240) -> str:
     """The last thing it said, for a message a person reads on a phone."""
     return " ".join((text or "").split())[-keep:]
+
+
+def answer(text: str) -> tuple[str, Result]:
+    """Read the final line with the existing parser; leave legacy bodies intact."""
+    lines = (text or "").rstrip().splitlines()
+    last = lines[-1].strip() if lines else ""
+    said = read_result(last)
+    return ("\n".join(lines[:-1]) if _from_json(last) else text), said
+
+
+def park(book, space, task_id: str, why: str) -> None:
+    """A complaint belongs to a person, never to automatic recovery."""
+    book.set_status(task_id, "blocked_by_agent", refused_why=why,
+                    blocked_by_human=True, held_by="needs_person")
+    if space is not None:
+        space.event("needs_a_person", task=task_id, why=why)
+        space.alert(task_id, why)
+
+
+def stop(loop, task: dict, tree, said: Result):
+    """Use the builder's guarded parking path for every review as well."""
+    from loop_judge_retry import moved_first
+    from loop_types import TaskOutcome
+    if said.state not in ("BLOCKED", "PARTIAL"):
+        return None
+    why = said.why or tail(said.raw)
+    with loop.backlog.only_writer():
+        ended = moved_first(loop, task, tree, "said")
+        if ended is not None:
+            return ended
+        park(loop.backlog, loop.space, task["id"], why)
+    tree.keep(f"the agent stopped and said why: {why[:200]}")
+    return TaskOutcome("blocked", why, tree.path)

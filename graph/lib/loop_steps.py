@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import resources
 from backlog_status import is_live
-from distress import read_result, tail
-from loop_judge_retry import moved_first, scope_fault
+from distress import answer, stop
+from loop_judge_retry import scope_fault
 from loop_peers import hold_live_peers, open_why
 from loop_resume import resuming
 from loop_steps_live import live_call_lost
@@ -162,30 +162,16 @@ def build(loop, task: dict, tree: Worktree, in_place: bool = False) -> TaskOutco
                              "what it did: read the diff, continue from it, finish, and say DONE.",
                              build_kind=built.kind)
 
-    said = read_result(built.text)
+    said = answer(built.text)[1]
     loop.space.event("said", task=task_id, state=said.state, why=said.why[:300])
     if said.state == "UNCLEAR":
         # It did not say plainly what it did. The gate is the judge, so carry
         # on — but a person is told, because a builder that cannot say
         # whether it finished usually did not.
         loop.space.alert(task_id, f"the builder gave no clear answer: {said.why}")
-    if said.state in ("BLOCKED", "PARTIAL"):
-        # It stopped on purpose and said why: that is the answer, not a failure.
-        # The build took an hour, so it passes the same guard every other ending
-        # passes first — a drop, a hold or a rewrite decided in that hour is
-        # newer than this answer, and parking the card would bring it back.
-        with loop.backlog.only_writer():
-            ended = moved_first(loop, task, tree, "said")
-            if ended is not None:
-                return ended
-            loop.backlog.set_status(task_id, f"{said.state.lower()}_by_agent",
-                                    refused_why=said.why or tail(built.text))
-        loop.space.event("needs_a_person", task=task_id,
-                         why=said.why or tail(built.text))
-        loop.space.alert(task_id, f"the builder stopped: "
-                         f"{said.why or tail(built.text)}")
-        tree.keep(f"the builder stopped and said why: {said.why[:200]}")
-        return TaskOutcome("blocked", said.why or tail(built.text), tree.path)
+    ending = stop(loop, task, tree, said)
+    if ending is not None:
+        return ending
 
     outside = changed_outside(tree.path, task.get("files") or [], bool(task.get("may_add_files")))
     if outside:

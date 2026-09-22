@@ -51,6 +51,9 @@ def _read_review(text: str) -> tuple[str | None, str]:
     because a reviewer that wrote two has not decided which contract it
     answered.
     """
+    text, said = distress.answer(text)
+    if said.state in ("BLOCKED", "PARTIAL"):
+        return "BLOCKED", said.raw
     try:
         whole = review_scope.read(text)
     except ValueError:

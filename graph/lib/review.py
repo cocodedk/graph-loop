@@ -82,7 +82,7 @@ def _claude_review(prompt: str, resource, effort: str, timeout: int, *, cwd: str
     if not out.ok:
         return out
     verdict, findings = _read_review(out.text or "")
-    if verdict not in ("ACCEPT", "REJECT"):
+    if verdict not in ("ACCEPT", "REJECT", "BLOCKED"):
         return Outcome("malformed", text=(out.text or "").strip()[:500], raw=out.raw,
                        cost=out.cost, tokens=out.tokens)
     return Outcome("ok", text=findings or out.text, verdict=verdict, raw=out.raw,
@@ -104,7 +104,7 @@ def _one_review(binary: str, prompt: str, model: str, cwd: str, effort: str,
         # whatever its output holds is not a verdict.
         return out
     verdict, findings = _read_review(out.text)
-    if verdict not in ("ACCEPT", "REJECT"):
+    if verdict not in ("ACCEPT", "REJECT", "BLOCKED"):
         # Only now do the words matter: a reviewer that answered is not a
         # reviewer that was refused, whatever its banner says about limits.
         return Outcome(_classify_text(out.raw) or "malformed",
