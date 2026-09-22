@@ -16,6 +16,9 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
+import threading
+
+owned = threading.local()  # lists belong to the driver turn, one per lane
 
 from worktree_lock import (  # noqa: F401 — the door stays here
     LOCK_WAITS,
@@ -86,6 +89,8 @@ class Worktree:
         return self
 
     def create(self, parent: str | None = None) -> Worktree:
+        if hasattr(owned, "trees"):
+            owned.trees.append(self)  # before any allocation can fail
         base = parent or tempfile.mkdtemp(prefix="graph-")
         self.path = str(pathlib.Path(base) / f"task-{self.task_id}")
         # Detached at a named commit: whatever is uncommitted in the main
@@ -122,7 +127,8 @@ class Worktree:
     def remove(self) -> None:
         if not self.path:
             return
-        shutil.rmtree(self.path, ignore_errors=True)
+        if pathlib.Path(self.path).exists():
+            shutil.rmtree(self.path)  # a failed removal must reach the driver
         # and the mkdtemp parent it sat in: an empty graph-* dir per removed
         # tree is how /tmp grew 123 of them in an hour
         parent = pathlib.Path(self.path).parent

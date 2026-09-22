@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pathlib
 
-from worktree import Worktree, reuse_or_salvage
+from worktree import Worktree, owned, reuse_or_salvage
 
 
 def for_this_round(loop, task: dict) -> tuple[Worktree, bool]:
@@ -28,7 +28,8 @@ def for_this_round(loop, task: dict) -> tuple[Worktree, bool]:
     # the repository; a `.git` FILE is a linked worktree, which `Worktree.
     # reuse` itself now refuses to adopt, so this pick must agree. Keyed
     # on the tree, not the round: an uncharged outage (B4) can leave round 0 with a real tree to reuse.
-    in_place = bool(previous) and (pathlib.Path(previous) / ".git").is_dir()
+    in_place = (not hasattr(owned, "trees") and bool(previous)
+                and (pathlib.Path(previous) / ".git").is_dir())
     tree = Worktree(loop.repo, task_id, start)
     stale_why = saved = ""
     if in_place:
@@ -52,7 +53,7 @@ def for_this_round(loop, task: dict) -> tuple[Worktree, bool]:
         if previous or task.get("rebuild_round"):
             # the session belonged to the lost worktree; the card names no tree until a
             # builder is paid. Read FIRST, then written into this round's own dictionary
-            fresh = loop.backlog.note(task_id, rebuild_from=None, session="")
+            fresh = loop.backlog.note(task_id, rebuild_from=None, session="", finished=None)
             task.clear(); task.update(fresh)    # — never over it: the lane holds it too
     claims = loop.space.running()
     if task_id in claims:
