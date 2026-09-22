@@ -7,8 +7,26 @@ name every caller and test uses.
 
 from __future__ import annotations
 
+import pathlib
+
 from backlog_status import is_live
 from contract import frozen_requirement
+from worktree_scope import changed_outside
+
+
+def _attempt_context(task: dict) -> str:
+    tree = str(task.get("rebuild_from") or task.get("worktree") or "")
+    if not tree:
+        return ""
+    changed = "unknown (attempt worktree unavailable)"
+    if (pathlib.Path(tree) / ".git").exists():
+        try:
+            changed = repr(changed_outside(tree, []))
+        except (OSError, RuntimeError):
+            pass  # missing evidence never means that no files changed
+    return (f"Previous attempt's uncommitted files: {changed}. These edits are not landed "
+            "on the campaign branch and cannot prove this card is already complete; "
+            "judge completion against the campaign branch tip.\n\n")
 
 
 def prompt_for(task: dict) -> str:
@@ -24,6 +42,7 @@ def prompt_for(task: dict) -> str:
         f"done when: {task.get('done_when')}\n\n"
         f"Recorded requirement: {task.get('requirement') or frozen_requirement(task)}\n\n"
         f"What the reviewer said:\n{task.get('refused_why')}\n\n"
+        + _attempt_context(task)
         + ("Earlier reasons this task was refused, oldest first — a rewrite that repeats one is refused again:\n"
            + "\n".join(f"- {why}" for why in task.get("replan_history") or []) + "\n\n"
            if task.get("replan_history") else "")
@@ -41,6 +60,12 @@ def prompt_for(task: dict) -> str:
            "literal, to len(...), or to a value read from HEAD: the runner's EXPECTED counts "
            "test cases and moves as tests land, so assert it only against what the runner "
            "collects (`countTestCases()`/`run_all.EXPECTED`).\n\n")
+        + "When the refusal names a concrete bypass that a frozen judge test misses, add an "
+        "executed probe to THIS card's gate: the gate writes a small test file beside the project's "
+        "tests, runs it with the project's test command, and removes it with a trap on exit. "
+        "Assert exactly the named case so the bypass fails the gate; keep this card's files "
+        "unchanged, with the probe only in the gate text. Never substitute greps or regexes "
+        "on the source for a behavioural gap, and never ask for the judge to change.\n\n"
         + "A gate must never hide or delete the output a builder needs: no quiet flags "
         "that drop compiler errors, no deleting the log it greps. A stub's acceptance checks "
         "compilation/interface availability, never continued non-implementation.\n\n"

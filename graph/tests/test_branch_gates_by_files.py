@@ -15,7 +15,7 @@ import yaml  # type: ignore[import-untyped]  # no stubs in this environment
 from backlog import Backlog
 from doctor import check_backlog
 
-EXPECTED_TESTS = 4
+EXPECTED_TESTS = 8
 
 
 def _loop(rows: list[dict]):
@@ -30,6 +30,53 @@ def _loop(rows: list[dict]):
 
 
 class TouchedFilesTest(unittest.TestCase):
+    def test_a_sibling_waits_for_the_code_before_running_the_judges_lasting_gate(self):
+        judge = {"id": "J", "status": "done", "files": ["a.py"], "gate": "red",
+                 "gate_until_kept": True, "gate_when_kept": "lasting"}
+        code = {"id": "C", "status": "todo", "needs": ["J"],
+                "files": ["a.py"], "gate": "code"}
+        for needs in ([], ["J"]):  # beside the judge, or between judge and code
+            with self.subTest(needs=needs):
+                sibling = {"id": "S", "status": "todo", "needs": needs,
+                           "files": ["a.py"], "gate": "sibling"}
+                loop = _loop([judge, code, sibling])
+                self.assertEqual(["sibling"], loop_judge._gates_on_the_branch(loop, sibling))
+                self.assertEqual("", loop_judge._gate_owner(loop, sibling, "lasting"))
+
+    def test_the_code_under_check_does_not_delay_its_judges_lasting_gate(self):
+        judge = {"id": "J", "status": "done", "files": ["a.py"], "gate": "red",
+                 "gate_until_kept": True, "gate_when_kept": "lasting"}
+        code = {"id": "C", "status": "todo", "needs": ["J"],
+                "files": ["a.py"], "gate": "code"}
+        loop = _loop([judge, code])
+        self.assertEqual(["lasting", "code"], loop_judge._gates_on_the_branch(loop, code))
+        self.assertEqual("J", loop_judge._gate_owner(loop, code, "lasting"))
+
+    def test_every_other_dependent_must_be_done_even_if_its_files_are_disjoint(self):
+        judge = {"id": "J", "status": "done", "files": ["a.py"], "gate": "red",
+                 "gate_until_kept": True, "gate_when_kept": "lasting"}
+        current = {"id": "C", "files": ["a.py"], "gate": "code", "needs": ["J"]}
+        # A dropped dependent was decided against: it will never land the work
+        # the lasting gate waits for, so it must not hold that gate back for ever.
+        for status in ("todo", "building", "dropped", "done"):
+            with self.subTest(status=status):
+                other = {"id": "O", "files": ["other.py"], "needs": ["J"], "status": status}
+                loop = _loop([judge, current, other])
+                expected = ["lasting", "code"] if status in ("done", "dropped") else ["code"]
+                self.assertEqual(expected, loop_judge._gates_on_the_branch(loop, current))
+
+    def test_gate_owner_uses_the_same_status_overlap_and_keep_order_as_selection(self):
+        current = {"id": "C", "files": ["a.py"], "gate": "code", "needs": ["J"]}
+        rows = [{"id": "TODO", "status": "todo", "files": ["a.py"], "gate": "lasting"},
+                {"id": "FAR", "status": "done", "files": ["other.py"], "gate": "lasting"},
+                {"id": "LATER", "status": "done", "files": ["a.py"], "gate": "lasting",
+                 "kept_at": "2026-09-22"},
+                {"id": "J", "status": "done", "files": ["a.py"], "gate": "lasting",
+                 "kept_at": "2026-09-21"}]
+        loop = _loop([*rows, current])
+        self.assertEqual(["lasting", "code"], loop_judge._gates_on_the_branch(loop, current))
+        self.assertEqual("J", loop_judge._gate_owner(loop, current, "lasting"))
+
     def test_kept_one_shot_gates_use_only_the_explicit_lasting_form(self):
         lasting = "grep -q implemented a.py"
         judge = {"id": "J", "status": "done", "files": ["a.py"],

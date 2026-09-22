@@ -81,8 +81,8 @@ def prove_red(command: str, cwd: str, expect: str = "",
     if result.passed:
         return False, GREEN_ALREADY
     if result.kind != "ran":
-        return False, f"the gate could not run ({result.kind}): {result.output[-400:]}"
+        return False, f"the gate could not run ({result.kind}): {result.output[-2000:]}"
     if expect and expect not in result.output:
         return False, ("the gate is red for another reason; expected "
-                       f"{expect!r} in:\n{result.output[-400:]}")
-    return True, result.output[-400:]
+                       f"{expect!r} in:\n{result.output[-2000:]}")
+    return True, result.output[-2000:]

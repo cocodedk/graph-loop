@@ -1,11 +1,7 @@
-"""The contract a card carries: its words, its short name, and whether the card
-in front of a write is still the one the round started from.
+"""The card's contract, digest and checks for edits during a round.
 
-Split out of `prompts.py` at the 200-line cap; `prompts.py` imports the names
-back, so every site that says `from prompts import contract_prompt` (or
-`contract_digest`, `already_read`, `moved_under`) still reaches them there.
-This module is the contract itself; `loop_contract.py` is the STEP that asks a
-reviewer to read it.
+Split from `prompts.py`, which re-exports these names; `loop_contract.py`
+is the step that asks a reviewer to read the contract.
 """
 
 from __future__ import annotations
@@ -109,6 +105,12 @@ def contract_prompt(task: dict) -> str:
         "deliberately deceptive builder would write (hard-coding the judge's expected values, "
         "a lookup table keyed on test data) is the diff review's finding, not grounds to "
         "refuse a contract.\n"
+        "If a concrete bypass is missing from a frozen judge test, this card's gate must add an "
+        "executed probe: write a small test file beside the project's tests, run it with the "
+        "project's test command, and remove it with a trap on exit. Assert exactly the named "
+        "case so the bypass fails the gate; keep this card's files unchanged and the probe in "
+        "the gate text, never greps or regexes on the source for a behavioural gap. Refuse "
+        "that gap only while the gate lacks this probe; never ask for the judge to change.\n"
         + ("Refuse a rewrite that proves less than the requirement recorded below.\n"
            if task.get("requirement") else "")
         + writes_its_test + uses_question(task) + fixture_question(task) + "\n"
