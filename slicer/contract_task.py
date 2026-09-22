@@ -85,7 +85,7 @@ def _task(task: dict, repo: pathlib.Path, known: set[str], *,
     for key in ("needs", "uses", "creates", "helper_verbs"):
         values = _strings(task.get(key, []), key)
         if key == "needs" and set(values) - known:
-            raise ValueError("an atom needs a task that does not exist")
+            raise ValueError(f"an atom needs a task that does not exist: {sorted(set(values) - known)}")
         if key == "needs" and siblings and set(values) & siblings:
             # Stage numbers derive these waits; only outside needs are stored.
             task[key] = [value for value in values if value not in siblings]
