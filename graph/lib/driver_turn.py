@@ -14,6 +14,7 @@ from __future__ import annotations
 from backlog_status import settled
 from doctor import as_text as doctor_text
 from doctor import diagnose
+from issue_drafts import draft_stalls
 from publishing import reconcile, settle_superseded
 from watchdog import already_said
 from watchdog import check as watchdog_check
@@ -93,3 +94,4 @@ def _park(book, space, verdict, taking: list[dict]) -> None:
             # counting endings from before this turn and replays the same stale
             # spin forever.
             space.event("spin_spent", task=spinner, why=verdict.why[:400])
+    draft_stalls(space, book, repeated=spinner)

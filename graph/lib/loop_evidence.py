@@ -13,6 +13,7 @@ from backlog_reach import overlap
 from backlog_status import is_live, settled
 from gates import GREEN_ALREADY, prove_red
 from loop_contract import contract
+from loop_environment import environment_ending
 from loop_judge_retry import gate_left_its_lane, moved_first
 from loop_types import TaskOutcome
 from worktree import Worktree
@@ -46,6 +47,10 @@ def red_first(loop, task: dict, tree: Worktree, gate: str, rebuild: int,
         with loop.space.step(task_id, "red_first") as note:
             proved, why = prove_red(gate, tree.path, task.get("expect_red") or "")
             note(proved=proved)
+        stopped = environment_ending(loop, task, tree, why, gate, "red_first")
+        if stopped is not None:
+            loop.space.artifact(task_id, "red-first", why)
+            return stopped
         # Whatever colour the gate came back, before either branch below acts
         # on it: this run just executed reviewed shell, same as a builder's
         # edits, and a HEAD move or a stray file here must not ride along into

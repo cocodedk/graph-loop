@@ -11,6 +11,7 @@ import hashlib
 import pathlib
 import re
 
+from provider_words import environment_hint
 from triage_evidence import Ending, has_outcome
 from triage_stable import (
     stable,  # the scrub's home since the 200-line split; this stays its front door
@@ -141,7 +142,7 @@ def _environment(text: str, card: dict) -> bool:
         return True
     if not card.get("gate_has_side_effects") and any(mark in low for mark in ENVIRONMENT):
         return True
-    if "command not found" in low:
+    if environment_hint(text, str(card.get("gate") or "")):
         return True
     found = MISSING.search(text)
     return bool(found and not _belongs(found["path"], list(card.get("files") or [])))

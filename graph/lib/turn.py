@@ -18,6 +18,7 @@ import os
 
 import resources
 from backlog_decision import can_replan
+from issue_drafts import draft_stalls
 from lanes import run_lanes  # noqa: F401 — run_lanes' front door stays here
 from providers import PLAN_TIMEOUT, claude
 from replan import replan_until_planned
@@ -37,6 +38,7 @@ def stood_down(space, code: int, why: str) -> int:
     """
     space.event("driver_stood_down", why=why, exit=code,
                 supervisor_restarts=code == RESTART_EXIT)
+    draft_stalls(space)
     return code
 
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")

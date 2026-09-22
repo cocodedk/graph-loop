@@ -18,6 +18,7 @@ import tempfile
 
 import gate_sandbox
 import runner
+from provider_words import environment_hint
 
 DEFAULT_TIMEOUT = 3600
 
@@ -80,6 +81,8 @@ def prove_red(command: str, cwd: str, expect: str = "",
     result = run_gate(command, cwd, timeout, confine=confine)
     if result.passed:
         return False, GREEN_ALREADY
+    if environment_hint(result.output, command):
+        return False, result.output  # classify before a long footer can hide the toolchain error
     if result.kind != "ran":
         return False, f"the gate could not run ({result.kind}): {result.output[-2000:]}"
     if expect and expect not in result.output:

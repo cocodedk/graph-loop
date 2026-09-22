@@ -38,8 +38,9 @@ from cli_args import build_parser
 from cuts_command import command_cuts
 from doctor_auth import run_accounts
 from driver_turn import after_lanes, before_turn
-from finishing import stand_down
+from finishing import ENDED_WITH_GAPS, stand_down
 from loop import Loop
+from loop_environment import environment_stop
 from remember import command_remember  # a hand-run command, never a step of the loop
 from throttle import Throttle
 from turn_plan import code_first, width_against_lanes
@@ -142,6 +143,8 @@ def _run(args, space) -> int:
         finally:
             throttle.closes(turn_id, len(taking))
         started += ran
+        if why := environment_stop(space):
+            return stood_down(space, ENDED_WITH_GAPS, why)
         # The doctor and the watchdog read what this turn just did, and write
         # what they find into the log nobody is here to read (lib/driver_turn.py).
         after_lanes(book, space, args, taking)
