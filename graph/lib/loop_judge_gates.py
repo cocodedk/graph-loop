@@ -81,8 +81,10 @@ def _confirmed_gate_failure(loop, task: dict, commit: str, gates: list):
         first = loop.keeper._combined_tree_red(task["id"], commit, remaining)
         if first is None:
             return None
+        if first.result.kind != "ran":
+            return first
         owner = _gate_owner(loop, task, first.gate)
-        if not owner or first.result.kind != "ran":
+        if not owner:
             return first
         second = loop.keeper._combined_tree_red(task["id"], commit, [first.gate])
         if second is not None:

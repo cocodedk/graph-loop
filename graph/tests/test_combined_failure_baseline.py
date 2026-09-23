@@ -64,7 +64,7 @@ class BaselineTest(unittest.TestCase):
                                                                     artifact=lambda *a, **k: None))
         failure = GateFailure("false", GateResult(1, "X"), "candidate", "/candidate")
         clash = SimpleNamespace(gate="false", base="captured-parent", failure=failure)
-        self.assertFalse(_gate_is_defective(loop, {"id": "T1"}, clash))
+        self.assertFalse(_gate_is_defective(loop, task(), clash))
         self.assertEqual(["captured-parent"], seen)
 
     def test_baseline_timeout_is_unknown_instead_of_proof_of_an_old_failure(self):
@@ -73,27 +73,29 @@ class BaselineTest(unittest.TestCase):
         keeper = SimpleNamespace(tip=lambda: "parent", _combined_tree_red=lambda *args: baseline)
         loop = SimpleNamespace(keeper=keeper, space=SimpleNamespace(event=lambda *a, **k: None,
                                                                     artifact=lambda *a, **k: None))
-        self.assertIsNone(_gate_is_defective(loop, {"id": "T1"},
+        self.assertIsNone(_gate_is_defective(loop, task(),
                                             SimpleNamespace(gate="false", base="parent", failure=failure)))
 
     def test_only_the_known_checkout_path_is_normalized(self):
         failure = GateFailure("false", GateResult(1, "/candidate/a.py: X"), "candidate", "/candidate")
         baseline = GateFailure("false", GateResult(1, "/base/a.py: X"), "parent", "/base")
         loop = SimpleNamespace(
+            backlog=SimpleNamespace(tasks=lambda: [{**BROKEN, "gate": baseline.gate}]),
             keeper=SimpleNamespace(_combined_tree_red=lambda *args: baseline),
             space=SimpleNamespace(event=lambda *a, **k: None, artifact=lambda *a, **k: None))
         clash = SimpleNamespace(gate="false", base="parent", failure=failure)
-        self.assertTrue(_gate_is_defective(loop, {"id": "T1"}, clash))
+        self.assertTrue(_gate_is_defective(loop, task(), clash))
         baseline.result.output = "/base/a.py: Y"
-        self.assertFalse(_gate_is_defective(loop, {"id": "T1"}, clash))
+        self.assertFalse(_gate_is_defective(loop, task(), clash))
 
     def test_the_same_output_with_a_different_exit_is_not_the_same_failure(self):
         failure = GateFailure("false", GateResult(1, "X"), "candidate", "/candidate")
         baseline = GateFailure("false", GateResult(2, "X"), "parent", "/base")
         loop = SimpleNamespace(
+            backlog=SimpleNamespace(tasks=lambda: [{**BROKEN, "gate": baseline.gate}]),
             keeper=SimpleNamespace(_combined_tree_red=lambda *args: baseline),
             space=SimpleNamespace(event=lambda *a, **k: None, artifact=lambda *a, **k: None))
-        self.assertFalse(_gate_is_defective(loop, {"id": "T1"},
+        self.assertFalse(_gate_is_defective(loop, task(),
                                            SimpleNamespace(gate="false", base="parent", failure=failure)))
 
     def test_a_slower_rerun_of_the_same_failure_is_still_the_same_failure(self):
@@ -103,17 +105,18 @@ class BaselineTest(unittest.TestCase):
         failure = GateFailure("g", GateResult(1, ran), "candidate", "/candidate")
         baseline = GateFailure("g", GateResult(1, slower), "parent", "/base")
         loop = SimpleNamespace(
+            backlog=SimpleNamespace(tasks=lambda: [{**BROKEN, "gate": baseline.gate}]),
             keeper=SimpleNamespace(_combined_tree_red=lambda *args: baseline),
             space=SimpleNamespace(event=lambda *a, **k: None,
                                   artifact=lambda _id, _name, text: saved.append(text)))
         clash = SimpleNamespace(gate="g", base="parent", failure=failure)
-        self.assertTrue(_gate_is_defective(loop, {"id": "T1"}, clash))
+        self.assertTrue(_gate_is_defective(loop, task(), clash))
         self.assertIn("0.674s", saved[0])                        # the kept evidence is untouched
         self.assertIn("0.676s", saved[0])
         for changed in (slower.replace("Ran 1 test", "Ran 2 tests"),
                         slower.replace("ABSTAIN", "INVESTIGATE"), slower + "another failure\n"):
             baseline.result.output = changed
-            self.assertFalse(_gate_is_defective(loop, {"id": "T1"}, clash), changed)
+            self.assertFalse(_gate_is_defective(loop, task(), clash), changed)
 
     def test_the_suite_asserts_its_own_size(self):
         self.assertEqual(9, unittest.TestLoader().loadTestsFromTestCase(type(self)).countTestCases())
