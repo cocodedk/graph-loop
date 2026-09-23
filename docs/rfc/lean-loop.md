@@ -41,7 +41,7 @@ never moved and never merged into; a person does that" (`graph/lib/keep.py:10`).
 *What happened:* for 30 hours, 0 commits reached `main`. The app on the phone could not change.
 
 **7. The design was never a job at all.** The plan called the look "a person's node: it is never a loop
-card" (exercise-log `vault/N11-visual-design.md`, commit `f7b77e8`), so no card was cut for any screen's
+card" (exercise-log `vault/N11-visual-design.md`, commit [f7b77e8](https://github.com/cocodedk/exercise-log/commit/f7b77e8)), so no card was cut for any screen's
 look (fixed by #112 and #113).
 
 **8. Busy counts as progress.** The watchdog counts "cards planned" and "a charged rebuild" as the
@@ -64,9 +64,9 @@ looks healthy.
    and why (the channel from #114). No six rewrites, no model deciding what to do.
 7. **Every run ends on `main` with an installable app, and an email to go look.**
 
-*This is exactly how the screens were finished this morning:* Log (`cbe53e5`), running set and rest
-(`3407921`), History and Catalog (`efe5b8d`), the remaining design details (`d3e21a6`), merged to
-exercise-log `main` as `a217d37` and `a765737`. Five screens, about an hour, each gated only by "it
+*This is exactly how the screens were finished this morning:* Log ([cbe53e5](https://github.com/cocodedk/exercise-log/commit/cbe53e5)), running set and rest
+([3407921](https://github.com/cocodedk/exercise-log/commit/3407921)), History and Catalog ([efe5b8d](https://github.com/cocodedk/exercise-log/commit/efe5b8d)), the remaining design details ([d3e21a6](https://github.com/cocodedk/exercise-log/commit/d3e21a6)), merged to
+exercise-log `main` as [a217d37](https://github.com/cocodedk/exercise-log/commit/a217d37) and [a765737](https://github.com/cocodedk/exercise-log/commit/a765737). Five screens, about an hour, each gated only by "it
 builds and the 744 existing tests still pass", then installed on the phone.
 
 ### What stays, what goes, in one line each
@@ -175,7 +175,7 @@ the event log and cost records; the contact channel (#114) and "no person inside
 the answer command and its log (#95, #119); budgets and timeouts; the repository profile (the loop names
 no build tool); one independent diff review; the dashboard.
 
-## What goes (Astra's line counts at `0f2af2d`)
+## What goes (Astra's line counts at [0f2af2d](https://github.com/cocodedk/graph-loop/commit/0f2af2d))
 
 | Mechanism | Size | Replaced by |
 |---|---|---|
