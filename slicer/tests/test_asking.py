@@ -21,7 +21,7 @@ from tree import publish
 
 import slicer
 
-EXPECTED_TESTS = 9
+EXPECTED_TESTS = 10
 
 
 def rig():
@@ -33,6 +33,21 @@ def rig():
 
 
 class AncestryTest(unittest.TestCase):
+    def test_the_prompt_keeps_work_in_the_loop_and_asks_for_person_only_inputs_first(self):
+        question = asking.prompt(pathlib.Path.cwd(), [], [])
+        for rule in (
+            "A plan never gives work to a person.",
+            "Work that a person judges is still the loop's to build",
+            'its gate is "it builds and every existing test stays green"',
+            "the person accepts the result at the end",
+            "judgement is never a reason to cut no card",
+            "What only a person can supply (a file the loop cannot fetch, a credential, a decision)",
+            "is asked before any card is cut",
+            "answer NEEDS_PERSON first, naming it, and plan nothing further until it is answered",
+        ):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, question)
+
     def test_a_walls_ancestors_appear_in_the_prompt(self):
         repo, source = rig()
         rows = [{"id": "P0", "goal": "the grandparent plan that failed", "sliced_from": ""},

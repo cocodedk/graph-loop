@@ -16,7 +16,7 @@ from intelligence import Reply
 from slicer_state import record
 from speccer import prompt, write_answer
 
-EXPECTED_TESTS = 6
+EXPECTED_TESTS = 7
 
 
 def answer(body: str = "# Greeting\n\n## Goal\nReturn a greeting.\n\n"
@@ -29,6 +29,21 @@ def answer(body: str = "# Greeting\n\n## Goal\nReturn a greeting.\n\n"
 class Speccing(unittest.TestCase):
     def setUp(self):
         self.root = pathlib.Path(tempfile.mkdtemp()) / "specs"
+
+    def test_the_prompt_keeps_work_in_the_loop_and_asks_for_person_only_inputs_first(self):
+        question = prompt("make it", self.root.parent)
+        for rule in (
+            "A plan never gives work to a person.",
+            "Work that a person judges is still the loop's to build",
+            'its gate is "it builds and every existing test stays green"',
+            "the person accepts the result at the end",
+            "judgement is never a reason to cut no card",
+            "What only a person can supply (a file the loop cannot fetch, a credential, a decision)",
+            "is asked before any card is cut",
+            "answer NEEDS_PERSON first, naming it, and plan nothing further until it is answered",
+        ):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, question)
 
     def test_an_accepted_spec_is_written_once(self):
         state, path = write_answer(answer(), goal="greet", spec_root=self.root,

@@ -51,6 +51,11 @@ def prompt(repo: pathlib.Path, sources: list[pathlib.Path], rows: list[dict],
         "declares it, a fixture you write is that invention with a path on it. Put file boundaries in "
         "note; if an approved source requires a method the gate cannot observe, or a shape nothing here "
         "declares, answer NEEDS_PERSON.\n\n"
+        "A plan never gives work to a person. Work that a person judges is still the loop's to build: "
+        'its gate is "it builds and every existing test stays green", and the person accepts the result '
+        "at the end; judgement is never a reason to cut no card. What only a person can supply "
+        "(a file the loop cannot fetch, a credential, a decision) is asked before any card is cut: "
+        "answer NEEDS_PERSON first, naming it, and plan nothing further until it is answered.\n\n"
         "Repository: the directory you are running in, a throwaway copy of the campaign "
         "tip. Never write its path: the builder runs the gate in its own worktree "
         "elsewhere, and this copy is deleted before any builder starts, so every path "
