@@ -19,6 +19,10 @@ The failing test names and their exception types live here, not in the console.
 
     $ANDROID_HOME          the SDK, wherever the machine keeps it
     $GRADLE_USER_HOME      a writable cache directory, outside any masked home
+    $ANDROID_USER_HOME     a writable directory holding a copy of the owner's debug.keystore
+                           (~/.config/.android/ on newer tools, else ~/.android/): without it
+                           the build signs with a throwaway key, and its APK cannot update the
+                           app the owner has installed
 
 A gate box that hides the user's home hides both. The SDK is read-only; the cache must be writable
 and should survive between gates, or every gate downloads the toolchain again.
