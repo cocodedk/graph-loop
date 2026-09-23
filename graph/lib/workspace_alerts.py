@@ -49,7 +49,8 @@ class AlertsMixin:
             return
         try:
             alert_email.send(row["kind"], json.dumps(row, sort_keys=True),
-                             recipient=self.require_contact())
+                             recipient=self.require_contact(),
+                             subject=f"graph-loop needs you: {row.get('task') or 'the campaign'}")
         except (OSError, ValueError, SystemExit) as error:
             self.event("contact_send_failed", about=row["kind"], error=str(error))
 
