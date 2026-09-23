@@ -24,7 +24,7 @@ def _identity(failure) -> tuple:
     return failure.result.kind, failure.result.code, DURATION.sub(r"\1<seconds>s", output)
 
 
-def same_failure(loop, task: dict, clash) -> bool | None:
+def same_failure(loop, task: dict, clash, check=None) -> bool | None:
     """Only identical completed failures establish that this work added nothing."""
     evidence = {"gate": clash.gate, "base": clash.base}
     try:
@@ -33,7 +33,7 @@ def same_failure(loop, task: dict, clash) -> bool | None:
         evidence["candidate"] = _record(clash.failure)
         if clash.failure.result.kind != "ran":
             raise RuntimeError("the candidate gate did not finish running")
-        baseline = loop.keeper._combined_tree_red(task["id"], clash.base, [clash.gate])
+        baseline = (check or loop.keeper._combined_tree_red)(task["id"], clash.base, [clash.gate])
         evidence["baseline"] = _record(baseline) if baseline else {"commit": clash.base, "passed": True}
         if baseline and baseline.result.kind != "ran":
             raise RuntimeError(f"the baseline gate did not finish running ({baseline.result.kind})")

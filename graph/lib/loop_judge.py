@@ -17,6 +17,7 @@ from loop_contract import contract  # noqa: F401 — loop.py imports it from her
 from loop_diff_review import review_change
 from loop_environment import environment_ending
 from loop_judge_gates import (
+    _confirmed_gate_failure,
     _gate_is_defective,
     _gate_owner,
     _gates_on_the_branch,
@@ -155,7 +156,8 @@ def _keep(loop, task: dict, tree, rebuild: int):
                     gates=lambda: _gates_on_the_branch(loop, task),
                     record=lambda sha: loop.backlog.set_status(
                         task_id, "done", commit=sha, worktree=tree.path, kept_at=_now()),
-                    publishing=loop.backlog.only_writer)
+                    publishing=loop.backlog.only_writer,
+                    check=lambda _id, commit, gates: _confirmed_gate_failure(loop, task, commit, gates))
             except CombinedGateFailed as clash:
                 note(commit=None, clash=str(clash))
                 output = clash.failure.result.output if clash.failure else str(clash)

@@ -49,7 +49,7 @@ class Keeper:
 
     def keep(self, task_id: str, worktree: str, message: str,
              files: list[str] | None = None, attempt: int = 1, gates=None,
-             record=None, publishing=None) -> str | None:
+             record=None, publishing=None, check=None) -> str | None:
         """Commit a task's work onto the campaign branch. Returns the commit id.
 
         Nothing to commit answers None: an accepted task that changed no file is
@@ -117,19 +117,19 @@ class Keeper:
         # sibling that landed since the last try is gated too.
         with (publishing() if publishing else contextlib.nullcontext()):
             return self._publish(task_id, worktree, message, files, attempt, gates, record,
-                                 publishing, commit, tip, name)
+                                 publishing, commit, tip, name, check)
 
     def _publish(self, task_id, worktree, message, files, attempt, gates, record,
-                 publishing, commit, tip, name):
+                 publishing, commit, tip, name, check):
         if self.tip() != tip:
             # A sibling published while this commit was being built: gating a stale
             # candidate would fail for the wrong reason, so it is rebuilt first.
             if attempt >= 3:
                 raise RuntimeError(f"the branch moved under {task_id} three times")
             return self.keep(task_id, worktree, message, files, attempt=attempt + 1,
-                             gates=gates, record=record, publishing=publishing)
+                             gates=gates, record=record, publishing=publishing, check=check)
         wanted = list(gates() if callable(gates) else (gates or []))
-        red = self._combined_tree_red(task_id, commit, wanted) if wanted else None
+        red = (check or self._combined_tree_red)(task_id, commit, wanted) if wanted else None
         if red:
             # This card passed alone, but a sibling landed meanwhile: the two
             # together are what the branch will hold, so the gate runs on THAT
@@ -167,7 +167,7 @@ class Keeper:
             if attempt >= 3:
                 raise RuntimeError(f"the branch moved under {task_id} three times: {moved.stderr.strip()[:200]}")
             return self.keep(task_id, worktree, message, files, attempt=attempt + 1, gates=gates,
-                             record=record, publishing=publishing)
+                             record=record, publishing=publishing, check=check)
         return commit
 
     def _combined_tree_red(self, task_id: str, commit: str, gates: list):
