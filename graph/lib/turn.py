@@ -14,12 +14,16 @@ rewritten, and the lanes.
 
 from __future__ import annotations
 
+import contextlib
 import os
+from functools import partial
 
+import clean_tree
 import resources
 import where
 from backlog_decision import can_replan
 from issue_drafts import draft_stalls
+from keep_branch import tip_of
 from lanes import run_lanes  # noqa: F401 — run_lanes' front door stays here
 from providers import PLAN_TIMEOUT, claude
 from replan import replan_until_planned
@@ -62,8 +66,6 @@ def replan_pending(book, space, planner=None) -> bool:
     asked again next turn instead of stranding the task. A call that was paid
     for and did not finish spends its round like any other answered refusal.
     A rejected diff is not a contract problem and never comes here."""
-    planner = planner or (lambda prompt, resource: plan_with_claude(
-        prompt, resource, cwd=str(where.repo(space))))
     for task in book.tasks():
         # `backlog_decision.can_replan` is this condition's one home, so the
         # plan phase and this path cannot both claim the same card.
@@ -72,7 +74,7 @@ def replan_pending(book, space, planner=None) -> bool:
             continue
         if contract_path(book, space, task):
             return True
-        def recorded(prompt: str, task_id: str = task["id"]):
+        def recorded(prompt: str, task_id: str = task["id"], *, invoke):
             """Every planner call leaves its own record: a summary of the last
             one hid what the first cost and what it answered.
 
@@ -88,7 +90,7 @@ def replan_pending(book, space, planner=None) -> bool:
                 if spent.skip(resource):
                     continue      # this account or this model has already said no
                 with space.step(task_id, "replan_call") as call:
-                    out = planner(prompt, resource)
+                    out = invoke(prompt, resource)
                     call(outcome=out.kind, cost=out.cost, tokens=out.tokens, on=str(resource))
                 space.artifact(task_id, "replan-answer", out.raw or out.text)
                 space.attempt(task_id, account="plan", kind=out.kind, cost=out.cost,
@@ -105,7 +107,18 @@ def replan_pending(book, space, planner=None) -> bool:
         # report.py's clock, by_step and by_task totals summed the same
         # seconds twice. The outcome is still recorded once, below, as a
         # plain event rather than a second step.
-        fixed = replan_until_planned(book, task, recorded, space=space)
+        with contextlib.ExitStack() as stack:
+            if planner is None:
+                tip = tip_of(space)
+                if not tip:
+                    space.event("replan_skipped", task=task["id"], why="no campaign tip")
+                    return True
+                clean, cannot = stack.enter_context(clean_tree.checkout(tip, where.repo(space)))
+                if clean is None:
+                    space.event("replan_skipped", task=task["id"], why=f"no clean checkout: {cannot}")
+                    return True
+                planner = partial(plan_with_claude, cwd=str(clean))
+            fixed = replan_until_planned(book, task, partial(recorded, invoke=planner), space=space)
         say(f"  replan {task['id']}: {fixed.why[:160]}")
         space.event("replanned" if fixed.rewritten else "replan_refused", task=task["id"], why=fixed.why[:300])
         return True
