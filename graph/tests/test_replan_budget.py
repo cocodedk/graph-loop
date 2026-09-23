@@ -20,6 +20,18 @@ REASONS = ("The gate accepts a comment instead of executing the implementation."
 
 
 class ReplanBudgetTest(unittest.TestCase):
+    def test_another_file_needs_a_slice_without_storing_a_rewrite(self):
+        book = book_with()
+        before = book.task("T1")
+        planner = Mock(return_value=answer("needs_slice: needs MainActivity.kt"))
+        result = replan_until_planned(book, before, planner)
+        self.assertFalse(result.rewritten)
+        self.assertIsNone(result.task)
+        self.assertEqual("needs MainActivity.kt", result.why)
+        self.assertEqual({**before, "status": "needs_slice",
+                          "refused_why": "needs MainActivity.kt"}, book.task("T1"))
+        planner.assert_called_once()
+
     def test_blocked_footer_parks_without_spending_a_replan(self):
         from unittest import mock
 

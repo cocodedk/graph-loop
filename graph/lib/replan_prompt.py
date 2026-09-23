@@ -80,4 +80,7 @@ def prompt_for(task: dict) -> str:
         + ("." if is_live(task) else ", gate.")
         + " Keep the goal to one idea, name every file the gate can fail on, "
         "and say plainly what the gate will prove and what it will not.\n"
-        + distress.INSTRUCTION + distress.TEMPLATE)
+        + distress.INSTRUCTION + distress.TEMPLATE
+        + "\nException: when the fix needs a file this card does not own, answer only "
+        "`needs_slice: <why>` instead of a contract or distress line. "
+        "BLOCKED stays for everything else.\n")
