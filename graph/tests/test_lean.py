@@ -8,6 +8,7 @@ from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
+import alert_email
 import lean
 import lean_run
 import providers
@@ -82,7 +83,7 @@ class Entry(unittest.TestCase):
             return built, "" if built else "BUILD FAILED"
         with mock.patch.object(lean_run, "run_feature", return_value="abc123") as feature, \
                 mock.patch.object(lean_run, "masked", masked), \
-                mock.patch.object(lean_run.alert_email, "send", self.send):
+                mock.patch.object(alert_email, "send", self.send):
             code = lean.main(self.argv())
         feature.assert_called_once()
         return code
@@ -139,7 +140,7 @@ class Wiring(unittest.TestCase):
         self.assertEqual(self.tree.path, call.call_args.kwargs["cwd"])
         prompt = call.call_args.args[1]
         self.assertIn("+a line", prompt)
-        self.assertIn('"review": "ACCEPT" or "REJECT"', prompt)
+        self.assertIn('"review":"ACCEPT|REJECT"', prompt)
 
     def test_the_suite_runs_for_real_and_a_red_one_says_why(self):
         passed, tail = lean_run.masked(self.ws, "echo the ring is grey; exit 1", self.tree.path)

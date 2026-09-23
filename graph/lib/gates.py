@@ -51,7 +51,8 @@ def run_gate(command: str, cwd: str, timeout: int = DEFAULT_TIMEOUT,
     `confine=False` is for a LIVE gate only: it performs the work it measures,
     it needs Docker and the database, and its text is the commander's.
     """
-    home = tempfile.mkdtemp(prefix="gate-home-")
+    # Never made for an unconfined (LIVE) gate: nothing below reads it then.
+    home = tempfile.mkdtemp(prefix="gate-home-") if confine else ""
     boxed = confine and gate_sandbox.works()
     argv = (gate_sandbox.argv(command, cwd, home, **({"paths": paths} if paths else {}))
             if boxed else ["bash", "-c", command])
@@ -75,7 +76,8 @@ def run_gate(command: str, cwd: str, timeout: int = DEFAULT_TIMEOUT,
         # the empty home is this call's alone: left behind, one per gate run,
         # 196 of them filled /tmp in an hour and the full disk of 2026-09-03
         # killed every process on the host
-        shutil.rmtree(home, ignore_errors=True)
+        if home:
+            shutil.rmtree(home, ignore_errors=True)
     if not result.passed:
         result.output += junit_failures(cwd, started)
     return result

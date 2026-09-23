@@ -14,18 +14,17 @@ import pathlib
 import re
 
 import accounts
-import alert_email
 import gate_paths
 import gates
 import lean_git
 import providers
 import review
 import tools
+from review_scope import VERDICT
 from worktree import Worktree
 
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
-VERDICT = '{"review": "ACCEPT" or "REJECT", "accept": true or false, "findings": [at most three short strings]}'
 
 
 def build(ws, task: dict, prompt: str, tree, resume: str = "") -> providers.Outcome:
@@ -49,8 +48,7 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome
     prompt = (f"You review one change to this repository, read-only. It should implement the "
               f"spec below, with tests. Refuse only for a real defect: it does not do what the "
               f"spec asks, it breaks something, or it adds behaviour without tests.\n\n"
-              f"## Spec\n\n{spec}\n\n## The diff against main\n\n{diff}\n\n"
-              f"Answer with exactly one line of JSON: {VERDICT}")
+              f"## Spec\n\n{spec}\n\n## The diff against main\n\n{diff}\n\n{VERDICT}")
 
     def paid(kind, account, cost, tokens, _text):
         ws.attempt(feature, account=account, kind=kind, cost=cost, tokens=tokens, purpose="review")
@@ -59,10 +57,7 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome
 
 def mail(ws, subject: str, body: str) -> None:
     """Through the proven contact; a failed send is logged, never raised."""
-    try:
-        alert_email.send(body, "", recipient=ws.require_contact(), subject=subject)
-    except (OSError, ValueError, SystemExit) as error:
-        ws.event("contact_send_failed", about=subject, error=str(error))
+    ws.mail_person(subject, body)
 
 
 def slug(path: str) -> str:

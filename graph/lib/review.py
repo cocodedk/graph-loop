@@ -81,12 +81,7 @@ def _claude_review(prompt: str, resource, effort: str, timeout: int, *, cwd: str
                  read_only=True, timeout=timeout, cwd=cwd or None)
     if not out.ok:
         return out
-    verdict, findings = _read_review(out.text or "")
-    if verdict not in ("ACCEPT", "REJECT", "BLOCKED"):
-        return Outcome("malformed", text=(out.text or "").strip()[:500], raw=out.raw,
-                       cost=out.cost, tokens=out.tokens)
-    return Outcome("ok", text=findings or out.text, verdict=verdict, raw=out.raw,
-                   cost=out.cost, tokens=out.tokens)
+    return _verdict_outcome(out)
 
 
 def _one_review(binary: str, prompt: str, model: str, cwd: str, effort: str,
@@ -103,10 +98,21 @@ def _one_review(binary: str, prompt: str, model: str, cwd: str, effort: str,
         # The reviewer's own exit already said the call did not finish, so
         # whatever its output holds is not a verdict.
         return out
-    verdict, findings = _read_review(out.text)
+    return _verdict_outcome(out, reclassify_malformed=True)
+
+
+def _verdict_outcome(out: Outcome, *, reclassify_malformed: bool = False) -> Outcome:
+    """A reviewer's reply as an Outcome, carrying its cost either way. Only the
+    codex path reads a malformed reply again for a refusal (`_classify_text`)."""
+    verdict, findings = _read_review(out.text or "")
     if verdict not in ("ACCEPT", "REJECT", "BLOCKED"):
-        # Only now do the words matter: a reviewer that answered is not a
-        # reviewer that was refused, whatever its banner says about limits.
-        return Outcome(_classify_text(out.raw) or "malformed",
-                       text=(out.text or out.raw).strip()[:500], raw=out.raw)
-    return Outcome("ok", text=findings or out.text, verdict=verdict, raw=out.raw)
+        if reclassify_malformed:
+            # Only now do the words matter: a reviewer that answered is not a
+            # reviewer that was refused, whatever its banner says about limits.
+            return Outcome(_classify_text(out.raw) or "malformed",
+                           text=(out.text or out.raw).strip()[:500], raw=out.raw,
+                           cost=out.cost, tokens=out.tokens)
+        return Outcome("malformed", text=(out.text or "").strip()[:500], raw=out.raw,
+                       cost=out.cost, tokens=out.tokens)
+    return Outcome("ok", text=findings or out.text, verdict=verdict, raw=out.raw,
+                   cost=out.cost, tokens=out.tokens)
