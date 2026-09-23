@@ -113,6 +113,13 @@ class Entry(unittest.TestCase):
         masked.assert_not_called()
         self.assertFalse(any(row["kind"] == "lean_built" for row in self.ws.events()))
 
+    def test_a_stopped_feature_stops_the_run(self):
+        (self.ws.root / "contact").write_text("person@example.test\n")
+        argv = self.argv() + ["--spec", str(self.spec)]
+        with mock.patch.object(lean_run, "run_feature", return_value="") as feature:
+            self.assertEqual(1, lean.main(argv))
+        feature.assert_called_once()
+
 
 class Wiring(unittest.TestCase):
     """The real call sites, with only the providers themselves faked."""

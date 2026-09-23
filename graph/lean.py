@@ -3,7 +3,8 @@
 
     lean.py --workspace <ws> --repo <repo> --spec <file> [--spec <file> ...] [--profile <file>]
 
-Each spec file is one feature, run in the order given (`lean_run.py`). The run
+Each spec file is one feature, run in the order given (`lean_run.py`); the run
+stops at the first that does not land, since later specs build on it. The run
 refuses to start without a proven contact (`graph-goal.py contact`). The
 profile, by default the `profile-*.md` the repository's CLAUDE.md links to,
 gives three commands under `## suite_command`, `## build_command` and
@@ -90,8 +91,11 @@ def main(argv: list[str] | None = None) -> int:
     repo = str(pathlib.Path(args.repo).resolve())
     path = profile_path(repo, args.profile)
     profile = read_profile(path)
-    merged = [lean_run.slug(spec) for spec in args.spec
-              if lean_run.run_feature(ws, repo, str(pathlib.Path(spec).resolve()), profile, path)]
+    merged = []
+    for spec in args.spec:     # in order: a later spec builds on the ones before it
+        if not lean_run.run_feature(ws, repo, str(pathlib.Path(spec).resolve()), profile, path):
+            break
+        merged.append(lean_run.slug(spec))
     if merged and not finish(ws, repo, profile, merged):
         return 1
     return 0 if len(merged) == len(args.spec) else 1
