@@ -23,7 +23,12 @@ rewritten about 95 times.
 **3. A refused card is rewritten by another model, up to six times.** (`graph/lib/replan.py:111`,
 `MAX_ROUNDS = 6` in `graph/lib/replan_budget.py:10`.) For most of the run, the rewriter could not even
 read the code it was writing about, so it guessed names that did not exist (`SetRecord`, issues #70 and
-#73). A small decision model (Jev) picks what to do with each refusal (`graph/lib/triage_path_jev.py:14`).
+#73). Giving it read access fixed only half of that. Until #73 (merged 2026-09-22 about 18:18Z) the
+rewriter ran with no tools at all: N19's ~95 rewrites all happened then. #73 let it read, but in the
+repository's own checkout, which sits on `main`; the campaign's code lives on the campaign branch, so it
+read an old tree without the new files (N13's rewrite said "the worktree was unreadable"). The fix,
+reading a clean copy of the campaign branch as the slicer already does, is issue #109; it was never
+built, and neither was #110. In the proposed flow the rewriter is gone, so neither is needed. A small decision model (Jev) picks what to do with each refusal (`graph/lib/triage_path_jev.py:14`).
 *What happened:* one day had 143 refusals, 98 rewrites and 45 cards kept. Rewriting cost $78, more than
 building ($70).
 
