@@ -3,6 +3,34 @@
 Status: **proposal, 2026-09-23 — for the owner to decide.** Nothing here is built. If accepted, it is
 carried out as the numbered steps at the end, one issue and one PR each, in that order.
 
+## In plain words
+
+**Today** the loop works like an office that won't let anyone write a letter until they have proved,
+on paper, that the letter cannot be wrong. Every small job gets a written test plan, a reviewer whose
+job is to find holes in it, a rewrite of the plan when a hole is found (up to six times), and only
+then the work, which is checked again against every older plan. The office is very busy, and very few
+letters go out. That is what happened: three days, hundreds of approved plans, and the app looked the same.
+
+**The proposal** is to work like a normal team:
+
+1. You say what you want, including how it should look, and answer any questions up front.
+2. Each feature or screen is one job for one builder.
+3. The builder makes it, together with its tests.
+4. The check is simply: does the app still build, and do all the tests still pass? One other agent
+   reads the change.
+5. If it fails, the builder gets one more try. If it still fails, you get an email saying why.
+6. At the end of every run, the new app is on `main` and ready to install, and you get an email to go look.
+
+That is how the five screens were done in one hour.
+
+**What we keep:** everything that protects you — each builder in its own copy of the code, no access to
+your passwords, every change saved in git, the emails to you, and spending limits.
+
+**What we remove:** the parts that only exist to prove proofs — the hole-hunting reviewer, the rewrites,
+three cards per feature, and a model that picks models. That is about two thirds of graph-loop's code.
+
+It is done in nine small steps, one deletion each. If any step makes things worse, we stop there.
+
 ## Why
 
 On the exercise-log app, graph-loop ran for about three days. It kept about 250 cards, but after 30 hours
