@@ -165,7 +165,7 @@ def _keep(loop, task: dict, tree, rebuild: int):
                 if ending is not None:
                     return ending
                 owner = _gate_owner(loop, task, clash.gate)
-                defective = _gate_is_defective(loop, task, clash) if owner else False
+                defective = _gate_is_defective(loop, task, clash, owner) if owner else False
                 if defective is None:
                     return back_in_place(
                         loop, task, tree, "harness", "the baseline gate could not be checked",

@@ -74,7 +74,7 @@ def _gate_owner(loop, task: dict, gate: str) -> str:
     return ""
 
 
-def _confirmed_gate_failure(loop, task: dict, commit: str, gates: list):
+def _confirmed_gate_failure(loop, task: dict, commit: str, gates: list, owner=None):
     """An older gate must fail twice on this commit before it stops the keep."""
     remaining = list(gates)
     while remaining:
@@ -83,24 +83,24 @@ def _confirmed_gate_failure(loop, task: dict, commit: str, gates: list):
             return None
         if first.result.kind != "ran":
             return first
-        owner = _gate_owner(loop, task, first.gate)
-        if not owner:
+        gate_owner = _gate_owner(loop, task, first.gate) if owner is None else owner
+        if not gate_owner:
             return first
         second = loop.keeper._combined_tree_red(task["id"], commit, [first.gate])
         if second is not None:
             return second
-        loop.space.event("gate_flake", task=task["id"], gate_owner=owner,
+        loop.space.event("gate_flake", task=task["id"], gate_owner=gate_owner,
                          gate=first.gate, commit=commit, tail=first.result.why)
         remaining = remaining[remaining.index(first.gate) + 1:]
     return None
 
 
-def _gate_is_defective(loop, task: dict, clash) -> bool | None:
+def _gate_is_defective(loop, task: dict, clash, owner="") -> bool | None:
     """True for the same old failure, False for new evidence, None without proof."""
     if isinstance(clash, GateMutatedTree):
         return True
     return same_failure(loop, task, clash, check=lambda _id, commit, gates:
-                        _confirmed_gate_failure(loop, task, commit, gates))
+                        _confirmed_gate_failure(loop, task, commit, gates, owner))
 
 
 def _send_to_its_owner(loop, task: dict, tree, owner: str, clash) -> TaskOutcome:
