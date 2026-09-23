@@ -148,6 +148,7 @@ class Wiring(unittest.TestCase):
         prompt = call.call_args.args[1]
         self.assertIn("+a line", prompt)
         self.assertIn('"review":"ACCEPT|REJECT"', prompt)
+        self.assertIn("ordinary use", prompt)          # rarer edge cases are findings, not refusals
 
     def test_the_suite_runs_for_real_and_a_red_one_says_why(self):
         passed, tail = lean_run.masked(self.ws, "echo the ring is grey; exit 1", self.tree.path)
