@@ -14,7 +14,7 @@ REQUIREMENTS = {"goal", "done_when", "gate", "note", "safety", "simplicity"}
 # correct REJECT thrown away as malformed (2026-09-18). A prompt and a parser
 # that state the shape separately will drift; these two cannot.
 VERDICT = (
-    'Answer with exactly one JSON object and no other text: '
+    'Answer with exactly one JSON object on one line and no other text: '
     '{"review":"ACCEPT|REJECT","accept":true,"findings":["what is wrong, in one sentence"]}. '
     'Exactly those three keys. `findings` holds at most three plain strings, never objects. '
     'ACCEPT requires accept=true and no findings; REJECT requires accept=false and at '

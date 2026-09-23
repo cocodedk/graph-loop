@@ -47,12 +47,16 @@ class AlertsMixin:
             return
         if not (self.root / "contact").exists():
             return
+        self.mail_person(f"graph-loop needs you: {row.get('task') or 'the campaign'}",
+                         row["kind"], json.dumps(row, sort_keys=True), about=row["kind"])
+
+    def mail_person(self, subject: str, why: str, flags: str = "", *, about: str = "") -> None:
+        """Through the proven contact; a failed send is logged, never raised.
+        `about` names the event when it is not the subject."""
         try:
-            alert_email.send(row["kind"], json.dumps(row, sort_keys=True),
-                             recipient=self.require_contact(),
-                             subject=f"graph-loop needs you: {row.get('task') or 'the campaign'}")
+            alert_email.send(why, flags, recipient=self.require_contact(), subject=subject)
         except (OSError, ValueError, SystemExit) as error:
-            self.event("contact_send_failed", about=row["kind"], error=str(error))
+            self.event("contact_send_failed", about=about or subject, error=str(error))
 
     def alert(self, task_id: str, what: str, *, limit: int | None = 300) -> str:
         """Log and send something a person has to read, newest last."""

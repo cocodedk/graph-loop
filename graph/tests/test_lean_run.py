@@ -12,6 +12,7 @@ from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
+import alert_email
 import lean_run
 import tmp_root  # noqa: F401
 from providers import Outcome
@@ -63,7 +64,7 @@ class Rig(unittest.TestCase):
         with mock.patch.object(lean_run, "build", build), \
                 mock.patch.object(lean_run, "masked", masked), \
                 mock.patch.object(lean_run, "judge", judge), \
-                mock.patch.object(lean_run.alert_email, "send",
+                mock.patch.object(alert_email, "send",
                                   lambda body, flags, **kw: self.mails.append((kw, body))):
             return lean_run.run_feature(self.ws, self.repo, str(self.spec), PROFILE, "profile.md")
 

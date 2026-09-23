@@ -127,10 +127,14 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
     added without editing code.
     """
     env, drop = accounts.environment(account)
+    denies = [name for name in ("Agent", disallowed_tools) if name]
+    if no_tools:   # a planner answers with text: it edits nothing and touches no stack
+        # the families a planner must never have are denied by name as well.
+        denies.append("Bash,Edit,Write,MultiEdit,NotebookEdit,Monitor,Workflow,WebFetch,Task")
     argv = [binary, "--permission-mode", "dontAsk", "--strict-mcp-config",
             "-p", "--output-format", "json",
             "--model", model or MODEL, "--effort", effort or EFFORT,
-            "--disallowedTools", ",".join(name for name in ("Agent", disallowed_tools) if name)]
+            "--disallowedTools", ",".join(denies)]
     if resume:
         # A rebuild round continues the SAME work: the builder keeps what it read
         # and gets the findings on top, instead of paying to read it all again.
@@ -139,10 +143,8 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
         argv += ["--allowedTools", allowed_tools]
     if read_only:   # a reviewer reads and nothing else; the denies alone cannot
         argv += list(READ_ONLY_FLAGS)   # reach an inherited MCP server (tools.py)
-    if no_tools:   # a planner answers with text: it edits nothing and touches no stack
+    if no_tools:
         argv += ["--tools", ""]   # --strict-mcp-config above already keeps out an inherited MCP server
-        # the families a planner must never have are denied by name as well.
-        argv[argv.index("--disallowedTools") + 1] += ",Bash,Edit,Write,MultiEdit,NotebookEdit,Monitor,Workflow,WebFetch,Task"
     settings = None
     if guard:   # a live task: the guard hook first, its prefixes in the environment
         with tempfile.NamedTemporaryFile("w", suffix=".json", prefix="live-guard-", delete=False) as settings:
