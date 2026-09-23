@@ -20,12 +20,15 @@
 <meta name="twitter:image" content="https://graph-loop.cocode.dk/og.png" />
 <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 <link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="https://brand.cocode.dk/v1.css" />
+<script type="module" src="https://brand.cocode.dk/v1.js"></script>
 </head>
 <body>
-<header>
-  <img class="mark" src="favicon.svg" alt="" width="32" height="32" />
-  <span class="name"><a href="./">graph-loop</a></span>
-</header>
+<!-- The cocode.dk family frame. Without JavaScript its children show instead: a way home.
+     No hreflang alternates on this page — there is no Persian version to switch to. -->
+<cocode-head project="graph-loop" accent="#6ee7a8" on-accent="#0b0e11" dark>
+  <a href="https://cocode.dk">cocode.dk</a>
+</cocode-head>
 
 <main>
   <h1>How the loop runs a card</h1>
@@ -61,7 +64,11 @@
 </main>
 
 <footer>
-  <p>MIT &nbsp;|&nbsp; © 2026 <a href="https://cocode.dk" target="_blank" rel="noreferrer">Cocode</a> &nbsp;|&nbsp; Created by <a href="https://linkedin.com/in/babakbandpey" target="_blank" rel="noreferrer">Babak Bandpey</a></p>
+  <p>MIT</p>
 </footer>
+
+<cocode-foot repo="cocodedk/graph-loop" dark>
+  <a href="https://cocode.dk">cocode.dk</a>
+</cocode-foot>
 </body>
 </html>
