@@ -57,6 +57,30 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome
     return review.codex(CODEX_BIN, prompt, cwd=cwd, attempt=paid)
 
 
+def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
+    """Before anything is built: the questions only a person can answer, or ""."""
+    specs = "\n\n".join(f"## {pathlib.Path(path).name}\n\n{pathlib.Path(path).read_text('utf-8')}"
+                        for path in spec_paths)
+    prompt = (f"You read these specs before anything is built, read-only; the repository's CLAUDE.md, "
+              f"its brief and the profile at {profile_path} give the context. A builder implements "
+              f"each spec in order. It edits files only (no chmod, no git, no network), and the suite "
+              f"runs in a sandbox with an empty home and no network. Refuse only for what a person "
+              f"must decide first: specs that contradict each other or themselves, a decision the "
+              f"builder would have to guess, or a requirement it cannot meet here. Each finding is one "
+              f"question to the person. What the builder can settle itself is no question: accept."
+              f"\n\n{specs}\n\n{VERDICT}")
+
+    def paid(kind, account, cost, tokens, _text):
+        ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens, purpose="grill")
+    out = review.codex(CODEX_BIN, prompt, cwd=repo, attempt=paid)
+    questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
+    ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=questions[:2000])
+    if questions:
+        mail(ws, "graph-loop has questions before building",
+             f"{questions}\n\nAnswer them in the specs, then run again. Nothing was built.")
+    return questions
+
+
 def mail(ws, subject: str, body: str) -> None:
     """Through the proven contact; a failed send is logged, never raised."""
     ws.mail_person(subject, body)
