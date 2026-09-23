@@ -21,7 +21,7 @@ sys.path.insert(0, str(HERE))
 from contracts import validate
 from git_fixture import commit
 
-EXPECTED_TESTS = 17
+EXPECTED_TESTS = 18
 
 
 class GateOutputTest(unittest.TestCase):
@@ -123,6 +123,13 @@ class GateOutputTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "nothing owns"):
             self.check(gate.replace(trap, ""))
         self.assertEqual("MOLECULE", self.check(gate)["result"])
+
+    def test_a_probe_removed_alongside_other_exit_cleanup_is_owned(self):
+        gate = 'probe=tests/test_gate_probe.py\ncat app.py > "$probe"\n'
+        trap = "trap 'rm -f \"$probe\"; ./gradlew --stop >/dev/null 2>&1 || true' EXIT"
+        self.assertEqual("MOLECULE", self.check(trap + "\n" + gate)["result"])
+        with self.assertRaisesRegex(ValueError, "nothing owns"):
+            self.check(trap.replace('rm -f "$probe"; ', '') + "\n" + gate)
 
     def test_a_pwd_prefixed_target_is_refused(self):
         # $PWD is a real shell variable, but never one this gate assigned

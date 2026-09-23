@@ -131,17 +131,18 @@ def _targets(match: re.Match) -> list[str]:
 
 
 def _exit_cleanup_targets(text: str, spans: list[tuple[int, int, bool]]) -> set[str]:
-    """Exact targets of a quoted `rm [-f] [--] target` EXIT trap."""
+    """Exact targets of `rm [-f] [--] target` commands in a quoted EXIT trap."""
     targets = set()
     for match in re.finditer(r"\btrap\s+(['\"])(.*?)\1\s+EXIT(?=\s|[;&)]|$)", text):
         if not _outside(match.start(), spans) or not _command_position(text, match.start()):
             continue
-        command = match.group(2)
-        remove = re.match(r"rm\s+(?:-f\s+)?(?:--\s+)?", command)
-        if remove:
-            target = redirect_target(command, remove.end())
-            if target and command[remove.end():].strip() == target:
-                targets.add(target.strip('"'))
+        for command in re.split(r";|&&|\|\|", match.group(2)):
+            command = command.strip()
+            remove = re.match(r"rm\s+(?:-f\s+)?(?:--\s+)?", command)
+            if remove:
+                target = redirect_target(command, remove.end())
+                if target and command[remove.end():].strip() == target:
+                    targets.add(target.strip('"'))
     return targets
 
 
