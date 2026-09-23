@@ -91,7 +91,15 @@ def main(argv: list[str] | None = None) -> int:
     ws = Workspace(args.workspace)
     ws.require_contact()                       # no proven channel, no run
     repo = str(pathlib.Path(args.repo).resolve())
-    path = profile_path(repo, args.profile)
+    try:
+        path = profile_path(repo, args.profile)
+    except SystemExit as missing:            # the person chooses the profile, told how
+        shelf = pathlib.Path(__file__).resolve().parents[1] / "profiles"
+        names = "\n".join(f"- {kind.name}" for kind in sorted(shelf.glob("*.md")))
+        lean_run.mail(ws, "graph-loop needs a profile",
+                      f"{missing}\n\nCopy one of these from {shelf} into the repository as "
+                      f"profile-<name>.md and link it from CLAUDE.md:\n{names}")
+        raise
     profile = read_profile(path)
     specs = [str(pathlib.Path(spec).resolve()) for spec in args.spec]
     if lean_run.grill(ws, repo, specs, path):   # questions first: nothing is built on a guess
