@@ -6,6 +6,7 @@ from __future__ import annotations
 import contextlib
 import io
 import pathlib
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -75,21 +76,36 @@ class PlannerCallTest(unittest.TestCase):
     def test_the_planner_reads_the_campaign_checkout_with_its_own_timeout(self):
         import turn
         with tempfile.TemporaryDirectory() as tmp:
-            root = pathlib.Path(tmp)
-            repo = root / "repo"
-            repo.mkdir()
-            space = Workspace(root / "campaign").init(
-                goal="g", backlog="b.yaml", repo=str(repo))
+            repo = pathlib.Path(tempfile.mkdtemp(dir=tmp))
+            def git(*args):
+                return subprocess.check_output(["git", "-c", "commit.gpgsign=false", "-C", str(repo), *args], text=True).strip()
+            git("init", "-q", "-b", "main")
+            git("-c", "user.name=Test", "-c", "user.email=test@example.org",
+                "commit", "-q", "--allow-empty", "-m", "main")
+            git("checkout", "-q", "-b", "campaign/test")
+            (repo / "tip.txt").write_text("campaign")
+            git("add", "tip.txt")
+            git("-c", "user.name=Test", "-c", "user.email=test@example.org",
+                "commit", "-q", "-m", "campaign")
+            tip = git("rev-parse", "HEAD")
+            git("checkout", "-q", "main")
+            (repo / "tip.txt").write_text("dirty main")
+            space = Workspace(pathlib.Path(tmp) / "campaign").init(
+                goal="g", backlog="b.yaml", repo=str(repo), branch="campaign/test")
             answer = yaml.safe_dump({"goal": "g2", "files": [],
                                      "gate": "true", "done_when": "y"})
-            with unittest.mock.patch.object(turn, "claude", return_value=Outcome("ok", text=answer)) as call:
+            def planner(*args, cwd, **kwargs):
+                self.assertNotEqual(repo, pathlib.Path(cwd))
+                self.assertEqual(tip, git("-C", cwd, "rev-parse", "HEAD"))
+                self.assertEqual("", git("-C", cwd, "status", "--porcelain"))
+                self.assertEqual("campaign", (pathlib.Path(cwd) / "tip.txt").read_text())
+                self.assertTrue(kwargs.get("read_only"))
+                self.assertFalse(kwargs.get("no_tools", False))
+                self.assertEqual(900, kwargs.get("timeout"))
+                return Outcome("ok", text=answer)
+            with unittest.mock.patch.object(turn, "claude", side_effect=planner) as call:
                 replan_pending(book(), space)
             call.assert_called_once()
-            seen = call.call_args.kwargs
-        self.assertTrue(seen.get("read_only"))
-        self.assertFalse(seen.get("no_tools", False))
-        self.assertEqual(str(repo), seen.get("cwd"))
-        self.assertEqual(900, seen.get("timeout"))
 
 
 class RealReviewCwdTest(unittest.TestCase):
