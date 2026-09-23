@@ -30,8 +30,9 @@ card: what a person reads is byte for byte what the loop reads, `Needs` and `Use
 front matter. Planning and building are separate commands that never overlap.
 
 Everything said, heard and measured is appended to a log, and a watchdog reads that log to
-catch the loop going through the motions. A person is needed only where a task says so, and
-the loop says out loud when it needs one.
+catch the loop going through the motions. A plan never gives work to a person: the loop builds
+everything it plans, a person accepts at the end, and what only a person can supply is asked before
+planning starts.
 
 The counter-intuitive part, and the reason it is worth the money: **reviews are 70 to 99
 percent of the clock.** One campaign refused nine tasks in a row and built nothing, for

@@ -14,8 +14,8 @@ reviewer refuses any task whose gate could pass without the work, a builder does
 in a private worktree, the gate — a command whose exit code is the verdict — decides, the
 reviewer reads the finished diff, and only then is the work committed to a campaign
 branch. Everything the loop says, hears and measures is written to an append-only log, and
-a watchdog reads that log to catch the loop going through the motions. A person is needed
-only where a task says so, and the loop says out loud when it needs one.
+a watchdog reads that log to catch the loop going through the motions. A plan never gives work to a person: the loop builds everything it plans, a person
+accepts at the end, and what only a person can supply is asked before planning starts.
 
 ## The parts, in dependency order
 
@@ -174,8 +174,8 @@ It is a method, not a feeling:
 4. Dependencies are only what is real: a task waits for another only if it reads that
    task's output. Measure the backlog by what is startable now; a long chain behind one
    brick is a stalled weekend.
-5. Mark what performs live actions, what writes its own proof, and what a person must see
-   first.
+5. Mark what performs live actions and what writes its own proof. Never a person's step: what
+   only a person can supply is asked before slicing starts.
 6. Let the reviewer refuse your contracts cheaply before any building — one campaign's
    nine zero-cost refusals were the backlog being debugged, not the models failing.
 7. Expect to re-slice: anything a builder cannot finish in about half an hour is too big,
