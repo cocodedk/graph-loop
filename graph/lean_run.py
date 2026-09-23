@@ -2,8 +2,8 @@
 
 A worktree off main; one builder writes the feature and its tests; the
 repository's own suite runs masked (`gates.run_gate`); one reviewer reads the
-diff. A red suite or a refused review gets ONE repair pass with the failure
-text. Still failing: the person is emailed why, and the feature stops with its
+diff. A red suite or a refused review gets a repair pass with the failure
+text, up to `REPAIRS` of them. Still failing: the person is emailed why, and the feature stops with its
 worktree kept. Passing: the change is committed and landed on main.
 """
 
@@ -25,6 +25,7 @@ from worktree import Worktree
 
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
+REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
 
 
 def build(ws, task: dict, prompt: str, tree, resume: str = "") -> providers.Outcome:
@@ -99,11 +100,13 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str)
               f"## Spec\n\n{spec}")
     built = build(ws, task, prompt, tree)
     why = check(ws, feature, spec, tree, built, profile["suite_command"], 1)
-    if why:
+    for round_ in range(2, 2 + REPAIRS):
+        if not why:
+            break
         ws.event("lean_repair", task=feature, why=why[-2000:])
-        built = build(ws, task, f"{prompt}\n\n## Your first attempt failed\n\n{why}\n\n"
+        built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
                       "Fix that, and keep the suite green.", tree, resume=built.session)
-        why = check(ws, feature, spec, tree, built, profile["suite_command"], 2)
+        why = check(ws, feature, spec, tree, built, profile["suite_command"], round_)
     if not why:
         try:
             work = lean_git.commit(repo, tree.path, tree.commit, f"feat({feature}): {feature}")

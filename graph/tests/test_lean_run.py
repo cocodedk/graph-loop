@@ -1,4 +1,4 @@
-"""The lean loop, one feature: build, suite, review, one repair, land or stop.
+"""The lean loop, one feature: build, suite, review, up to two repairs, land or stop.
 
 The builder, the suite, the reviewer and the email are faked; git is real.
 """
@@ -143,11 +143,12 @@ class Repair(Rig):
         self.assertEqual("test\n", show(self.repo, "main", "ring_test.py"))
 
     def test_still_failing_after_the_repair_stops_emails_and_keeps_the_work(self):
-        landed = self.run_it(self.builder(("ring.py", "grey\n"), ("ring.py", "grey2\n")),
-                             suites=(False, False))
+        landed = self.run_it(self.builder(("ring.py", "grey\n"), ("ring.py", "grey1\n"),
+                                          ("ring.py", "grey2\n")),
+                             suites=(False, False, False))
         self.assertEqual("", landed)
         self.assertEqual(self.base, sha(self.repo, "refs/heads/main"))
-        self.assertEqual(2, len(self.prompts))             # never a third build
+        self.assertEqual(1 + lean_run.REPAIRS, len(self.prompts))   # never another build
         self.assertEqual("lean_stopped", self.kinds()[-1])
         (sent, body), = self.mails
         self.assertEqual("graph-loop needs you: rest-ring", sent["subject"])
@@ -155,6 +156,14 @@ class Repair(Rig):
         self.assertIn("FAILED: AmberTest > overdue", body)
         stopped = next(row for row in self.ws.events() if row["kind"] == "lean_stopped")
         self.assertEqual("grey2\n", (pathlib.Path(stopped["tree"]) / "ring.py").read_text())
+
+    def test_a_second_refusal_gets_the_second_repair(self):
+        refused = Outcome("ok", verdict="REJECT", text="a new finding")
+        landed = self.run_it(self.builder(("ring.py", "a\n"), ("ring.py", "b\n"), ("ring.py", "c\n")),
+                             suites=(True, True, True), reviews=(refused, refused, ACCEPT))
+        self.assertTrue(landed)
+        self.assertEqual(3, len(self.prompts))
+        self.assertEqual("c\n", show(self.repo, "main", "ring.py"))
 
     def test_a_builder_that_changes_nothing_is_not_reviewed(self):
         self.run_it(self.builder(), suites=(), reviews=())
