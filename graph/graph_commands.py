@@ -121,10 +121,12 @@ def command_approve(args) -> int:
 
 
 def command_answer(args) -> int:
-    book = Backlog(_backlog_of(_space(args)))
+    space = _space(args)
+    book = Backlog(_backlog_of(space))
     book.set_status(args.card_id, "refused_contract", refused_why=args.decision,
                     blocked_by_human=None, held_by=None, triage=None,
                     accepted_criteria=None, contract_seen=None)
+    space.event("answered", task=args.card_id, decision=args.decision)
     return 0
 
 

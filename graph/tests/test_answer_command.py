@@ -39,6 +39,8 @@ class AnswerCommandTest(unittest.TestCase):
             self.assertEqual("refused_contract", row["status"])
             self.assertEqual(decision, row["refused_why"])
             self.assertNotIn("triage", row)
+            answered = [r for r in space.events() if r["kind"] == "answered"]
+            self.assertEqual([("T1", decision)], [(r["task"], r["decision"]) for r in answered])
             for field in ("blocked_by_human", "held_by", "accepted_criteria", "contract_seen"):
                 self.assertNotIn(field, row)
 
