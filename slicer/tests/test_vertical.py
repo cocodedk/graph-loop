@@ -53,6 +53,7 @@ class Vertical(unittest.TestCase):
                        env=env, check=True, capture_output=True, text=True)
         subprocess.run([sys.executable, str(GRAPH), "approve"], env=env, check=True,
                        capture_output=True, text=True)
+        (campaign / "contact").write_text("person@example.test\n")
         done = subprocess.run([sys.executable, str(GRAPH), "run", "--dry-run"], env=env,
                               check=True, capture_output=True, text=True)
         self.assertIn("would run greeting: return one greeting", done.stdout)

@@ -18,7 +18,7 @@ from email.message import EmailMessage
 ENV = pathlib.Path(__file__).with_name("smtp.env")
 
 
-def credentials() -> dict[str, str]:
+def credentials(*, recipient: str = "") -> dict[str, str]:
     if not ENV.exists():
         raise SystemExit(f"email not sent: no SMTP credentials at {ENV} "
                          "(SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS/SMTP_FROM/SMTP_TO)")
@@ -27,6 +27,8 @@ def credentials() -> dict[str, str]:
                          "it holds credentials; chmod 600 it")
     pairs = dict(line.split("=", 1) for line in ENV.read_text("utf-8").split()
                  if "=" in line)
+    if recipient:
+        pairs["SMTP_TO"] = recipient
     missing = [k for k in ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "SMTP_TO")
                if not pairs.get(k) or pairs[k] == "FILL_ME"]
     if missing:
@@ -34,9 +36,9 @@ def credentials() -> dict[str, str]:
     return pairs
 
 
-def send(why: str, flags: str, important: bool = False) -> None:
-    creds = credentials()
-    to = creds["SMTP_TO"]
+def send(why: str, flags: str, important: bool = False, *, recipient: str = "") -> None:
+    creds = credentials(recipient=recipient)
+    to = recipient or creds["SMTP_TO"]
     message = EmailMessage()
     message["From"], message["To"] = creds["SMTP_FROM"], to
     message["Subject"] = ("IMPORTANT — graph campaign: a red flag has stood 15+ minutes"

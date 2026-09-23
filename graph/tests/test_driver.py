@@ -21,12 +21,10 @@ sys.path.insert(0, str(HERE))
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 
 sys.path.insert(0, str(HERE / "lib"))
-
 from contract import revision
 from keep import Keeper
 
-# `graph-goal.py` (hyphenated, not an importable name) loaded by path, once,
-# so a test can monkeypatch the exact `turn_opens` name its loop body calls.
+# Load the CLI by path so tests can patch its loop calls.
 _spec = importlib.util.spec_from_file_location("graph_goal", HERE / "graph-goal.py")
 assert _spec is not None and _spec.loader is not None
 graph_goal = importlib.util.module_from_spec(_spec)
@@ -44,6 +42,7 @@ def campaign(root: pathlib.Path) -> dict:
                           capture_output=True, text=True, env=env, check=False)
     assert init.returncode == 0, init.stdout + init.stderr
     (root / "campaign" / "approved").write_text("test")
+    (root / "campaign" / "contact").write_text("person@example.test\n")
     return env
 
 
@@ -114,6 +113,7 @@ class DriverStartTest(unittest.TestCase):
                               capture_output=True, text=True, env=env, check=False)
         assert init.returncode == 0, init.stdout + init.stderr
         (root / "campaign" / "approved").write_text("test")
+        (root / "campaign" / "contact").write_text("person@example.test\n")
         return root, backlog, env
 
     def test_a_dry_run_does_not_reconcile_a_pending_keep(self):

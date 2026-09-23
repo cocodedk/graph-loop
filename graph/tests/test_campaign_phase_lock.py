@@ -27,6 +27,7 @@ class PhaseLockTest(unittest.TestCase):
                 "goal": "retry", "files": ["a.py"], "gate": "false", "triage": "harness"}]}))
             space = Workspace(root / "campaign").init(goal="test", backlog=str(backlog))
             (space.root / "approved").write_text("approved\n")
+            (space.root / "contact").write_text("person@example.test\n")
             before = backlog.read_bytes()
             with (space.root / "driver.lock").open("w") as held:
                 fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -51,6 +52,7 @@ class PhaseLockTest(unittest.TestCase):
             backlog.write_text(yaml.safe_dump({"tasks": []}))
             space = Workspace(root / "campaign").init(goal="test", backlog=str(backlog))
             (space.root / "approved").write_text("approved\n")
+            (space.root / "contact").write_text("person@example.test\n")
             # A real planning process, with only paid slicing replaced; its
             # callback starts the real build CLI while planning is in progress.
             script = """

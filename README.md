@@ -68,6 +68,7 @@ you see what buying them cost.
 export GRAPH_REPO=/path/to/the/repository/being/built
 export GRAPH_CAMPAIGN=$GRAPH_REPO/scratchpad/campaign
 
+python3 graph/graph-goal.py contact "<email-address>"  # first, before grilling; proves delivery
 python3 graph/graph-goal.py init --goal "..." --backlog "$GRAPH_REPO/vault" \
                                  --branch campaign/one --source spec/brief.md
 python3 graph/graph-goal.py approve       # you have read the goal and the sources

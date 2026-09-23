@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """graph-goal — work a backlog to done, and say so when it cannot.
 
+    graph-goal.py contact "<email-address>"
     graph-goal.py init --backlog <file> [--goal "..."] [--branch <name>] [--source <path>]...
     graph-goal.py approve
     graph-goal.py answer <card-id> "<decision>"
@@ -63,6 +64,7 @@ from graph_commands import (
     _space,
     command_answer,
     command_approve,
+    command_contact,
     command_doctor,
     command_init,
     command_plan,
@@ -170,13 +172,16 @@ def _run(args, space) -> int:
 
 def main(argv=None) -> int:
     parser = build_parser(__doc__.splitlines()[0], {
-        "init": command_init, "sources": command_sources,
+        "contact": command_contact, "init": command_init, "sources": command_sources,
         "approve": command_approve, "status": command_status,
         "answer": command_answer,
         "report": command_report, "doctor": command_doctor,
         "remember": command_remember, "cuts": command_cuts,
         "plan": command_plan, "run": command_run, "stop": command_stop})
     args = parser.parse_args(argv)
+    if args.command in ("sources", "plan", "run") or (
+            args.command == "init" and args.source):
+        _space(args).require_contact()
     return args.run(args)
 
 
