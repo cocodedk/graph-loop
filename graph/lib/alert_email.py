@@ -36,18 +36,20 @@ def credentials(*, recipient: str = "") -> dict[str, str]:
     return pairs
 
 
-def send(why: str, flags: str, important: bool = False, *, recipient: str = "") -> None:
+def send(why: str, flags: str, important: bool = False, *, recipient: str = "",
+         subject: str = "") -> None:
+    """`subject` is the caller's; without one the watchdog's own two subjects apply."""
     creds = credentials(recipient=recipient)
     to = recipient or creds["SMTP_TO"]
     message = EmailMessage()
     message["From"], message["To"] = creds["SMTP_FROM"], to
-    message["Subject"] = ("IMPORTANT — graph campaign: a red flag has stood 15+ minutes"
+    message["Subject"] = subject or ("IMPORTANT — graph campaign: a red flag has stood 15+ minutes"
                           if important else
                           "graph supervisor: red flags stand and WATCHER is unreachable")
     if important:
         message["X-Priority"] = "1"
         message["Importance"] = "high"
-    message.set_content(f"{why}\n\nThe red flags:\n{flags}\n")
+    message.set_content(f"{why}\n\n{flags}\n" if subject else f"{why}\n\nThe red flags:\n{flags}\n")
     port = int(creds["SMTP_PORT"])
     # 465 is implicit TLS from the first byte (one.com's send.one.com); 587 is
     # plain first, upgraded by STARTTLS. Certificates are verified either way.

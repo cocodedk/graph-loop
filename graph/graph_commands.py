@@ -54,6 +54,7 @@ def command_contact(args) -> int:
     if not channel:
         raise SystemExit("contact requires an email address")
     alert_email.send("Campaign contact test", "This campaign can now reach its person.",
+                     subject="graph-loop: can this campaign reach you?",
                      recipient=channel)
     with space.only_writer():
         durable.replace(space.root / "contact", channel + "\n")
