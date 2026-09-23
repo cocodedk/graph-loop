@@ -1,7 +1,6 @@
 """Alerts: something a person has to read, and how much of it has been.
 
-The loop cannot message anyone itself; it writes here, and whoever is
-watching — the commander's next round, or `watch.sh` — reads it out.
+The loop also emails alerts through the campaign's proven contact channel.
 `ALERTS.shown` is a candidate: what a render displayed, waiting on
 `watch.sh --read` to confirm it. `ALERTS.read` is the commitment.
 
@@ -18,6 +17,7 @@ from __future__ import annotations
 import json
 import pathlib
 
+import alert_email
 from workspace_claims import _now
 
 RESOLVED = "ALERTS.resolved"
@@ -35,12 +35,26 @@ class AlertsMixin:
     def only_writer(self):                        # provided by Workspace
         raise NotImplementedError
 
-    def alert(self, task_id: str, what: str, *, limit: int | None = 300) -> str:
-        """Something a person has to read. One line per alert, newest last.
+    def require_contact(self) -> str:
+        path = self.root / "contact"
+        channel = path.read_text("utf-8").strip() if path.exists() else ""
+        if not channel:
+            raise SystemExit('no proven channel — run `graph-goal.py contact "<email-address>"` first')
+        return channel
 
-        The loop cannot message anyone itself; it writes here, and whoever is
-        watching — the commander's next round, or `watch.sh` — reads it out.
-        """
+    def notify_person(self, row: dict) -> None:
+        if row["kind"] not in ("needs_a_person", "slice_needs_person", "alert"):
+            return
+        if not (self.root / "contact").exists():
+            return
+        try:
+            alert_email.send(row["kind"], json.dumps(row, sort_keys=True),
+                             recipient=self.require_contact())
+        except (OSError, ValueError, SystemExit) as error:
+            self.event("contact_send_failed", about=row["kind"], error=str(error))
+
+    def alert(self, task_id: str, what: str, *, limit: int | None = 300) -> str:
+        """Log and send something a person has to read, newest last."""
         line = f"{_now()}  {task_id}  {' '.join(str(what).split())[:limit]}\n"
         with self.only_writer(), (self.root / "ALERTS.txt").open("a", encoding="utf-8") as handle:
             handle.write(line)

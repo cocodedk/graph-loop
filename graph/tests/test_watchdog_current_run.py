@@ -62,6 +62,7 @@ class CurrentRunTest(unittest.TestCase):
         failed(here)
         failed(here)
         (here.root / "approved").touch()
+        (here.root / "contact").write_text("person@example.test\n")
         before = (here.root / "events.jsonl").read_bytes()
         attempts = []
 
@@ -75,6 +76,7 @@ class CurrentRunTest(unittest.TestCase):
         with mock.patch.object(graph_goal, "run_lanes", side_effect=lane), \
                 mock.patch.object(graph_goal, "turn_opens", return_value=None), \
                 mock.patch("driver_turn.diagnose", return_value=[]), \
+                mock.patch("alert_email.send"), \
                 contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(0, graph_goal.main(["--workspace", str(here.root), "run",
                                                "--lanes", "1", "--max-tasks", "2"]))

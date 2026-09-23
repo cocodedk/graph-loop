@@ -18,7 +18,6 @@ import time
 
 EVENTS = "events.jsonl"           # the part being written; older parts are numbered
 MAX_EVENTS_PER_FILE = 500         # small files are readable; huge ones are not
-
 import durable
 import watchdog_spin
 from workspace_alerts import AlertsMixin
@@ -114,6 +113,7 @@ class Workspace(ClaimsMixin, FlagsMixin, AlertsMixin, LockMixin):
             else:
                 with path.open("a", encoding="utf-8") as handle:
                     handle.write(line)
+        self.notify_person(row)
         return row
 
     def event_files(self) -> list[pathlib.Path]:

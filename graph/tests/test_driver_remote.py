@@ -50,6 +50,7 @@ def _campaign(repo: pathlib.Path) -> tuple[pathlib.Path, dict]:
                           capture_output=True, text=True, env=env, check=False)
     assert init.returncode == 0, init.stdout + init.stderr
     (root / "campaign" / "approved").write_text("test")
+    (root / "campaign" / "contact").write_text("person@example.test\n")
     return root, env
 
 

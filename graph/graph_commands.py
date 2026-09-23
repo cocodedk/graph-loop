@@ -12,6 +12,8 @@ import sys
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / "lib"))
 
+import alert_email
+import durable
 import where
 from backlog import Backlog
 from campaign_of import backlog_of
@@ -44,6 +46,18 @@ BUILDER_TOOLS = builder_tools({})
 
 def _space(args) -> Workspace:
     return Workspace(args.workspace or DEFAULT_WORKSPACE)
+
+
+def command_contact(args) -> int:
+    space = _space(args)
+    channel = args.channel.strip()
+    if not channel:
+        raise SystemExit("contact requires an email address")
+    alert_email.send("Campaign contact test", "This campaign can now reach its person.",
+                     recipient=channel)
+    with space.only_writer():
+        durable.replace(space.root / "contact", channel + "\n")
+    return 0
 
 
 def command_init(args) -> int:

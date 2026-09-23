@@ -9,6 +9,10 @@ decision wins and this note is wrong.
 House rules apply: Python, PyYAML the only runtime dependency, every file under 200 lines,
 no new `GRAPH_*` environment name — everything is a command-line argument.
 
+Before grilling starts, the campaign must have a proven `contact` record, written by
+`graph-goal.py --workspace <campaign> contact "<email-address>"` after a successful
+email. Refuse a workspace without it; use `Workspace.require_contact()` at entry.
+
 ## Where the code lives
 
 A new top-level package `grill/`, beside `graph/` and `slicer/`, with its tests in

@@ -30,6 +30,7 @@ class DriverRepositoryTest(unittest.TestCase):
         self.repo = pathlib.Path(root)
         self.other = pathlib.Path(repo())
         self.space = Workspace(tempfile.mkdtemp())
+        (self.space.root / "contact").write_text("person@example.test\n")
         self.argv = ["--workspace", str(self.space.root)]
         self.env = mock.patch.dict(os.environ, GRAPH_REPO="", GRAPH_BRANCH="campaign/test")
         self.env.start()

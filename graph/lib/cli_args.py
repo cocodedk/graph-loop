@@ -20,6 +20,10 @@ def build_parser(description: str, commands: dict) -> argparse.ArgumentParser:
     parser.add_argument("--workspace", default=None)
     sub = parser.add_subparsers(dest="command", required=True)
 
+    contact = sub.add_parser("contact")
+    contact.add_argument("channel", help="email address to prove and record for this campaign")
+    contact.set_defaults(run=commands["contact"])
+
     start = sub.add_parser("init"); start.add_argument("--backlog", required=True)
     start.add_argument("--goal", default=""); start.add_argument("--branch", default="")
     start.add_argument("--source", action="append", default=[],

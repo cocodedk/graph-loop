@@ -30,6 +30,14 @@ Do not start a campaign when:
 - **Judgement is the deliverable.** Design, naming, what-should-this-be — a gate cannot
   judge those, so the loop cannot either.
 
+## Before grilling or planning
+
+First run `graph/graph-goal.py --workspace <campaign> contact "<email-address>"`.
+Configure the existing sender's private `graph/lib/smtp.env` first. The command sends
+one test email and records `contact` in that workspace only after sending succeeds.
+Refuse to begin grilling without that record. Sources, plan and run require it too;
+alerts and calls for a person are logged and emailed to that recorded address.
+
 ## Writing a task contract
 
 A card is one note in a vault you can open in Obsidian. Front matter holds what the loop
