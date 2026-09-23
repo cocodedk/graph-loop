@@ -13,6 +13,8 @@ INSTRUCTIONS = ("Which prepared path should this stalled card take? Choose exact
                 "Use needs_person only when the evidence cannot support another path.")
 OPTIONS = {
     "judge_gap": {
+        "rewrite": "the refusal names a defect in this card's own gate or files, "
+                   "not a gap in a frozen judge; replan it from the refusal",
         "slice": "no rewrite of this card can satisfy the refusal (its judge is kept, "
                  "or the card holds more than one idea); send it to the slicer now",
         "probe_in_gate": "the refusal names a concrete bypass or case the frozen judge misses; "

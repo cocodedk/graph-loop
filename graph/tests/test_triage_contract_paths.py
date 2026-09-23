@@ -34,6 +34,18 @@ def stalled(**changes):
 
 
 class ContractPathsTest(unittest.TestCase):
+    def test_rewrite_leaves_refused_contract_for_the_replanner(self):
+        book, space = stalled()
+        book.note("T1", refused_why="this card's gate hides errors; the judge is unchanged")
+        before = book.task("T1")
+        with mock.patch("triage_jev.ask", return_value=Outcome(
+                "ok", verdict="rewrite", confidence=.9)):
+            self.assertFalse(contract_path(book, space, before))
+        self.assertEqual("refused_contract", book.task("T1")["status"])
+        self.assertEqual(before, book.task("T1"))
+        decision = next(r for r in space.events() if r["kind"] == "triage_decision")
+        self.assertEqual("rewrite", decision["path"])
+
     def test_slice_answer_sets_needs_slice(self):
         book, space = stalled()
         planner = mock.Mock()
