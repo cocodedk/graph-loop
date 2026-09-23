@@ -21,7 +21,7 @@ from keep_failure import GateFailure
 from loop import Loop
 from test_loop import Fakes, repo_with, task
 
-EXPECTED_TESTS = 7
+EXPECTED_TESTS = 8
 
 # Kept before this card and STILL GREEN on the branch tip: a.py says "one"
 # there. It goes red only beside this card's diff, which makes it a regression
@@ -44,6 +44,33 @@ def keeper_loop(row: dict, fakes: Fakes, extra: list):
 
 
 class OtherCardsGateTest(unittest.TestCase):
+    def test_an_older_gate_must_be_red_twice_before_it_parks_new_work(self):
+        for flakes in (True, False):
+            with self.subTest(flakes=flakes):
+                loop, book, space = keeper_loop(task(), Fakes(), [BROKEN])
+                real, calls = loop.keeper._combined_tree_red, []
+
+                def check(task_id, commit, gates, calls=calls, flakes=flakes, real=real):
+                    if BROKEN["gate"] in gates:
+                        calls.append((commit, list(gates)))
+                        if len(calls) == 1 or not flakes:
+                            return GateFailure(BROKEN["gate"], GateResult(1, "first red tail"), commit, "")
+                        return None
+                    return real(task_id, commit, gates)
+
+                loop.keeper._combined_tree_red = check
+                outcome = loop.run_task(book.task("T1"))
+                events = [e for e in space.events() if e["kind"] == "gate_flake"]
+                self.assertEqual("done" if flakes else "rejected", outcome.state)
+                self.assertEqual(flakes, book.task("T1")["status"] == "done")
+                self.assertEqual(not flakes, bool(book.task("T1").get("blocked_by_human")))
+                self.assertEqual(2 if flakes else 4, len(calls))
+                self.assertEqual(calls[0][0], calls[1][0])
+                self.assertEqual([BROKEN["gate"]], calls[1][1])
+                self.assertEqual([("T9", "first red tail")] if flakes else [],
+                                 [(e["gate_owner"], e["tail"]) for e in events])
+                self.assertEqual(BROKEN, book.task("T9"))
+
     def test_a_kept_red_first_judge_keeps_its_regression_check(self):
         judge = {**OLDER, "gate": "! grep -q two a.py", "gate_until_kept": True,
                  "gate_when_kept": "grep -q two a.py"}
