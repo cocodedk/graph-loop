@@ -47,6 +47,9 @@ class Entry(unittest.TestCase):
         self.spec = pathlib.Path(tempfile.mkdtemp()) / "log-screen.md"
         self.spec.write_text("Restyle the Log screen.\n")
         self.mails = []
+        grill = mock.patch.object(lean_run, "grill", return_value="")
+        grill.start()
+        self.addCleanup(grill.stop)
 
     def argv(self):
         return ["--workspace", str(self.ws.root), "--repo", self.repo, "--spec", str(self.spec)]
@@ -120,6 +123,13 @@ class Entry(unittest.TestCase):
             self.assertEqual(1, lean.main(argv))
         feature.assert_called_once()
 
+    def test_questions_stop_the_run_before_any_build(self):
+        (self.ws.root / "contact").write_text("person@example.test\n")
+        with mock.patch.object(lean_run, "grill", return_value="Which colour?"), \
+                mock.patch.object(lean_run, "run_feature") as feature:
+            self.assertEqual(2, lean.main(self.argv()))
+        feature.assert_not_called()
+
 
 class Wiring(unittest.TestCase):
     """The real call sites, with only the providers themselves faked."""
@@ -155,6 +165,34 @@ class Wiring(unittest.TestCase):
         passed, tail = lean_run.masked(self.ws, "echo the ring is grey; exit 1", self.tree.path)
         self.assertFalse(passed)
         self.assertIn("the ring is grey", tail)
+
+
+
+class Grill(unittest.TestCase):
+    def setUp(self):
+        self.ws = Workspace(tempfile.mkdtemp())
+        (self.ws.root / "contact").write_text("person@example.test\n")
+        self.mails, self.spec = [], pathlib.Path(tempfile.mkdtemp()) / "a.md"
+        self.spec.write_text("Make it blue, and make it red.\n")
+
+    def grill(self, answer):
+        with mock.patch.object(review, "codex", return_value=answer) as call, \
+                mock.patch.object(alert_email, "send", lambda *a, **k: self.mails.append(k)):
+            questions = lean_run.grill(self.ws, repo(), [str(self.spec)], "profile.md")
+        self.assertIn("Make it blue, and make it red.", call.call_args.args[1])
+        return questions
+
+    def test_questions_are_emailed_and_returned(self):
+        self.assertEqual("Blue or red?", self.grill(Outcome("ok", verdict="REJECT", text="Blue or red?")))
+        self.assertEqual("graph-loop has questions before building", self.mails[0]["subject"])
+
+    def test_clear_specs_ask_nothing(self):
+        self.assertEqual("", self.grill(Outcome("ok", verdict="ACCEPT")))
+        self.assertEqual([], self.mails)
+
+    def test_a_grill_that_did_not_answer_stops_too(self):
+        self.assertIn("did not answer", self.grill(Outcome("malformed")))
+        self.assertEqual("graph-loop could not read the specs before building", self.mails[0]["subject"])
 
 
 if __name__ == "__main__":

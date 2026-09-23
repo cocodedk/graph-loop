@@ -5,7 +5,9 @@
 
 Each spec file is one feature, run in the order given (`lean_run.py`); the run
 stops at the first that does not land, since later specs build on it. The run
-refuses to start without a proven contact (`graph-goal.py contact`). The
+refuses to start without a proven contact (`graph-goal.py contact`), and
+builds nothing while a reviewer reading the specs first has questions for
+the person: they are emailed, and the run exits 2. The
 profile, by default the `profile-*.md` the repository's CLAUDE.md links to,
 gives three commands under `## suite_command`, `## build_command` and
 `## artifact`, each an indented line. A run that merged anything ends by
@@ -91,9 +93,12 @@ def main(argv: list[str] | None = None) -> int:
     repo = str(pathlib.Path(args.repo).resolve())
     path = profile_path(repo, args.profile)
     profile = read_profile(path)
+    specs = [str(pathlib.Path(spec).resolve()) for spec in args.spec]
+    if lean_run.grill(ws, repo, specs, path):   # questions first: nothing is built on a guess
+        return 2
     merged = []
-    for spec in args.spec:     # in order: a later spec builds on the ones before it
-        if not lean_run.run_feature(ws, repo, str(pathlib.Path(spec).resolve()), profile, path):
+    for spec in specs:         # in order: a later spec builds on the ones before it
+        if not lean_run.run_feature(ws, repo, spec, profile, path):
             break
         merged.append(lean_run.slug(spec))
     if merged and not finish(ws, repo, profile, merged):
