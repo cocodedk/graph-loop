@@ -45,6 +45,8 @@ def contract_path(book, space, task: dict) -> bool:
         fresh = book.task(task["id"])
         if moved_under(fresh, task) or not eligible(fresh):
             return True
+        if decision["path"] == "rewrite":
+            return False
         if decision["path"] == "probe_in_gate":
             return False  # replan_prompt already carries the executed-probe instruction
         if decision["path"] == "slice":
