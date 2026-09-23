@@ -28,13 +28,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600&display=swap" />
 <link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="https://brand.cocode.dk/v1.css" />
+<script type="module" src="https://brand.cocode.dk/v1.js"></script>
 </head>
 <body>
-<header>
-  <img class="mark" src="../favicon.svg" alt="" width="32" height="32" />
-  <span class="name">graph-loop</span>
-  <a href="../" class="lang-switch" hreflang="en">English</a>
-</header>
+<!-- The cocode.dk family frame. Without JavaScript its children show instead: a way home
+     and the language link. -->
+<cocode-head project="graph-loop" accent="#6ee7a8" on-accent="#0b0e11" dark>
+  <a href="https://cocode.dk">cocode.dk</a>
+  <a href="../" hreflang="en">English</a>
+</cocode-head>
 
 <main>
   <h1>حلقه‌ای از عامل‌ها که بدون نظارت کد می‌سازد</h1>
@@ -88,7 +91,11 @@
 </main>
 
 <footer>
-  <p>MIT &nbsp;|&nbsp; © ۱۴۰۵ <a href="https://cocode.dk" target="_blank" rel="noreferrer">Cocode</a> &nbsp;|&nbsp; ساخته شده توسط <a href="https://linkedin.com/in/babakbandpey" target="_blank" rel="noreferrer">بابک بندپی</a></p>
+  <p>MIT</p>
 </footer>
+
+<cocode-foot repo="cocodedk/graph-loop" dark>
+  <a href="https://cocode.dk">cocode.dk</a>
+</cocode-foot>
 </body>
 </html>
