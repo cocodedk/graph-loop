@@ -76,8 +76,9 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
     questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
     ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=questions[:2000])
     if questions:
-        mail(ws, "graph-loop has questions before building",
-             f"{questions}\n\nAnswer them in the specs, then run again. Nothing was built.")
+        subject = ("graph-loop has questions before building" if out.verdict
+                   else "graph-loop could not read the specs before building")
+        mail(ws, subject, f"{questions}\n\nAnswer them in the specs, then run again. Nothing was built.")
     return questions
 
 

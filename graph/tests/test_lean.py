@@ -172,9 +172,8 @@ class Grill(unittest.TestCase):
     def setUp(self):
         self.ws = Workspace(tempfile.mkdtemp())
         (self.ws.root / "contact").write_text("person@example.test\n")
-        self.spec = pathlib.Path(tempfile.mkdtemp()) / "a.md"
+        self.mails, self.spec = [], pathlib.Path(tempfile.mkdtemp()) / "a.md"
         self.spec.write_text("Make it blue, and make it red.\n")
-        self.mails = []
 
     def grill(self, answer):
         with mock.patch.object(review, "codex", return_value=answer) as call, \
@@ -193,6 +192,7 @@ class Grill(unittest.TestCase):
 
     def test_a_grill_that_did_not_answer_stops_too(self):
         self.assertIn("did not answer", self.grill(Outcome("malformed")))
+        self.assertEqual("graph-loop could not read the specs before building", self.mails[0]["subject"])
 
 
 if __name__ == "__main__":
