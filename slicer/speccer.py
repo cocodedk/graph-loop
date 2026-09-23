@@ -35,6 +35,11 @@ def prompt(goal: str, repo: pathlib.Path) -> str:
         "State only what the goal and repository support. Use plain language. Acceptance must "
         "be observable and boundaries must say what is not granted. Do not add a required "
         "method that acceptance cannot observe. Do not write code.\n\n"
+        "A plan never gives work to a person. Work that a person judges is still the loop's to build: "
+        'its gate is "it builds and every existing test stays green", and the person accepts the result '
+        "at the end; judgement is never a reason to cut no card. What only a person can supply "
+        "(a file the loop cannot fetch, a credential, a decision) is asked before any card is cut: "
+        "answer NEEDS_PERSON first, naming it, and plan nothing further until it is answered.\n\n"
         f"Goal: {goal}\nRepository: {repo}\n\n"
         "Answer with YAML only and exactly: result (SPEC or NEEDS_PERSON), reason, spec. "
         "SPEC requires spec: {name: safe-slug, body: markdown}. The Markdown must contain "
