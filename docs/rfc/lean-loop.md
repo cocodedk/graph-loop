@@ -3,33 +3,82 @@
 Status: **proposal, 2026-09-23 — for the owner to decide.** Nothing here is built. If accepted, it is
 carried out as the numbered steps at the end, one issue and one PR each, in that order.
 
-## In plain words
+## In plain words, with what actually happened
 
-**Today** the loop works like an office that won't let anyone write a letter until they have proved,
-on paper, that the letter cannot be wrong. Every small job gets a written test plan, a reviewer whose
-job is to find holes in it, a rewrite of the plan when a hole is found (up to six times), and only
-then the work, which is checked again against every older plan. The office is very busy, and very few
-letters go out. That is what happened: three days, hundreds of approved plans, and the app looked the same.
+### How the loop works today, one step at a time
 
-**The proposal** is to work like a normal team:
+**1. A feature is cut into three cards.** "Show the overdue rest ring in amber" did not become one job.
+It became a *stub* card (an empty function), a *judge* card (tests that must fail first, then are frozen),
+and a *code* card (make the tests pass). The slicer's prompt asks for this split
+(`slicer/asking.py:104`, `gate_until_kept`). Each card also gets its own hand-written shell script that
+decides whether the card is done.
 
-1. You say what you want, including how it should look, and answer any questions up front.
-2. Each feature or screen is one job for one builder.
-3. The builder makes it, together with its tests.
-4. The check is simply: does the app still build, and do all the tests still pass? One other agent
-   reads the change.
-5. If it fails, the builder gets one more try. If it still fails, you get an email saying why.
-6. At the end of every run, the new app is on `main` and ready to install, and you get an email to go look.
+**2. Before anyone builds, a reviewer tries to prove the card wrong.** Its prompt
+(`graph/lib/contract.py:72`, `contract_prompt`) asks: "what wrong implementation would still pass this
+check?" If it can imagine one, it refuses the card. It can almost always imagine one.
+*What happened:* N15's code card was refused four times in a row, each time for a new imagined hole in
+tests that were already frozen and could not be changed (issue #72). N19's code card was refused and
+rewritten about 95 times.
 
-That is how the five screens were done in one hour.
+**3. A refused card is rewritten by another model, up to six times.** (`graph/lib/replan.py:111`,
+`MAX_ROUNDS = 6` in `graph/lib/replan_budget.py:10`.) For most of the run, the rewriter could not even
+read the code it was writing about, so it guessed names that did not exist (`SetRecord`, issues #70 and
+#73). A small decision model (Jev) picks what to do with each refusal (`graph/lib/triage_path_jev.py:14`).
+*What happened:* one day had 143 refusals, 98 rewrites and 45 cards kept. Rewriting cost $78, more than
+building ($70).
 
-**What we keep:** everything that protects you — each builder in its own copy of the code, no access to
-your passwords, every change saved in git, the emails to you, and spending limits.
+**4. The card is built, then its own script runs.** These scripts grew into small programs. One N16
+script was about 80 lines and built a deliberately wrong copy of the screen to prove its test would catch
+it; it failed on its own machinery while the real test was fine (issue #97).
 
-**What we remove:** the parts that only exist to prove proofs — the hole-hunting reviewer, the rewrites,
-three cards per feature, and a model that picks models. That is about two thirds of graph-loop's code.
+**5. Before a card is kept, every older card's check runs again** (`graph/lib/loop_judge_gates.py:22`).
+*What happened:* N13's light status-bar test could not be added, because an older check insisted the same
+test file hold *exactly two* tests. Adding a third, which is the whole point of the card, broke the older
+check (fixed by hand in the profile, "a lasting gate filters to its own test methods").
 
-It is done in nine small steps, one deletion each. If any step makes things worse, we stop there.
+**6. Kept work goes to a side branch, never to the app.** The keeper says so itself: "The main line is
+never moved and never merged into; a person does that" (`graph/lib/keep.py:10`). Nobody was told to.
+*What happened:* for 30 hours, 0 commits reached `main`. The app on the phone could not change.
+
+**7. The design was never a job at all.** The plan called the look "a person's node: it is never a loop
+card" (exercise-log `vault/N11-visual-design.md`, commit `f7b77e8`), so no card was cut for any screen's
+look (fixed by #112 and #113).
+
+**8. Busy counts as progress.** The watchdog counts "cards planned" and "a charged rebuild" as the
+campaign moving (`graph/lib/watchdog.py:106`, `_is_progress`), so a loop that plans and rewrites all day
+looks healthy.
+
+### How it would work instead
+
+1. **You say what you want, up front**, including how it looks (the design canvas), and answer anything
+   only you can supply before work starts. The loop proves it can email you first (#114, `graph-goal.py
+   contact`).
+2. **One job per feature or screen, one builder.** "Restyle the Log screen to its artboard" is one job,
+   not nine cards.
+3. **The builder writes the feature and its tests together**, in its own copy of the code
+   (`graph/lib/worktree.py` stays).
+4. **The check is the same for every job:** the app builds and all its tests pass (the repository's own
+   command, from `profile-android-gradle.md`). No per-job scripts.
+5. **One other agent reads the change** (`graph/lib/loop_diff_review.py` stays). No pre-build hole hunt.
+6. **If it fails, one more try with the error text. If it still fails, you get an email** saying which job
+   and why (the channel from #114). No six rewrites, no model deciding what to do.
+7. **Every run ends on `main` with an installable app, and an email to go look.**
+
+*This is exactly how the screens were finished this morning:* Log (`cbe53e5`), running set and rest
+(`3407921`), History and Catalog (`efe5b8d`), the remaining design details (`d3e21a6`), merged to
+exercise-log `main` as `a217d37` and `a765737`. Five screens, about an hour, each gated only by "it
+builds and the 744 existing tests still pass", then installed on the phone.
+
+### What stays, what goes, in one line each
+
+- **Stays:** separate copies of the code per builder (`worktree.py`), no access to passwords during checks
+  (`gate_sandbox.py:11`, `MASKED`), every change committed, the event log and costs, the email channel
+  (#114, #117), "no person inside a plan" (#112), the answer log (#95, #119), spending limits, the dashboard.
+- **Goes:** the pre-build hole hunt (`contract.py`), the rewriter and Jev's path choices
+  (`replan*.py` 336 lines, `triage*.py` 1,707 lines), three cards per feature and frozen tests, re-running
+  every old check (`loop_judge_gates.py`), per-call model picking (`model_router.py:37`), automatic
+  parallelism (`lanes*`, `throttle*`, `machine*`: 1,048 lines), and `remember`, doctor and report
+  (2,379 lines).
 
 ## Why
 
