@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """lean — ship features, not proofs (docs/rfc/lean-loop.md, issue #124).
 
-    lean.py --workspace <ws> --repo <repo> --spec <file> [--spec <file> ...] [--profile <file>]
+    lean.py --workspace <ws> --repo <repo> --spec <file> [--profile <file>]
 
-Each spec file is one feature, run in the order given (`lean_run.py`); the run
-stops at the first that does not land, since later specs build on it. The run
-refuses to start without a proven contact (`graph-goal.py contact`), and
-builds nothing while a reviewer reading the specs first has questions for
-the person: they are emailed, and the run exits 2. The
-profile, by default the `profile-*.md` the repository's CLAUDE.md links to,
-gives three commands under `## suite_command`, `## build_command` and
-`## artifact`, each an indented line. A run that merged anything ends by
-building main and emailing the person that it is ready to accept.
+One spec file per run is one feature (`lean_run.py`), and it becomes one pull
+request: the branch `lean/<feature>`, built on origin's main. Nothing is ever
+landed on main, and nothing is built while any branch on origin is unmerged,
+the loop's own or a person's: the person is emailed the list and the run exits 3.
+The run also refuses to start without a proven contact (`graph-goal.py
+contact`), and builds nothing while a reviewer reading the spec first has
+questions for the person: they are emailed, and the run exits 2. The profile,
+by default the `profile-*.md` the repository's CLAUDE.md links to, gives three
+commands under `## suite_command`, `## build_command` and `## artifact`, each an
+indented line. A run that opened a pull request ends by building that branch
+and emailing the person that it is ready for review.
 
 This sits beside the current loop (`graph-goal.py`) and changes none of it.
 """
@@ -60,24 +62,24 @@ def read_profile(path: str) -> dict:
     return values
 
 
-def finish(ws, repo: str, profile: dict, merged: list[str]) -> bool:
-    """Build main in its own checkout and tell the person. The checkout stays:
-    the artifact the email names lives in it."""
-    tree = Worktree(repo, "build", commit=lean_git.MAIN).create(
+def finish(ws, repo: str, profile: dict, feature: str, url: str) -> bool:
+    """Build the feature's branch in its own checkout and tell the person. The
+    checkout stays: the artifact the email names lives in it."""
+    tree = Worktree(repo, "build", commit=f"refs/heads/lean/{feature}").create(
         parent=tempfile.mkdtemp(prefix="lean-build-"))   # its own folder: the artifact lives here
     passed, tail = lean_run.masked(ws, profile["build_command"], tree.path)
     artifact = pathlib.Path(tree.path) / profile["artifact"]
     ready = passed and artifact.is_file()
     ws.event("lean_built", commit=tree.commit, passed=passed,
              artifact=str(artifact) if ready else "", tail=tail[-2000:])
-    names = "\n".join(f"- {name}" for name in merged)
     if ready:
-        lean_run.mail(ws, "graph-loop: ready to accept",
-                      f"Merged to main, now at {tree.commit[:12]}:\n{names}\n\nThe build: {artifact}")
+        lean_run.mail(ws, "graph-loop: ready for review",
+                      f"{feature}: {url}\n\nThe build: {artifact}\n\nReview and merge the pull "
+                      "request; the next spec waits until it is merged.")
     else:
         why = "the build is red" if not passed else f"the build left no {profile['artifact']}"
-        lean_run.mail(ws, "graph-loop needs you: the build on main",
-                      f"Merged to main:\n{names}\n\nBut {why}:\n{tail}")
+        lean_run.mail(ws, f"graph-loop needs you: the build of {feature}",
+                      f"{feature}: {url}\n\nBut {why}:\n{tail}")
     return ready
 
 
@@ -85,9 +87,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="lean.py", description=__doc__.split("\n\n")[0])
     parser.add_argument("--workspace", required=True)
     parser.add_argument("--repo", required=True)
-    parser.add_argument("--spec", action="append", required=True, help="one feature; repeat, in order")
+    parser.add_argument("--spec", action="append", required=True,
+                        help="one feature: its pull request is merged before the next run")
     parser.add_argument("--profile", default="")
     args = parser.parse_args(argv)
+    if len(args.spec) != 1:
+        parser.error("one spec per run: the next is built once this one's pull request is merged")
     ws = Workspace(args.workspace)
     ws.require_contact()                       # no proven channel, no run
     repo = str(pathlib.Path(args.repo).resolve())
@@ -101,17 +106,20 @@ def main(argv: list[str] | None = None) -> int:
                       f"profile-<name>.md and link it from CLAUDE.md:\n{names}")
         raise
     profile = read_profile(path)
-    specs = [str(pathlib.Path(spec).resolve()) for spec in args.spec]
-    if lean_run.grill(ws, repo, specs, path):   # questions first: nothing is built on a guess
+    waiting = lean_git.unmerged(repo)
+    if waiting:                                # nothing starts from main while anything waits
+        ws.event("lean_waiting", branches=waiting)
+        names = "\n".join(f"- {name}" for name in waiting)
+        lean_run.mail(ws, "graph-loop is waiting: unmerged branches",
+                      f"Nothing was built. Merge or delete these branches first:\n{names}")
+        return 3
+    spec = str(pathlib.Path(args.spec[0]).resolve())
+    if lean_run.grill(ws, repo, [spec], path):   # questions first: nothing is built on a guess
         return 2
-    merged = []
-    for spec in specs:         # in order: a later spec builds on the ones before it
-        if not lean_run.run_feature(ws, repo, spec, profile, path):
-            break
-        merged.append(lean_run.slug(spec))
-    if merged and not finish(ws, repo, profile, merged):
+    url = lean_run.run_feature(ws, repo, spec, profile, path)
+    if not url:
         return 1
-    return 0 if len(merged) == len(args.spec) else 1
+    return 0 if finish(ws, repo, profile, lean_run.slug(spec), url) else 1
 
 
 if __name__ == "__main__":

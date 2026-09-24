@@ -1,6 +1,7 @@
-"""The lean loop, one feature: build, suite, review, up to two repairs, land or stop.
+"""The lean loop, one feature: build, suite, review, up to two repairs, publish or stop.
 
-The builder, the suite, the reviewer and the email are faked; git is real.
+The builder, the suite, the reviewer, the email and `gh` are faked; git is real, with a
+local bare repository as origin.
 """
 
 import pathlib
@@ -13,6 +14,7 @@ from unittest import mock
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import alert_email
+import lean_git
 import lean_run
 import tmp_root  # noqa: F401
 from providers import Outcome
@@ -32,6 +34,13 @@ class Rig(unittest.TestCase):
     def setUp(self):
         self.repo = repo()
         self.base = sha(self.repo)
+        self.origin = tempfile.mkdtemp()
+        for args in (("git", "init", "-q", "--bare", self.origin),
+                     ("git", "-C", self.repo, "remote", "add", "origin", self.origin),
+                     ("git", "-C", self.repo, "push", "-q", "origin", "main"),
+                     ("git", "-C", self.repo, "fetch", "-q", "origin")):
+            subprocess.run(args, capture_output=True, check=True)
+        self.prs = []
         self.ws = Workspace(tempfile.mkdtemp())
         (self.ws.root / "contact").write_text("person@example.test\n")
         self.spec = pathlib.Path(tempfile.mkdtemp()) / "rest ring.md"
@@ -61,7 +70,11 @@ class Rig(unittest.TestCase):
         def judge(ws, feature, spec, diff, cwd):
             self.reviews.append(diff)
             return reviews.pop(0)
+        def pull_request(repo, branch, title, body):
+            self.prs.append((branch, title))
+            return f"https://example.test/pull/{len(self.prs)}"
         with mock.patch.object(lean_run, "build", build), \
+                mock.patch.object(lean_git, "pull_request", pull_request), \
                 mock.patch.object(lean_run, "masked", masked), \
                 mock.patch.object(lean_run, "judge", judge), \
                 mock.patch.object(alert_email, "send",
@@ -73,56 +86,49 @@ class Rig(unittest.TestCase):
 
 
 class GreenFeature(Rig):
-    def test_a_green_feature_lands_on_main_and_its_tree_goes(self):
-        landed = self.run_it(self.builder(("ring.py", "amber\n")))
-        self.assertEqual(landed, sha(self.repo, "refs/heads/main"))
-        self.assertEqual("amber\n", show(self.repo, "main", "ring.py"))
-        listed = subprocess.run(("git", "-C", self.repo, "ls-tree", "--name-only", "main"),
+    def test_a_green_feature_becomes_a_pull_request_and_main_never_moves(self):
+        url = self.run_it(self.builder(("ring.py", "amber\n")))
+        self.assertEqual("https://example.test/pull/1", url)
+        self.assertEqual([("lean/rest-ring", "feat(rest-ring): rest-ring")], self.prs)
+        self.assertEqual("amber\n", show(self.origin, "lean/rest-ring", "ring.py"))   # pushed
+        listed = subprocess.run(("git", "-C", self.repo, "ls-tree", "--name-only", "lean/rest-ring"),
                                 capture_output=True, text=True, check=True).stdout.split()
         self.assertEqual(["a.py", "ring.py"], listed)        # the work, and nothing else
-        self.assertEqual("amber\n", (pathlib.Path(self.repo) / "ring.py").read_text())  # the checkout moved too
-        self.assertEqual(["lean_feature_started", "lean_suite", "lean_review", "lean_merged"], self.kinds())
+        self.assertEqual(self.base, sha(self.repo, "refs/heads/main"))
+        self.assertEqual(self.base, sha(self.origin, "refs/heads/main"))
+        self.assertFalse((pathlib.Path(self.repo) / "ring.py").exists())   # the checkout untouched
+        self.assertEqual(["lean_feature_started", "lean_suite", "lean_review", "lean_published"],
+                         self.kinds())
         started = next(row for row in self.ws.events() if row["kind"] == "lean_feature_started")
         self.assertEqual("rest-ring", started["task"])
         self.assertFalse(pathlib.Path(started["tree"]).exists())
         self.assertIn("ring.py", self.reviews[0])
         self.assertEqual([], self.mails)
+        self.assertTrue(self.spec.read_text().startswith(
+            "---\nlean_status: pr_open\nlean_pr: https://example.test/pull/1\n---\n"))
 
-    def test_main_held_by_no_checkout_moves_by_a_guarded_update(self):
-        subprocess.run(("git", "-C", self.repo, "checkout", "-q", "--detach"), check=True)
-        landed = self.run_it(self.builder(("ring.py", "amber\n")))
-        self.assertEqual(landed, sha(self.repo, "refs/heads/main"))
-        self.assertEqual(self.base, sha(self.repo, "HEAD"))   # the detached checkout was left alone
-
-    def test_main_that_moved_meanwhile_is_merged_not_overwritten(self):
-        def build(ws, task, prompt, tree, resume=""):
-            (pathlib.Path(tree.path) / "ring.py").write_text("amber\n")
-            (pathlib.Path(self.repo) / "other.py").write_text("person\n")
-            subprocess.run(("git", "-C", self.repo, "add", "other.py"), check=True)
-            subprocess.run(("git", "-C", self.repo, "commit", "-qm", "a person's commit"), check=True)
-            return Outcome("ok")
-        self.run_it(build)
-        self.assertEqual("amber\n", show(self.repo, "main", "ring.py"))
-        self.assertEqual("person\n", show(self.repo, "main", "other.py"))
-        parents = subprocess.run(("git", "-C", self.repo, "rev-list", "--parents", "-n1", "main"),
-                                 capture_output=True, text=True, check=True).stdout.split()
-        self.assertEqual(3, len(parents))   # a merge commit: itself and two parents
-
-    def test_a_clash_with_what_main_gained_is_never_forced(self):
-        def build(ws, task, prompt, tree, resume=""):
-            (pathlib.Path(tree.path) / "a.py").write_text("the builder's\n")
-            (pathlib.Path(self.repo) / "a.py").write_text("the person's\n")
-            subprocess.run(("git", "-C", self.repo, "commit", "-qam", "a person's commit"), check=True)
-            return Outcome("ok")
-        landed = self.run_it(build)
-        person = sha(self.repo, "refs/heads/main")
-        self.assertEqual("", landed)
-        self.assertEqual("the person's\n", show(self.repo, person, "a.py"))
-        self.assertEqual("the person's\n", (pathlib.Path(self.repo) / "a.py").read_text())
+    def test_a_branch_left_by_an_earlier_run_is_never_moved(self):
+        subprocess.run(("git", "-C", self.repo, "branch", "lean/rest-ring"), check=True)
+        url = self.run_it(self.builder(("ring.py", "amber\n")))
+        self.assertEqual("", url)
+        self.assertEqual(self.base, sha(self.repo, "refs/heads/lean/rest-ring"))
+        self.assertEqual([], self.prs)
         stopped = next(row for row in self.ws.events() if row["kind"] == "lean_stopped")
-        self.assertIn("could not land", stopped["why"])
-        self.assertIn("could not land", self.mails[0][1])
-        self.assertEqual("the builder's\n", (pathlib.Path(stopped["tree"]) / "a.py").read_text())
+        self.assertIn("could not open its pull request", stopped["why"])
+        self.assertIn("lean_status: stopped", self.spec.read_text())
+
+
+class Unmerged(Rig):
+    def test_only_branches_not_merged_into_origin_main_are_listed(self):
+        for name in ("merged", "waiting"):
+            subprocess.run(("git", "-C", self.repo, "branch", name), check=True)
+        (pathlib.Path(self.repo) / "b.py").write_text("two\n")
+        subprocess.run(("git", "-C", self.repo, "switch", "-q", "waiting"), check=True)
+        subprocess.run(("git", "-C", self.repo, "add", "b.py"), check=True)
+        subprocess.run(("git", "-C", self.repo, "commit", "-qm", "unreviewed"), check=True)
+        subprocess.run(("git", "-C", self.repo, "push", "-q", "origin", "merged", "waiting"),
+                       capture_output=True, check=True)
+        self.assertEqual(["origin/waiting"], lean_git.unmerged(self.repo))
 
 
 class Repair(Rig):
@@ -133,14 +139,14 @@ class Repair(Rig):
         self.assertEqual(2, len(self.prompts))
         self.assertIn("FAILED: AmberTest > overdue", self.prompts[1])
         self.assertEqual(["lean_feature_started", "lean_suite", "lean_repair", "lean_suite",
-                          "lean_review", "lean_merged"], self.kinds())
+                          "lean_review", "lean_published"], self.kinds())
 
     def test_a_refused_review_gets_one_repair_with_its_findings(self):
         refused = Outcome("ok", verdict="REJECT", text="no test covers the amber colour")
         self.run_it(self.builder(("ring.py", "amber\n"), ("ring_test.py", "test\n")),
                     suites=(True, True), reviews=(refused, ACCEPT))
         self.assertIn("no test covers the amber colour", self.prompts[1])
-        self.assertEqual("test\n", show(self.repo, "main", "ring_test.py"))
+        self.assertEqual("test\n", show(self.repo, "lean/rest-ring", "ring_test.py"))
 
     def test_still_failing_after_the_repair_stops_emails_and_keeps_the_work(self):
         landed = self.run_it(self.builder(("ring.py", "grey\n"), ("ring.py", "grey1\n"),
@@ -163,7 +169,7 @@ class Repair(Rig):
                              suites=(True, True, True), reviews=(refused, refused, ACCEPT))
         self.assertTrue(landed)
         self.assertEqual(3, len(self.prompts))
-        self.assertEqual("c\n", show(self.repo, "main", "ring.py"))
+        self.assertEqual("c\n", show(self.repo, "lean/rest-ring", "ring.py"))
 
     def test_a_builder_that_changes_nothing_is_not_reviewed(self):
         self.run_it(self.builder(), suites=(), reviews=())

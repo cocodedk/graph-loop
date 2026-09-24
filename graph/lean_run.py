@@ -1,10 +1,11 @@
-"""One feature of the lean loop (docs/rfc/lean-loop.md): build, check, land.
+"""One feature of the lean loop (docs/rfc/lean-loop.md): build, check, publish.
 
-A worktree off main; one builder writes the feature and its tests; the
+A worktree off origin/main; one builder writes the feature and its tests; the
 repository's own suite runs masked (`gates.run_gate`); one reviewer reads the
 diff. A red suite or a refused review gets a repair pass with the failure
 text, up to `REPAIRS` of them. Still failing: the person is emailed why, and the feature stops with its
-worktree kept. Passing: the change is committed and landed on main.
+worktree kept. Passing: the change is committed, pushed as `lean/<feature>` and opened
+as a pull request; main never moves. The spec file's front matter records how it ended.
 """
 
 from __future__ import annotations
@@ -14,12 +15,14 @@ import pathlib
 import re
 
 import accounts
+import cardfile
 import gate_paths
 import gates
 import lean_git
 import providers
 import review
 import tools
+import yaml  # type: ignore[import-untyped]  # no stubs in this environment
 from review_scope import VERDICT
 from worktree import Worktree
 
@@ -87,6 +90,17 @@ def mail(ws, subject: str, body: str) -> None:
     ws.mail_person(subject, body)
 
 
+def record(spec_path: str, **fields: str) -> None:
+    """Write `fields` into the spec file's front matter, every other byte left alone."""
+    path = pathlib.Path(spec_path)
+    text = path.read_text("utf-8")
+    if not cardfile.FRONT.match(text):      # a spec with no front matter gets one
+        text = f"---\n{yaml.safe_dump(fields, sort_keys=False)}---\n{text}"
+    for field, value in fields.items():
+        text = cardfile.patch(text, field, value)
+    path.write_text(text, "utf-8")
+
+
 def slug(path: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", pathlib.Path(path).stem).strip("-") or "feature"
 
@@ -111,10 +125,10 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int) -
 
 
 def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str) -> str:
-    """One spec file, start to end. The new main commit, or "" when it stopped."""
+    """One spec file, start to end. Its pull request's URL, or "" when it stopped."""
     feature = slug(spec_path)
     spec = pathlib.Path(spec_path).read_text("utf-8")
-    tree = Worktree(repo, feature, commit=lean_git.MAIN).create()
+    tree = Worktree(repo, feature, commit=lean_git.BASE).create()
     ws.event("lean_feature_started", task=feature, spec=str(spec_path), base=tree.commit,
              tree=tree.path)
     task = {"id": feature, "gate": profile["suite_command"]}
@@ -134,15 +148,20 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str)
         why = check(ws, feature, spec, tree, built, profile["suite_command"], round_)
     if not why:
         try:
-            work = lean_git.commit(repo, tree.path, tree.commit, f"feat({feature}): {feature}")
-            landed = lean_git.land(repo, work, tree.commit, feature)
+            title = f"feat({feature}): {feature}"
+            work = lean_git.commit(repo, tree.path, tree.commit, title)
+            url = lean_git.publish(repo, work, feature, title,
+                                   f"Built by graph-loop's lean loop from `{pathlib.Path(spec_path).name}`: "
+                                   "the suite is green and an independent reviewer accepted it.")
         except RuntimeError as error:
-            why = f"it passed, but could not land on main: {error}"
+            why = f"it passed, but could not open its pull request: {error}"
         else:
-            ws.event("lean_merged", task=feature, commit=landed)
+            ws.event("lean_published", task=feature, commit=work, pr=url)
+            record(spec_path, lean_status="pr_open", lean_pr=url)
             tree.remove()
-            return landed
+            return url
     kept = tree.keep(why)
+    record(spec_path, lean_status="stopped", lean_worktree=kept)
     ws.event("lean_stopped", task=feature, why=why[-2000:], tree=kept)
     mail(ws, f"graph-loop needs you: {feature}",
          f"{feature} stopped.\n\nWhy:\n{why}\n\nIts work is kept at {kept}.")

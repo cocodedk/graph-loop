@@ -1,10 +1,12 @@
-"""The lean loop's two git moves: commit a finished worktree, and land it on main.
+"""The lean loop's git moves: refuse while anything is unmerged, commit a finished
+worktree, and publish it as a pull request.
 
 A builder's worktree refuses every ref write (`lib/hooks/reference-transaction`),
 so the commit is built from the repository's side, as `keep.py` does: a private
 index over the worktree's files, written into the repository's own object store.
-Main is then moved forward, never forced: by `merge --ff-only` in the checkout
-that holds it, or by a guarded `update-ref` when nothing holds it.
+Nothing is ever moved onto main. Each feature is pushed as a new branch,
+`lean/<feature>`, with a pull request the person reviews and merges; until every
+branch on origin is merged, the loop builds nothing.
 """
 
 from __future__ import annotations
@@ -14,7 +16,7 @@ import shutil
 import subprocess
 import tempfile
 
-MAIN = "refs/heads/main"
+BASE = "refs/remotes/origin/main"   # every feature starts here, after a fetch
 
 
 def git(cwd: str, *args: str, env: dict | None = None) -> str:
@@ -40,36 +42,27 @@ def commit(repo: str, tree: str, base: str, subject: str) -> str:
         shutil.rmtree(scratch, ignore_errors=True)
 
 
-def land(repo: str, work: str, base: str, feature: str) -> str:
-    """Put commit `work` (made on `base`) on main; the new tip.
-
-    If main is still at `base` this is a fast-forward. If a person moved it
-    meanwhile, the two are merged normally; a conflict refuses, and main stays.
-    """
-    tip = git(repo, "rev-parse", "--verify", MAIN)
-    new = work
-    if tip != base:
-        merged = subprocess.run(("git", "merge-tree", "--write-tree", tip, work), cwd=repo,
-                                capture_output=True, text=True, check=False)
-        if merged.returncode:
-            raise RuntimeError(f"{feature} and what main gained meanwhile change the same lines: "
-                               f"{merged.stdout.strip()[-300:] or merged.stderr.strip()[:300]}")
-        new = git(repo, "commit-tree", merged.stdout.split("\n", 1)[0].strip(),
-                  "-p", tip, "-p", work, "-m", f"Merge {feature} into main")
-    holder = _holding_main(repo)
-    if holder:
-        git(holder, "merge", "--ff-only", "--quiet", new)   # moves that checkout's files too
-    else:
-        git(repo, "update-ref", MAIN, new, tip)            # only if main is still `tip`
-    return new
+def unmerged(repo: str) -> list[str]:
+    """Every branch on origin not merged into its main, after a fetch: the loop's own
+    unreviewed work and a person's alike. While any is listed, nothing is built."""
+    git(repo, "fetch", "--quiet", "--prune", "origin")
+    listed = git(repo, "for-each-ref", "--format=%(refname:short)", "--no-merged", BASE,
+                 "refs/remotes/origin")
+    return [name for name in listed.splitlines() if name not in ("origin", "origin/HEAD")]
 
 
-def _holding_main(repo: str) -> str:
-    """The checkout that has main checked out, or ""."""
-    path = ""
-    for line in git(repo, "worktree", "list", "--porcelain").splitlines():
-        if line.startswith("worktree "):
-            path = line.split(" ", 1)[1]
-        elif line == f"branch {MAIN}":
-            return path
-    return ""
+def publish(repo: str, work: str, feature: str, title: str, body: str) -> str:
+    """Push commit `work` as the new branch lean/<feature>; its pull request's URL."""
+    branch = f"lean/{feature}"
+    git(repo, "update-ref", f"refs/heads/{branch}", work, "")   # new only: never moves a branch
+    git(repo, "push", "--quiet", "origin", f"refs/heads/{branch}:refs/heads/{branch}")
+    return pull_request(repo, branch, title, body)
+
+
+def pull_request(repo: str, branch: str, title: str, body: str) -> str:
+    done = subprocess.run(("gh", "pr", "create", "--base", "main", "--head", branch,
+                           "--title", title, "--body", body), cwd=repo, capture_output=True,
+                          text=True, check=False)
+    if done.returncode:
+        raise RuntimeError(f"gh pr create: {(done.stderr or done.stdout).strip()[:300]}")
+    return done.stdout.strip().splitlines()[-1]
