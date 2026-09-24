@@ -13,6 +13,7 @@ from unittest import mock
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import alert_email
+import lean_git
 import lean_run
 import tmp_root  # noqa: F401
 from providers import Outcome
@@ -32,6 +33,8 @@ class Rig(unittest.TestCase):
     def setUp(self):
         self.repo = repo()
         self.base = sha(self.repo)
+        # A person works on the campaign branch; the loop must never move main.
+        subprocess.run(("git", "-C", self.repo, "checkout", "-q", "-b", "lean"), check=True)
         self.ws = Workspace(tempfile.mkdtemp())
         (self.ws.root / "contact").write_text("person@example.test\n")
         self.spec = pathlib.Path(tempfile.mkdtemp()) / "rest ring.md"
@@ -73,11 +76,12 @@ class Rig(unittest.TestCase):
 
 
 class GreenFeature(Rig):
-    def test_a_green_feature_lands_on_main_and_its_tree_goes(self):
+    def test_a_green_feature_lands_on_the_branch_and_its_tree_goes(self):
         landed = self.run_it(self.builder(("ring.py", "amber\n")))
-        self.assertEqual(landed, sha(self.repo, "refs/heads/main"))
-        self.assertEqual("amber\n", show(self.repo, "main", "ring.py"))
-        listed = subprocess.run(("git", "-C", self.repo, "ls-tree", "--name-only", "main"),
+        self.assertEqual(landed, sha(self.repo, "refs/heads/lean"))
+        self.assertEqual(self.base, sha(self.repo, "refs/heads/main"))   # main never moves
+        self.assertEqual("amber\n", show(self.repo, "lean", "ring.py"))
+        listed = subprocess.run(("git", "-C", self.repo, "ls-tree", "--name-only", "lean"),
                                 capture_output=True, text=True, check=True).stdout.split()
         self.assertEqual(["a.py", "ring.py"], listed)        # the work, and nothing else
         self.assertEqual("amber\n", (pathlib.Path(self.repo) / "ring.py").read_text())  # the checkout moved too
@@ -88,13 +92,13 @@ class GreenFeature(Rig):
         self.assertIn("ring.py", self.reviews[0])
         self.assertEqual([], self.mails)
 
-    def test_main_held_by_no_checkout_moves_by_a_guarded_update(self):
+    def test_a_branch_held_by_no_checkout_moves_by_a_guarded_update(self):
         subprocess.run(("git", "-C", self.repo, "checkout", "-q", "--detach"), check=True)
         landed = self.run_it(self.builder(("ring.py", "amber\n")))
-        self.assertEqual(landed, sha(self.repo, "refs/heads/main"))
+        self.assertEqual(landed, sha(self.repo, "refs/heads/lean"))
         self.assertEqual(self.base, sha(self.repo, "HEAD"))   # the detached checkout was left alone
 
-    def test_main_that_moved_meanwhile_is_merged_not_overwritten(self):
+    def test_a_branch_that_moved_meanwhile_is_merged_not_overwritten(self):
         def build(ws, task, prompt, tree, resume=""):
             (pathlib.Path(tree.path) / "ring.py").write_text("amber\n")
             (pathlib.Path(self.repo) / "other.py").write_text("person\n")
@@ -102,20 +106,20 @@ class GreenFeature(Rig):
             subprocess.run(("git", "-C", self.repo, "commit", "-qm", "a person's commit"), check=True)
             return Outcome("ok")
         self.run_it(build)
-        self.assertEqual("amber\n", show(self.repo, "main", "ring.py"))
-        self.assertEqual("person\n", show(self.repo, "main", "other.py"))
-        parents = subprocess.run(("git", "-C", self.repo, "rev-list", "--parents", "-n1", "main"),
+        self.assertEqual("amber\n", show(self.repo, "lean", "ring.py"))
+        self.assertEqual("person\n", show(self.repo, "lean", "other.py"))
+        parents = subprocess.run(("git", "-C", self.repo, "rev-list", "--parents", "-n1", "lean"),
                                  capture_output=True, text=True, check=True).stdout.split()
         self.assertEqual(3, len(parents))   # a merge commit: itself and two parents
 
-    def test_a_clash_with_what_main_gained_is_never_forced(self):
+    def test_a_clash_with_what_the_branch_gained_is_never_forced(self):
         def build(ws, task, prompt, tree, resume=""):
             (pathlib.Path(tree.path) / "a.py").write_text("the builder's\n")
             (pathlib.Path(self.repo) / "a.py").write_text("the person's\n")
             subprocess.run(("git", "-C", self.repo, "commit", "-qam", "a person's commit"), check=True)
             return Outcome("ok")
         landed = self.run_it(build)
-        person = sha(self.repo, "refs/heads/main")
+        person = sha(self.repo, "refs/heads/lean")
         self.assertEqual("", landed)
         self.assertEqual("the person's\n", show(self.repo, person, "a.py"))
         self.assertEqual("the person's\n", (pathlib.Path(self.repo) / "a.py").read_text())
@@ -123,6 +127,18 @@ class GreenFeature(Rig):
         self.assertIn("could not land", stopped["why"])
         self.assertIn("could not land", self.mails[0][1])
         self.assertEqual("the builder's\n", (pathlib.Path(stopped["tree"]) / "a.py").read_text())
+
+
+class FirstRun(Rig):
+    def test_the_branch_is_made_at_main_and_main_never_moves(self):
+        subprocess.run(("git", "-C", self.repo, "checkout", "-q", "main"), check=True)
+        subprocess.run(("git", "-C", self.repo, "branch", "-q", "-D", "lean"), check=True)
+        self.assertEqual(self.base, lean_git.start(self.repo))
+        landed = self.run_it(self.builder(("ring.py", "amber\n")))
+        self.assertEqual(landed, sha(self.repo, "refs/heads/lean"))
+        self.assertEqual(self.base, sha(self.repo, "refs/heads/main"))
+        self.assertFalse((pathlib.Path(self.repo) / "ring.py").exists())   # main's checkout untouched
+        self.assertEqual(landed, lean_git.start(self.repo))                  # a second run continues it
 
 
 class Repair(Rig):
@@ -140,14 +156,14 @@ class Repair(Rig):
         self.run_it(self.builder(("ring.py", "amber\n"), ("ring_test.py", "test\n")),
                     suites=(True, True), reviews=(refused, ACCEPT))
         self.assertIn("no test covers the amber colour", self.prompts[1])
-        self.assertEqual("test\n", show(self.repo, "main", "ring_test.py"))
+        self.assertEqual("test\n", show(self.repo, "lean", "ring_test.py"))
 
     def test_still_failing_after_the_repair_stops_emails_and_keeps_the_work(self):
         landed = self.run_it(self.builder(("ring.py", "grey\n"), ("ring.py", "grey1\n"),
                                           ("ring.py", "grey2\n")),
                              suites=(False, False, False))
         self.assertEqual("", landed)
-        self.assertEqual(self.base, sha(self.repo, "refs/heads/main"))
+        self.assertEqual(self.base, sha(self.repo, "refs/heads/lean"))
         self.assertEqual(1 + lean_run.REPAIRS, len(self.prompts))   # never another build
         self.assertEqual("lean_stopped", self.kinds()[-1])
         (sent, body), = self.mails
@@ -163,7 +179,7 @@ class Repair(Rig):
                              suites=(True, True, True), reviews=(refused, refused, ACCEPT))
         self.assertTrue(landed)
         self.assertEqual(3, len(self.prompts))
-        self.assertEqual("c\n", show(self.repo, "main", "ring.py"))
+        self.assertEqual("c\n", show(self.repo, "lean", "ring.py"))
 
     def test_a_builder_that_changes_nothing_is_not_reviewed(self):
         self.run_it(self.builder(), suites=(), reviews=())

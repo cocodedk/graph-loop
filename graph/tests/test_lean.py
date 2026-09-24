@@ -91,21 +91,22 @@ class Entry(unittest.TestCase):
         feature.assert_called_once()
         return code
 
-    def test_a_run_that_merged_builds_main_and_says_ready(self):
+    def test_a_run_that_landed_builds_the_branch_and_says_ready(self):
         self.assertEqual(0, self.finished(built=True))
         (subject, body), = self.mails
-        self.assertEqual("graph-loop: ready to accept", subject)
+        self.assertEqual("graph-loop: ready for review", subject)
         self.assertIn("- log-screen", body)
         built = next(row for row in self.ws.events() if row["kind"] == "lean_built")
         self.assertTrue(built["passed"])
-        self.assertEqual(sha(self.repo, "refs/heads/main"), built["commit"])
+        self.assertEqual(sha(self.repo, "refs/heads/lean"), built["commit"])
+        self.assertIn("main has not moved", body)
         self.assertTrue(pathlib.Path(built["artifact"]).is_file())
         self.assertIn(built["artifact"], body)
 
     def test_a_red_build_is_never_called_ready(self):
         self.assertEqual(1, self.finished(built=False))
         (subject, body), = self.mails
-        self.assertEqual("graph-loop needs you: the build on main", subject)
+        self.assertEqual("graph-loop needs you: the build on branch lean", subject)
         self.assertIn("BUILD FAILED", body)
 
     def test_a_run_that_merged_nothing_builds_nothing(self):

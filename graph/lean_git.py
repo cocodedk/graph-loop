@@ -1,10 +1,11 @@
-"""The lean loop's two git moves: commit a finished worktree, and land it on main.
+"""The lean loop's two git moves: commit a finished worktree, and land it on the campaign branch.
 
 A builder's worktree refuses every ref write (`lib/hooks/reference-transaction`),
 so the commit is built from the repository's side, as `keep.py` does: a private
 index over the worktree's files, written into the repository's own object store.
-Main is then moved forward, never forced: by `merge --ff-only` in the checkout
-that holds it, or by a guarded `update-ref` when nothing holds it.
+The branch is then moved forward, never forced: by `merge --ff-only` in the checkout
+that holds it, or by a guarded `update-ref` when nothing holds it. Features land on
+BRANCH, never on main: a person reviews the branch and merges it with a pull request.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ import subprocess
 import tempfile
 
 MAIN = "refs/heads/main"
+BRANCH = "refs/heads/lean"   # created at main when missing; main itself never moves
 
 
 def git(cwd: str, *args: str, env: dict | None = None) -> str:
@@ -40,36 +42,44 @@ def commit(repo: str, tree: str, base: str, subject: str) -> str:
         shutil.rmtree(scratch, ignore_errors=True)
 
 
-def land(repo: str, work: str, base: str, feature: str) -> str:
-    """Put commit `work` (made on `base`) on main; the new tip.
+def start(repo: str) -> str:
+    """The campaign branch's tip, creating the branch at main when it is missing."""
+    if subprocess.run(("git", "rev-parse", "--verify", "--quiet", BRANCH), cwd=repo,
+                      capture_output=True, check=False).returncode:
+        git(repo, "update-ref", BRANCH, git(repo, "rev-parse", "--verify", MAIN), "")
+    return git(repo, "rev-parse", "--verify", BRANCH)
 
-    If main is still at `base` this is a fast-forward. If a person moved it
-    meanwhile, the two are merged normally; a conflict refuses, and main stays.
+
+def land(repo: str, work: str, base: str, feature: str) -> str:
+    """Put commit `work` (made on `base`) on the campaign branch; the new tip.
+
+    If the branch is still at `base` this is a fast-forward. If a person moved it
+    meanwhile, the two are merged normally; a conflict refuses, and the branch stays.
     """
-    tip = git(repo, "rev-parse", "--verify", MAIN)
+    tip = git(repo, "rev-parse", "--verify", BRANCH)
     new = work
     if tip != base:
         merged = subprocess.run(("git", "merge-tree", "--write-tree", tip, work), cwd=repo,
                                 capture_output=True, text=True, check=False)
         if merged.returncode:
-            raise RuntimeError(f"{feature} and what main gained meanwhile change the same lines: "
+            raise RuntimeError(f"{feature} and what the branch gained meanwhile change the same lines: "
                                f"{merged.stdout.strip()[-300:] or merged.stderr.strip()[:300]}")
         new = git(repo, "commit-tree", merged.stdout.split("\n", 1)[0].strip(),
-                  "-p", tip, "-p", work, "-m", f"Merge {feature} into main")
-    holder = _holding_main(repo)
+                  "-p", tip, "-p", work, "-m", f"Merge {feature} into lean")
+    holder = _holding(repo)
     if holder:
         git(holder, "merge", "--ff-only", "--quiet", new)   # moves that checkout's files too
     else:
-        git(repo, "update-ref", MAIN, new, tip)            # only if main is still `tip`
+        git(repo, "update-ref", BRANCH, new, tip)          # only if it is still `tip`
     return new
 
 
-def _holding_main(repo: str) -> str:
-    """The checkout that has main checked out, or ""."""
+def _holding(repo: str) -> str:
+    """The checkout that has the campaign branch checked out, or ""."""
     path = ""
     for line in git(repo, "worktree", "list", "--porcelain").splitlines():
         if line.startswith("worktree "):
             path = line.split(" ", 1)[1]
-        elif line == f"branch {MAIN}":
+        elif line == f"branch {BRANCH}":
             return path
     return ""

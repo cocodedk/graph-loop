@@ -11,7 +11,8 @@ the person: they are emailed, and the run exits 2. The
 profile, by default the `profile-*.md` the repository's CLAUDE.md links to,
 gives three commands under `## suite_command`, `## build_command` and
 `## artifact`, each an indented line. A run that merged anything ends by
-building main and emailing the person that it is ready to accept.
+building the `lean` branch and emailing the person that it is ready for review:
+the loop never moves main; a person merges the branch with a pull request.
 
 This sits beside the current loop (`graph-goal.py`) and changes none of it.
 """
@@ -61,9 +62,9 @@ def read_profile(path: str) -> dict:
 
 
 def finish(ws, repo: str, profile: dict, merged: list[str]) -> bool:
-    """Build main in its own checkout and tell the person. The checkout stays:
+    """Build the campaign branch in its own checkout and tell the person. The checkout stays:
     the artifact the email names lives in it."""
-    tree = Worktree(repo, "build", commit=lean_git.MAIN).create(
+    tree = Worktree(repo, "build", commit=lean_git.BRANCH).create(
         parent=tempfile.mkdtemp(prefix="lean-build-"))   # its own folder: the artifact lives here
     passed, tail = lean_run.masked(ws, profile["build_command"], tree.path)
     artifact = pathlib.Path(tree.path) / profile["artifact"]
@@ -72,12 +73,13 @@ def finish(ws, repo: str, profile: dict, merged: list[str]) -> bool:
              artifact=str(artifact) if ready else "", tail=tail[-2000:])
     names = "\n".join(f"- {name}" for name in merged)
     if ready:
-        lean_run.mail(ws, "graph-loop: ready to accept",
-                      f"Merged to main, now at {tree.commit[:12]}:\n{names}\n\nThe build: {artifact}")
+        lean_run.mail(ws, "graph-loop: ready for review",
+                      f"Landed on branch lean, now at {tree.commit[:12]}:\n{names}\n\nThe build: {artifact}"
+                      "\n\nReview the branch and merge it with a pull request; main has not moved.")
     else:
         why = "the build is red" if not passed else f"the build left no {profile['artifact']}"
-        lean_run.mail(ws, "graph-loop needs you: the build on main",
-                      f"Merged to main:\n{names}\n\nBut {why}:\n{tail}")
+        lean_run.mail(ws, "graph-loop needs you: the build on branch lean",
+                      f"Landed on branch lean:\n{names}\n\nBut {why}:\n{tail}")
     return ready
 
 
@@ -104,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     specs = [str(pathlib.Path(spec).resolve()) for spec in args.spec]
     if lean_run.grill(ws, repo, specs, path):   # questions first: nothing is built on a guess
         return 2
+    lean_git.start(repo)       # the campaign branch, made at main the first time
     merged = []
     for spec in specs:         # in order: a later spec builds on the ones before it
         if not lean_run.run_feature(ws, repo, spec, profile, path):

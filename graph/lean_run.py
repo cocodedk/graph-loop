@@ -1,10 +1,10 @@
 """One feature of the lean loop (docs/rfc/lean-loop.md): build, check, land.
 
-A worktree off main; one builder writes the feature and its tests; the
+A worktree off the campaign branch (`lean_git.BRANCH`); one builder writes the feature and its tests; the
 repository's own suite runs masked (`gates.run_gate`); one reviewer reads the
 diff. A red suite or a refused review gets a repair pass with the failure
 text, up to `REPAIRS` of them. Still failing: the person is emailed why, and the feature stops with its
-worktree kept. Passing: the change is committed and landed on main.
+worktree kept. Passing: the change is committed and landed on the branch, never on main.
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome
               f"spec below, with tests. Refuse only for: something the spec's 'Done when' names "
               f"that does not hold, a failure a user would meet in ordinary use, a security hole, "
               f"or behaviour added without tests. List anything rarer as a finding, and accept.\n\n"
-              f"## Spec\n\n{spec}\n\n## The diff against main\n\n{diff}\n\n{VERDICT}")
+              f"## Spec\n\n{spec}\n\n## The diff against the branch it builds on\n\n{diff}\n\n{VERDICT}")
 
     def paid(kind, account, cost, tokens, _text):
         ws.attempt(feature, account=account, kind=kind, cost=cost, tokens=tokens, purpose="review")
@@ -111,10 +111,10 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int) -
 
 
 def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str) -> str:
-    """One spec file, start to end. The new main commit, or "" when it stopped."""
+    """One spec file, start to end. The new branch commit, or "" when it stopped."""
     feature = slug(spec_path)
     spec = pathlib.Path(spec_path).read_text("utf-8")
-    tree = Worktree(repo, feature, commit=lean_git.MAIN).create()
+    tree = Worktree(repo, feature, commit=lean_git.BRANCH).create()
     ws.event("lean_feature_started", task=feature, spec=str(spec_path), base=tree.commit,
              tree=tree.path)
     task = {"id": feature, "gate": profile["suite_command"]}
@@ -137,7 +137,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str)
             work = lean_git.commit(repo, tree.path, tree.commit, f"feat({feature}): {feature}")
             landed = lean_git.land(repo, work, tree.commit, feature)
         except RuntimeError as error:
-            why = f"it passed, but could not land on main: {error}"
+            why = f"it passed, but could not land on {lean_git.BRANCH}: {error}"
         else:
             ws.event("lean_merged", task=feature, commit=landed)
             tree.remove()
