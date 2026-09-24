@@ -59,7 +59,7 @@ class Rig(unittest.TestCase):
             return Outcome("ok", session="s1")
         return build
 
-    def run_it(self, build, suites=(True,), reviews=(ACCEPT,)):
+    def run_it(self, build, suites=(True,), reviews=(ACCEPT,), **revise):
         suites, reviews = list(suites), list(reviews)
 
         def masked(ws, command, cwd):
@@ -79,7 +79,8 @@ class Rig(unittest.TestCase):
                 mock.patch.object(lean_run, "judge", judge), \
                 mock.patch.object(alert_email, "send",
                                   lambda body, flags, **kw: self.mails.append((kw, body))):
-            return lean_run.run_feature(self.ws, self.repo, str(self.spec), PROFILE, "profile.md")
+            return lean_run.run_feature(self.ws, self.repo, str(self.spec), PROFILE, "profile.md",
+                                        **revise)
 
     def kinds(self):
         return [row["kind"] for row in self.ws.events() if row["kind"].startswith("lean_")]
