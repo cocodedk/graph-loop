@@ -15,17 +15,16 @@ import pathlib
 import re
 
 import accounts
-import cardfile
 import gate_paths
 import gates
 import lean_git
+import lean_spec
 import providers
 import review
 import tools
-import yaml  # type: ignore[import-untyped]  # no stubs in this environment
+from lean_spec import record
 from review_scope import VERDICT
-from worktree import KEEP_NOTE, Worktree
-from worktree_refs import HeadMoved
+from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
 
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
@@ -93,46 +92,19 @@ def mail(ws, subject: str, body: str) -> None:
     ws.mail_person(subject, body)
 
 
-def record(spec_path: str, **fields: str) -> None:
-    """Write `fields` into the spec file's front matter, every other byte left alone."""
-    path = pathlib.Path(spec_path)
-    text = path.read_text("utf-8")
-    if not cardfile.FRONT.match(text):      # a spec with no front matter gets one
-        text = f"---\n{yaml.safe_dump(fields, sort_keys=False)}---\n{text}"
-    for field, value in fields.items():
-        text = cardfile.patch(text, field, value)
-    path.write_text(text, "utf-8")
-
-
 def slug(path: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", pathlib.Path(path).stem).strip("-") or "feature"
 
 
-def resumed(repo: str, feature: str, spec: str) -> tuple[Worktree, str]:
-    """The checkout to build in, and why its last run stopped ("" for a fresh one).
-    A spec that stopped with its worktree kept carries on there: the work is not
-    thrown away and paid for again. Delete the worktree to start fresh."""
-    tree = Worktree(repo, feature, commit=lean_git.BASE)
-    matter = cardfile.FRONT.match(spec)
-    front = (yaml.safe_load(matter["front"]) or {}) if matter else {}
-    kept = pathlib.Path(str(front.get("lean_worktree") or "")) if front.get("lean_status") == "stopped" else None
-    if not kept or not (kept / ".git").is_dir():
-        return tree.create(), ""
-    note = kept / KEEP_NOTE
-    last = note.read_text("utf-8").split("\n\nTask ", 1)[0] if note.is_file() else "it stopped"
-    try:
-        return tree.reuse(str(kept)), last
-    except HeadMoved:                          # the kept work no longer fits main: start over
-        return Worktree(repo, feature, commit=lean_git.BASE).create(), ""
-
-
-def check(ws, feature: str, spec: str, tree, built, command: str, round_: int) -> str:
-    """Why this round is not done, or "" when it is."""
+def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
+          against: str = "") -> str:
+    """Why this round is not done, or "" when it is. The reviewer reads the diff
+    against `against` (the whole feature when revising), else against the base."""
     if not built.ok:
         return f"the builder did not finish ({built.kind}): {built.text[:500]}"
-    diff = tree.diff(against=tree.commit)
-    if not diff.strip():
+    if not tree.diff(against=tree.commit).strip():
         return "the builder changed nothing"
+    diff = tree.diff(against=against or tree.commit)
     passed, tail = masked(ws, command, tree.path)
     ws.event("lean_suite", task=feature, round=round_, passed=passed, tail=tail[-2000:])
     if not passed:
@@ -145,11 +117,13 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int) -
     return ""
 
 
-def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str) -> str:
-    """One spec file, start to end. Its pull request's URL, or "" when it stopped."""
+def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
+                revise: str = "", pr: str = "") -> str:
+    """One spec file, start to end. Its pull request's URL, or "" when it stopped.
+    `revise` is the open pull request's review findings: fix them on its branch."""
     feature = slug(spec_path)
     spec = pathlib.Path(spec_path).read_text("utf-8")
-    tree, last = resumed(repo, feature, spec)
+    tree, last, against = lean_spec.start(repo, feature, spec, revise)
     ws.event("lean_feature_started", task=feature, spec=str(spec_path), base=tree.commit,
              tree=tree.path, resumed=bool(last))
     task = {"id": feature, "gate": profile["suite_command"]}
@@ -160,21 +134,22 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str)
               f"## Spec\n\n{spec}")
     built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
                   "in this checkout: fix that, and keep the suite green." if last else prompt, tree)
-    why = check(ws, feature, spec, tree, built, profile["suite_command"], 1)
+    why = check(ws, feature, spec, tree, built, profile["suite_command"], 1, against)
     for round_ in range(2, 2 + REPAIRS):
         if not why:
             break
         ws.event("lean_repair", task=feature, why=why[-2000:])
         built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
                       "Fix that, and keep the suite green.", tree, resume=built.session)
-        why = check(ws, feature, spec, tree, built, profile["suite_command"], round_)
+        why = check(ws, feature, spec, tree, built, profile["suite_command"], round_, against)
     if not why:
         try:
             title = f"feat({feature}): {feature}"
             work = lean_git.commit(repo, tree.path, tree.commit, title)
-            url = lean_git.publish(repo, work, feature, title,
-                                   f"Built by graph-loop's lean loop from `{pathlib.Path(spec_path).name}`: "
-                                   "the suite is green and an independent reviewer accepted it.")
+            url = lean_git.update(repo, work, feature, pr) if revise else lean_git.publish(
+                repo, work, feature, title,
+                f"Built by graph-loop's lean loop from `{pathlib.Path(spec_path).name}`: "
+                "the suite is green and an independent reviewer accepted it.")
         except RuntimeError as error:
             why = f"it passed, but could not open its pull request: {error}"
         else:
@@ -186,7 +161,8 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str)
                 ws.event("lean_tree_left", task=feature, tree=tree.path, error=str(error)[:300])
             return url
     kept = tree.keep(why)
-    record(spec_path, lean_status="stopped", lean_worktree=kept)
+    if not revise:                   # a revision that stopped leaves its pull request open
+        record(spec_path, lean_status="stopped", lean_worktree=kept)
     ws.event("lean_stopped", task=feature, why=why[-2000:], tree=kept)
     mail(ws, f"graph-loop needs you: {feature}",
          f"{feature} stopped.\n\nWhy:\n{why}\n\nIts work is kept at {kept}.")

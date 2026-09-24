@@ -7,6 +7,9 @@ One spec file per run is one feature (`lean_run.py`), and it becomes one pull
 request: the branch `lean/<feature>`, built on origin's main. Nothing is ever
 landed on main, and nothing is built while any branch on origin is unmerged,
 the loop's own or a person's: the person is emailed the list and the run exits 3.
+One exception: when the only unmerged branch is this spec's own open pull request
+and it has unresolved review threads, the run fixes those on that branch and
+pushes to the same pull request.
 The run also refuses to start without a proven contact (`graph-goal.py
 contact`), and builds nothing while a reviewer reading the spec first has
 questions for the person: they are emailed, and the run exits 2. The profile,
@@ -30,6 +33,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "lib"))
 
 import lean_git
 import lean_run
+import lean_spec
 from workspace import Workspace
 from worktree import Worktree
 
@@ -106,17 +110,22 @@ def main(argv: list[str] | None = None) -> int:
                       f"profile-<name>.md and link it from CLAUDE.md:\n{names}")
         raise
     profile = read_profile(path)
-    waiting = lean_git.unmerged(repo)
-    if waiting:                                # nothing starts from main while anything waits
+    spec = str(pathlib.Path(args.spec[0]).resolve())
+    info = lean_spec.front(pathlib.Path(spec).read_text("utf-8"))
+    waiting, revise = lean_git.unmerged(repo), ""
+    own = waiting == [f"origin/lean/{lean_run.slug(spec)}"] and info.get("lean_status") == "pr_open"
+    if own:                                    # its own pull request: fix what review found
+        revise = lean_git.threads(str(info.get("lean_pr", "")))
+    if waiting and not revise:                 # nothing starts from main while anything waits
         ws.event("lean_waiting", branches=waiting)
         names = "\n".join(f"- {name}" for name in waiting)
         lean_run.mail(ws, "graph-loop is waiting: unmerged branches",
-                      f"Nothing was built. Merge or delete these branches first:\n{names}")
+                      f"Nothing was built. Merge or delete these branches first:\n{names}"
+                      + ("\n\nIts own pull request has no unresolved review threads to fix." if own else ""))
         return 3
-    spec = str(pathlib.Path(args.spec[0]).resolve())
-    if lean_run.grill(ws, repo, [spec], path):   # questions first: nothing is built on a guess
+    if not revise and lean_run.grill(ws, repo, [spec], path):   # questions first: nothing on a guess
         return 2
-    url = lean_run.run_feature(ws, repo, spec, profile, path)
+    url = lean_run.run_feature(ws, repo, spec, profile, path, revise, str(info.get("lean_pr", "")))
     if not url:
         return 1
     return 0 if finish(ws, repo, profile, lean_run.slug(spec), url) else 1

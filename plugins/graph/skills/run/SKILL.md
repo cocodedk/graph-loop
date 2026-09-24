@@ -71,7 +71,9 @@ The run first fetches origin. Then a reviewer reads the spec before anything is 
 - **Exit 2:** its questions have been emailed and nothing was built. Answer them in
   the specs, then run again.
 - **Exit 3:** a branch on origin is unmerged, so nothing was built. The mail lists
-  the branches.
+  the branches. The one exception is the spec's own open pull request with unresolved
+  review threads (CodeRabbit's or a person's). Then the run fixes those on the PR's
+  branch and pushes to the same PR, so rerun the same spec after a review.
 - **Exit 0:** the pull request is open, its branch was built, and the person got a
   "ready for review" mail with the PR link and the artifact.
 - **Exit 1:** the feature stopped, or its build was red. The mail says which, and the

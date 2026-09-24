@@ -11,7 +11,9 @@ branch on origin is merged, the loop builds nothing.
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -66,3 +68,35 @@ def pull_request(repo: str, branch: str, title: str, body: str) -> str:
     if done.returncode:
         raise RuntimeError(f"gh pr create: {(done.stderr or done.stdout).strip()[:300]}")
     return done.stdout.strip().splitlines()[-1]
+
+
+def fork_point(repo: str, feature: str) -> str:
+    """Where lean/<feature> left origin's main: the reviewer diffs the whole feature."""
+    return git(repo, "merge-base", BASE, f"refs/remotes/origin/lean/{feature}")
+
+
+def update(repo: str, work: str, feature: str, url: str) -> str:
+    """Push commit `work` (made on the branch's tip) onto lean/<feature>, the same
+    pull request. A plain push: git refuses it unless it is a fast-forward."""
+    branch = f"lean/{feature}"
+    git(repo, "update-ref", f"refs/heads/{branch}", work)
+    git(repo, "push", "--quiet", "origin", f"{work}:refs/heads/{branch}")
+    return url
+
+
+THREADS = ("query($u:URI!){resource(url:$u){... on PullRequest{reviewThreads(first:100){nodes{"
+           "isResolved comments(first:1){nodes{path line body}}}}}}}")
+
+
+def threads(url: str) -> str:
+    """The pull request's unresolved review threads as text, "" when none."""
+    done = subprocess.run(("gh", "api", "graphql", "-f", f"query={THREADS}", "-F", f"u={url}"),
+                          capture_output=True, text=True, check=False)
+    if done.returncode:
+        raise RuntimeError(f"gh api graphql: {(done.stderr or done.stdout).strip()[:300]}")
+    nodes = json.loads(done.stdout)["data"]["resource"]["reviewThreads"]["nodes"]
+    found = [node["comments"]["nodes"][0] for node in nodes
+             if not node["isResolved"] and node["comments"]["nodes"]]
+    return "\n\n".join(f"{c['path']}:{c.get('line') or ''}\n"
+                       f"{re.sub(r'(?s)<details>.*?</details>|<!--.*?-->', '', c['body']).strip()}"
+                       for c in found)
