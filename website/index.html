@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- SEO keywords:
+     primary:   unattended agent coding loop
+     secondary: agent task backlog, AI code review gate, Obsidian vault backlog
+     intent:    informational
+-->
+<title>graph-loop: an unattended agent coding loop</title>
+<meta name="description" content="graph-loop breaks a large job into small tasks and builds them unattended: one model writes the code, a second refuses any task that could pass without the work." />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://graph-loop.cocode.dk/" />
+<link rel="alternate" hreflang="en" href="https://graph-loop.cocode.dk/" />
+<link rel="alternate" hreflang="fa" href="https://graph-loop.cocode.dk/fa/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="graph-loop" />
+<meta property="og:title" content="graph-loop: an unattended agent coding loop" />
+<meta property="og:description" content="Two models that never trust each other: one builds a task, the other refuses work that only looks done. The backlog is a folder of linked notes." />
+<meta property="og:url" content="https://graph-loop.cocode.dk/" />
+<meta property="og:image" content="https://graph-loop.cocode.dk/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="graph-loop: build, gate, review, commit." />
+<meta property="og:locale" content="en_US" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="graph-loop: an unattended agent coding loop" />
+<meta name="twitter:description" content="Two models that never trust each other: one builds a task, the other refuses work that only looks done." />
+<meta name="twitter:image" content="https://graph-loop.cocode.dk/og.png" />
+<meta name="twitter:image:alt" content="graph-loop: build, gate, review, commit." />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="https://brand.cocode.dk/v1.css" />
+<script type="module" src="https://brand.cocode.dk/v1.js"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "graph-loop",
+  "description": "An unattended agent coding loop. One model builds each task in its own copy of the repository, a gate decides, and a second model reviews the finished diff before anything is committed.",
+  "url": "https://graph-loop.cocode.dk/",
+  "downloadUrl": "https://github.com/cocodedk/graph-loop",
+  "codeRepository": "https://github.com/cocodedk/graph-loop",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Linux, macOS",
+  "license": "https://github.com/cocodedk/graph-loop/blob/main/LICENSE",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": {
+    "@type": "Person",
+    "name": "Babak Bandpey",
+    "url": "https://cocode.dk",
+    "sameAs": ["https://linkedin.com/in/babakbandpey", "https://github.com/cocodedk"]
+  }
+}
+</script>
+</head>
+<body>
+<!-- The cocode.dk family frame. Without JavaScript its children show instead: a way home
+     and the language link. -->
+<cocode-head project="graph-loop" accent="#6ee7a8" on-accent="#0b0e11" dark>
+  <a href="https://cocode.dk">cocode.dk</a>
+  <a href="fa/" hreflang="fa">فارسی</a>
+</cocode-head>
+
+<main>
+  <h1>An unattended agent coding loop</h1>
+  <p class="lede">Break a big job into small tasks, then let the loop build them. One model
+  writes the code. A second one, which takes nothing on trust, refuses anything that only
+  looks done.</p>
+
+  <p><a class="cta" href="https://github.com/cocodedk/graph-loop">Code on GitHub</a>
+  <a class="cta" href="https://github.com/cocodedk/graph-loop/blob/main/docs/DESIGN.md">The design</a>
+  <a class="cta" href="https://github.com/cocodedk/graph-loop/blob/main/docs/DIARY.md">The diary</a></p>
+
+  <p><a class="cta" href="how.html">The loop in one picture</a>
+  <a class="cta" href="example.html">A real card, and a real run</a></p>
+
+  <h2>How one task runs</h2>
+  <ol>
+    <li>A reviewer reads the task and refuses it if the check could pass without the work
+    being done.</li>
+    <li>A builder does that one task alone, in its own copy of the repository.</li>
+    <li>A gate runs. It is a command, and its exit code is the verdict.</li>
+    <li>A second reviewer, who has not seen the work before, reads the finished change.
+    Only then is it committed.</li>
+  </ol>
+
+  <h2>The backlog is a folder of notes</h2>
+  <p>One note is one task. What you read is byte for byte what the loop reads. Links between
+  notes are ordinary wikilinks, so your editor's graph view is the dependency graph, and the
+  loop writes nothing in a note but its front matter.</p>
+
+  <div class="note">
+    <p>Reviews take 70 to 99 percent of the clock. One campaign refused nine tasks in a row
+    and built nothing, for $0.00, and that was the loop working. The backlog was the
+    defect. The way to go faster is a clearer task, not a faster builder.</p>
+  </div>
+
+  <h2>What you need</h2>
+  <p>A machine with <code>python3</code>, <code>git</code>, <code>bash</code> and
+  <code>ps</code>, and command-line access to two different model providers: one that
+  builds, one that reviews. That is not a detail. The whole design rests on the reviewer
+  having blind spots the builder does not.</p>
+
+  <h2>Start with the method</h2>
+  <p>The method is a Claude Code skill, and it is useful on its own. You can slice
+  work into tasks without running the loop at all.</p>
+<pre><code>/plugin marketplace add cocodedk/graph-loop
+/plugin install graph@graph-loop</code></pre>
+  <p>To run the loop itself, follow
+  <a href="https://github.com/cocodedk/graph-loop#run-it">Run it</a> in the README, and read
+  <a href="https://github.com/cocodedk/graph-loop/blob/main/docs/STATUS.md">STATUS</a> for
+  what is proven and what is not.</p>
+</main>
+
+<footer>
+  <p>MIT</p>
+</footer>
+
+<cocode-foot repo="cocodedk/graph-loop" dark>
+  <a href="https://cocode.dk">cocode.dk</a>
+</cocode-foot>
+</body>
+</html>
