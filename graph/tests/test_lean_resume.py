@@ -5,9 +5,12 @@ import pathlib
 import subprocess
 import sys
 import unittest
+from unittest import mock
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import lean_git
+import lean_run
 from test_lean_run import Rig
 
 
@@ -34,6 +37,16 @@ class Resume(Rig):
         started = next(row for row in self.ws.events() if row["kind"] == "lean_feature_started")
         self.assertFalse(started["resumed"])
         self.assertNotIn("last attempt failed", self.prompts[0])
+
+
+class Cleanup(Rig):
+    def test_a_tree_that_cannot_be_removed_never_loses_the_pull_request(self):
+        denied = PermissionError(13, "Permission denied", "backend/__pycache__")
+        with mock.patch.object(lean_run.Worktree, "remove", side_effect=denied):
+            url = self.run_it(self.builder(("ring.py", "amber\n")))
+        self.assertEqual("https://example.test/pull/1", url)
+        left = next(row for row in self.ws.events() if row["kind"] == "lean_tree_left")
+        self.assertIn("Permission denied", left["error"])
 
 
 class Unmerged(Rig):

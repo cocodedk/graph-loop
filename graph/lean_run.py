@@ -180,7 +180,10 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str)
         else:
             ws.event("lean_published", task=feature, commit=work, pr=url)
             record(spec_path, lean_status="pr_open", lean_pr=url)
-            tree.remove()
+            try:
+                tree.remove()
+            except OSError as error:   # files a suite's container left as root: tidy later
+                ws.event("lean_tree_left", task=feature, tree=tree.path, error=str(error)[:300])
             return url
     kept = tree.keep(why)
     record(spec_path, lean_status="stopped", lean_worktree=kept)
