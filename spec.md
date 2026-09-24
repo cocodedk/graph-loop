@@ -1,1 +1,0 @@
-Feedback is delivered.
