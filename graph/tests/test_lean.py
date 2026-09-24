@@ -98,7 +98,7 @@ class Entry(unittest.TestCase):
     def test_a_published_feature_builds_its_branch_and_says_ready(self):
         self.assertEqual(0, self.finished(built=True))
         (subject, body), = self.mails
-        self.assertEqual("graph-loop: ready for review", subject)
+        self.assertEqual("graph-loop: ready for review", subject.partition("] ")[2])
         self.assertIn("log-screen: https://example.test/pull/7", body)
         built = next(row for row in self.ws.events() if row["kind"] == "lean_built")
         self.assertTrue(built["passed"])
@@ -109,7 +109,7 @@ class Entry(unittest.TestCase):
     def test_a_red_build_is_never_called_ready(self):
         self.assertEqual(1, self.finished(built=False))
         (subject, body), = self.mails
-        self.assertEqual("graph-loop needs you: the build of log-screen", subject)
+        self.assertEqual("graph-loop needs you: the build of log-screen", subject.partition("] ")[2])
         self.assertIn("BUILD FAILED", body)
 
     def test_a_run_that_merged_nothing_builds_nothing(self):
@@ -138,7 +138,7 @@ class Entry(unittest.TestCase):
         grill.assert_not_called()
         feature.assert_not_called()
         (subject, body), = self.mails
-        self.assertEqual("graph-loop is waiting: unmerged branches", subject)
+        self.assertEqual("graph-loop is waiting: unmerged branches", subject.partition("] ")[2])
         self.assertIn("- origin/feat/theirs", body)
 
     def test_no_profile_emails_the_ones_to_choose_from(self):
@@ -148,7 +148,7 @@ class Entry(unittest.TestCase):
                 self.assertRaises(SystemExit):
             lean.main(self.argv())
         (body, _flags), sent = self.mails[0]
-        self.assertEqual("graph-loop needs a profile", sent["subject"])
+        self.assertEqual("graph-loop needs a profile", sent["subject"].partition("] ")[2])
         self.assertIn("web-node.md", body)
 
     def test_questions_stop_the_run_before_any_build(self):

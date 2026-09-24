@@ -41,7 +41,7 @@ class CampaignContactTest(unittest.TestCase):
                 sender.send_message.side_effect = None
                 sender.send_message.return_value = {}
                 self.assertEqual(0, goal.main(argv + ["contact", channel]))
-                self.assertEqual("graph-loop: can this campaign reach you?",
+                self.assertEqual(f"[{space.root.name}] graph-loop: can this campaign reach you?",
                                  sender.send_message.call_args.args[0]["Subject"])
                 self.assertEqual(channel, (space.root / "contact").read_text().strip())
                 sender.send_message.reset_mock()
@@ -53,7 +53,7 @@ class CampaignContactTest(unittest.TestCase):
                                          ("choose the format", "supply the source", "read this alert")):
                     message = call.args[0]
                     self.assertEqual(channel, message["To"])
-                    self.assertTrue(message["Subject"].startswith("graph-loop needs you: T"))
+                    self.assertTrue(message["Subject"].startswith(f"[{space.root.name}] graph-loop needs you: T"))
                     self.assertIn(wording, message.get_content())
                 self.assertEqual(["needs_a_person", "slice_needs_person", "alert"],
                                  [row["kind"] for row in space.events()])

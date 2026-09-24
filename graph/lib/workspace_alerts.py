@@ -19,6 +19,7 @@ import pathlib
 
 import alert_email
 from workspace_claims import _now
+from workspace_repo import project
 
 RESOLVED = "ALERTS.resolved"
 
@@ -51,10 +52,11 @@ class AlertsMixin:
                          row["kind"], json.dumps(row, sort_keys=True), about=row["kind"])
 
     def mail_person(self, subject: str, why: str, flags: str = "", *, about: str = "") -> None:
-        """Through the proven contact; a failed send is logged, never raised.
-        `about` names the event when it is not the subject."""
+        """Through the proven contact, the subject naming the project; a failed send is
+        logged, never raised. `about` names the event when it is not the subject."""
         try:
-            alert_email.send(why, flags, recipient=self.require_contact(), subject=subject)
+            alert_email.send(why, flags, recipient=self.require_contact(),
+                             subject=f"[{project(self)}] {subject}")
         except (OSError, ValueError, SystemExit) as error:
             self.event("contact_send_failed", about=about or subject, error=str(error))
 
