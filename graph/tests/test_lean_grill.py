@@ -29,6 +29,7 @@ class Grill(unittest.TestCase):
                 mock.patch.object(alert_email, "send", lambda *a, **k: self.mails.append(k)):
             questions = lean_run.grill(self.ws, repo(), [str(self.spec)], "profile.md")
         self.assertIn("Make it blue, and make it red.", call.call_args.args[1])
+        self.prompt = call.call_args.args[1]
         return questions
 
     def test_questions_are_emailed_and_returned(self):
@@ -38,6 +39,12 @@ class Grill(unittest.TestCase):
     def test_clear_specs_ask_nothing(self):
         self.assertEqual("", self.grill(Outcome("ok", verdict="ACCEPT")))
         self.assertEqual([], self.mails)
+
+    def test_the_grill_is_told_the_suite_has_network_and_docker(self):
+        self.grill(Outcome("ok", verdict="ACCEPT"))
+        self.assertNotIn("no network. Refuse", self.prompt)    # the sandbox keeps the network
+        self.assertIn("with its network and Docker", self.prompt)
+        self.assertIn("your own read-only sandbox may be unable to run it", self.prompt)
 
     def test_a_grill_that_did_not_answer_stops_too(self):
         self.assertIn("did not answer", self.grill(Outcome("malformed")))
