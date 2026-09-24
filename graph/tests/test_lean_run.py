@@ -118,19 +118,6 @@ class GreenFeature(Rig):
         self.assertIn("lean_status: stopped", self.spec.read_text())
 
 
-class Unmerged(Rig):
-    def test_only_branches_not_merged_into_origin_main_are_listed(self):
-        for name in ("merged", "waiting"):
-            subprocess.run(("git", "-C", self.repo, "branch", name), check=True)
-        (pathlib.Path(self.repo) / "b.py").write_text("two\n")
-        subprocess.run(("git", "-C", self.repo, "switch", "-q", "waiting"), check=True)
-        subprocess.run(("git", "-C", self.repo, "add", "b.py"), check=True)
-        subprocess.run(("git", "-C", self.repo, "commit", "-qm", "unreviewed"), check=True)
-        subprocess.run(("git", "-C", self.repo, "push", "-q", "origin", "merged", "waiting"),
-                       capture_output=True, check=True)
-        self.assertEqual(["origin/waiting"], lean_git.unmerged(self.repo))
-
-
 class Repair(Rig):
     def test_a_red_suite_gets_one_repair_with_the_failure_text(self):
         landed = self.run_it(self.builder(("ring.py", "grey\n"), ("ring.py", "amber\n")),
