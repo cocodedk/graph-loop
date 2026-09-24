@@ -1,6 +1,7 @@
 """The lean loop's entry: its profile, its contact, its end, and its wiring."""
 
 import pathlib
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -10,6 +11,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import alert_email
 import lean
+import lean_git
 import lean_run
 import providers
 import review
@@ -47,9 +49,10 @@ class Entry(unittest.TestCase):
         self.spec = pathlib.Path(tempfile.mkdtemp()) / "log-screen.md"
         self.spec.write_text("Restyle the Log screen.\n")
         self.mails = []
-        grill = mock.patch.object(lean_run, "grill", return_value="")
-        grill.start()
-        self.addCleanup(grill.stop)
+        for name, fake in ((lean_run, "grill"), (lean_git, "unmerged")):
+            patched = mock.patch.object(name, fake, return_value=[] if fake == "unmerged" else "")
+            patched.start()
+            self.addCleanup(patched.stop)
 
     def argv(self):
         return ["--workspace", str(self.ws.root), "--repo", self.repo, "--spec", str(self.spec)]
@@ -84,28 +87,29 @@ class Entry(unittest.TestCase):
                 (pathlib.Path(cwd) / "out").mkdir()
                 (pathlib.Path(cwd) / "out" / "app.bin").write_text("app")
             return built, "" if built else "BUILD FAILED"
-        with mock.patch.object(lean_run, "run_feature", return_value="abc123") as feature, \
+        subprocess.run(("git", "-C", self.repo, "branch", "lean/log-screen"), check=True)
+        with mock.patch.object(lean_run, "run_feature", return_value="https://example.test/pull/7") as feature, \
                 mock.patch.object(lean_run, "masked", masked), \
                 mock.patch.object(alert_email, "send", self.send):
             code = lean.main(self.argv())
         feature.assert_called_once()
         return code
 
-    def test_a_run_that_merged_builds_main_and_says_ready(self):
+    def test_a_published_feature_builds_its_branch_and_says_ready(self):
         self.assertEqual(0, self.finished(built=True))
         (subject, body), = self.mails
-        self.assertEqual("graph-loop: ready to accept", subject)
-        self.assertIn("- log-screen", body)
+        self.assertEqual("graph-loop: ready for review", subject)
+        self.assertIn("log-screen: https://example.test/pull/7", body)
         built = next(row for row in self.ws.events() if row["kind"] == "lean_built")
         self.assertTrue(built["passed"])
-        self.assertEqual(sha(self.repo, "refs/heads/main"), built["commit"])
+        self.assertEqual(sha(self.repo, "refs/heads/lean/log-screen"), built["commit"])
         self.assertTrue(pathlib.Path(built["artifact"]).is_file())
         self.assertIn(built["artifact"], body)
 
     def test_a_red_build_is_never_called_ready(self):
         self.assertEqual(1, self.finished(built=False))
         (subject, body), = self.mails
-        self.assertEqual("graph-loop needs you: the build on main", subject)
+        self.assertEqual("graph-loop needs you: the build of log-screen", subject)
         self.assertIn("BUILD FAILED", body)
 
     def test_a_run_that_merged_nothing_builds_nothing(self):
@@ -116,12 +120,26 @@ class Entry(unittest.TestCase):
         masked.assert_not_called()
         self.assertFalse(any(row["kind"] == "lean_built" for row in self.ws.events()))
 
-    def test_a_stopped_feature_stops_the_run(self):
+    def test_one_spec_per_run(self):
         (self.ws.root / "contact").write_text("person@example.test\n")
         argv = self.argv() + ["--spec", str(self.spec)]
-        with mock.patch.object(lean_run, "run_feature", return_value="") as feature:
-            self.assertEqual(1, lean.main(argv))
-        feature.assert_called_once()
+        with mock.patch.object(lean_run, "run_feature") as feature, \
+                self.assertRaises(SystemExit), mock.patch("sys.stderr"):
+            lean.main(argv)
+        feature.assert_not_called()
+
+    def test_an_unmerged_branch_stops_the_run_before_the_grill(self):
+        (self.ws.root / "contact").write_text("person@example.test\n")
+        with mock.patch.object(lean_git, "unmerged", return_value=["origin/feat/theirs"]), \
+                mock.patch.object(lean_run, "grill") as grill, \
+                mock.patch.object(lean_run, "run_feature") as feature, \
+                mock.patch.object(alert_email, "send", self.send):
+            self.assertEqual(3, lean.main(self.argv()))
+        grill.assert_not_called()
+        feature.assert_not_called()
+        (subject, body), = self.mails
+        self.assertEqual("graph-loop is waiting: unmerged branches", subject)
+        self.assertIn("- origin/feat/theirs", body)
 
     def test_no_profile_emails_the_ones_to_choose_from(self):
         (self.ws.root / "contact").write_text("person@example.test\n")

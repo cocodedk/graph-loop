@@ -1,7 +1,7 @@
 {
   "name": "graph",
-  "description": "Slice a large body of work into atomic, gate-first tasks an agent loop can run unattended.",
-  "version": "0.1.0",
+  "description": "Slice a large body of work into atomic, gate-first tasks an agent loop can run unattended, and run graph-loop's lean loop on a project.",
+  "version": "0.2.0",
   "author": {
     "name": "Babak Bandpey",
     "email": "bb@cocode.dk"
