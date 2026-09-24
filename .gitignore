@@ -1,0 +1,9 @@
+PROVENANCE.local
+*.local
+*.local.md
+.mcp.json
+__pycache__/
+*.pyc
+
+# mail credentials for alert_email.py and the campaign contact; never committed
+graph/lib/smtp.env
