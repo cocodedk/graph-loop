@@ -2,4 +2,9 @@
 set -eu
 # The slicer's suite is the smoke test: it is green, it is fast, and it reaches
 # the driver's library. The driver's own suite is slower and runs in CI.
-(cd slicer/tests && python3 -m unittest discover -q)
+# Git hands a hook GIT_DIR and GIT_INDEX_FILE, and inside a worktree they point at the
+# real repository. The tests make throwaway repositories and run git in them; with those
+# variables set, their commits, config and HEAD changes land on this repository instead
+# (seven fixture commits reached main this way). The tests get none of git's variables.
+(cd slicer/tests && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_PREFIX \
+  -u GIT_COMMON_DIR -u GIT_OBJECT_DIRECTORY python3 -m unittest discover -q)
