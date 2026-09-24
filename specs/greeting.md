@@ -1,2 +1,2 @@
 # Greeting
-A greeting is returned.
+It is returned.
