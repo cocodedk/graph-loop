@@ -66,8 +66,10 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
                         for path in spec_paths)
     prompt = (f"You read these specs before anything is built, read-only; the repository's CLAUDE.md, "
               f"its brief and the profile at {profile_path} give the context. A builder implements "
-              f"each spec in order. It edits files only (no chmod, no git, no network), and the suite "
-              f"runs in a sandbox with an empty home and no network. Refuse only for what a person "
+              f"each spec in order. It edits files only (no chmod, no git, no network). The suite is "
+              f"the profile's command, run on this machine with its network and Docker in a scrubbed "
+              f"environment; your own read-only sandbox may be unable to run it, and that is no "
+              f"question for the person. Refuse only for what a person "
               f"must decide first: specs that contradict each other or themselves, a decision the "
               f"builder would have to guess, or a requirement it cannot meet here. Each finding is one "
               f"question to the person. What the builder can settle itself is no question: accept."
