@@ -24,7 +24,8 @@ import review
 import tools
 import yaml  # type: ignore[import-untyped]  # no stubs in this environment
 from review_scope import VERDICT
-from worktree import Worktree
+from worktree import KEEP_NOTE, Worktree
+from worktree_refs import HeadMoved
 
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
@@ -107,6 +108,24 @@ def slug(path: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", pathlib.Path(path).stem).strip("-") or "feature"
 
 
+def resumed(repo: str, feature: str, spec: str) -> tuple[Worktree, str]:
+    """The checkout to build in, and why its last run stopped ("" for a fresh one).
+    A spec that stopped with its worktree kept carries on there: the work is not
+    thrown away and paid for again. Delete the worktree to start fresh."""
+    tree = Worktree(repo, feature, commit=lean_git.BASE)
+    matter = cardfile.FRONT.match(spec)
+    front = (yaml.safe_load(matter["front"]) or {}) if matter else {}
+    kept = pathlib.Path(str(front.get("lean_worktree") or "")) if front.get("lean_status") == "stopped" else None
+    if not kept or not (kept / ".git").is_dir():
+        return tree.create(), ""
+    note = kept / KEEP_NOTE
+    last = note.read_text("utf-8").split("\n\nTask ", 1)[0] if note.is_file() else "it stopped"
+    try:
+        return tree.reuse(str(kept)), last
+    except HeadMoved:                          # the kept work no longer fits main: start over
+        return Worktree(repo, feature, commit=lean_git.BASE).create(), ""
+
+
 def check(ws, feature: str, spec: str, tree, built, command: str, round_: int) -> str:
     """Why this round is not done, or "" when it is."""
     if not built.ok:
@@ -130,16 +149,17 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str)
     """One spec file, start to end. Its pull request's URL, or "" when it stopped."""
     feature = slug(spec_path)
     spec = pathlib.Path(spec_path).read_text("utf-8")
-    tree = Worktree(repo, feature, commit=lean_git.BASE).create()
+    tree, last = resumed(repo, feature, spec)
     ws.event("lean_feature_started", task=feature, spec=str(spec_path), base=tree.commit,
-             tree=tree.path)
+             tree=tree.path, resumed=bool(last))
     task = {"id": feature, "gate": profile["suite_command"]}
     script = tools.write_gate_script(task)   # the builder may run it: `bash <script>`
     prompt = (f"Implement what this spec asks, including its tests. Follow the repository's "
               f"CLAUDE.md and the profile at {profile_path}. Run the suite with "
               f"`bash {script}` and leave it green. Do not commit: the loop commits.\n\n"
               f"## Spec\n\n{spec}")
-    built = build(ws, task, prompt, tree)
+    built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
+                  "in this checkout: fix that, and keep the suite green." if last else prompt, tree)
     why = check(ws, feature, spec, tree, built, profile["suite_command"], 1)
     for round_ in range(2, 2 + REPAIRS):
         if not why:
