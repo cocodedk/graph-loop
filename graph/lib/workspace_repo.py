@@ -23,6 +23,15 @@ def git_root(path: pathlib.Path) -> pathlib.Path | None:
     return pathlib.Path(done.stdout.strip()).resolve() if done.returncode == 0 else None
 
 
+def project(space) -> str:
+    """The name every mail's subject starts with: the recorded repository, else the
+    checkout the workspace sits in, else the workspace folder itself."""
+    for row in space.events():
+        if row.get("kind") in ("init", "repository_declared") and row.get("repo"):
+            return pathlib.Path(row["repo"]).name
+    return (git_root(space.root.resolve()) or space.root.resolve()).name
+
+
 def repository(space, *, persist: bool = True) -> pathlib.Path:
     rows = space.events()
     for row in rows:

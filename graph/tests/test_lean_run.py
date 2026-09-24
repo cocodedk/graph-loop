@@ -157,7 +157,7 @@ class Repair(Rig):
         self.assertEqual(1 + lean_run.REPAIRS, len(self.prompts))   # never another build
         self.assertEqual("lean_stopped", self.kinds()[-1])
         (sent, body), = self.mails
-        self.assertEqual("graph-loop needs you: rest-ring", sent["subject"])
+        self.assertEqual("graph-loop needs you: rest-ring", sent["subject"].partition("] ")[2])
         self.assertEqual("person@example.test", sent["recipient"])
         self.assertIn("FAILED: AmberTest > overdue", body)
         stopped = next(row for row in self.ws.events() if row["kind"] == "lean_stopped")
