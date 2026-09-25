@@ -29,6 +29,7 @@ from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
 REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
+REVIEW_EFFORT = "high"   # the owner, 2026-09-25: gpt-6-sol reviews at high (the reviewer cap)
 
 
 def build(ws, task: dict, prompt: str, tree, resume: str = "") -> providers.Outcome:
@@ -57,7 +58,7 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome
 
     def paid(kind, account, cost, tokens, _text):
         ws.attempt(feature, account=account, kind=kind, cost=cost, tokens=tokens, purpose="review")
-    return review.codex(CODEX_BIN, prompt, cwd=cwd, attempt=paid)
+    return review.codex(CODEX_BIN, prompt, cwd=cwd, effort=REVIEW_EFFORT, attempt=paid)
 
 
 def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
@@ -77,7 +78,7 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
 
     def paid(kind, account, cost, tokens, _text):
         ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens, purpose="grill")
-    out = review.codex(CODEX_BIN, prompt, cwd=repo, attempt=paid)
+    out = review.codex(CODEX_BIN, prompt, cwd=repo, effort=REVIEW_EFFORT, attempt=paid)
     questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
     ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=questions[:2000])
     if questions:

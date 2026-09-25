@@ -55,7 +55,7 @@ class CodexTest(unittest.TestCase):
             os.environ["OUT"] = handle.name
             out = codex(binary, "review this")
             argv = pathlib.Path(handle.name).read_text()
-        self.assertIn("--model gpt-6-astra", argv)
+        self.assertIn("--model gpt-6-sol", argv)
         self.assertIn('model_reasoning_effort="medium"', argv)
         self.assertEqual("ACCEPT", out.verdict)
 
