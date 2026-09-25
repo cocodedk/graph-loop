@@ -26,9 +26,9 @@ def task(**extra) -> dict:
 class ReuseTest(unittest.TestCase):
     def test_the_builder_is_told_to_follow_what_already_exists(self):
         prompt = build_prompt(task())
-        self.assertIn("find the service or module here that already", prompt)
-        self.assertIn("a second copy of an existing rule", prompt)
-        self.assertIn("name it in your final line and leave it", prompt)   # report, never refactor
+        self.assertIn("Where a module here already follows the rule you need, follow that module", prompt)
+        self.assertIn("rather than writing a second copy", prompt)
+        self.assertIn("goes in your final line, because a refactor", prompt)   # report, never refactor
 
     def test_the_reviewer_reports_only_a_second_copy_introduced_by_this_change(self):
         prompt = diff_prompt(task(), "diff")

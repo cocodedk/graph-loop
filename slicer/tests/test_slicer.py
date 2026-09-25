@@ -77,7 +77,7 @@ class Command(unittest.TestCase):
         self.assertIn("Never invent a required method", question)
         self.assertIn("the gate cannot observe, or a shape nothing here declares, "
                       "answer NEEDS_PERSON", question)
-        self.assertIn("never invent the SHAPE of data from outside this repository", question)
+        self.assertIn("never invent the shape of data from outside this repository", question)
         self.assertIn("never hide or delete the output a builder needs", question)
         self.assertIn("no quiet flags that drop compiler errors, no deleting the log it greps", question)
         self.assertIn("compilation/interface availability, never continued non-implementation", question)
