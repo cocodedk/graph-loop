@@ -7,9 +7,8 @@ from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
-import tmp_root  # noqa: F401
-
 import lean_run
+import tmp_root  # noqa: F401
 
 
 class LeanReviewEffortTest(unittest.TestCase):
