@@ -27,7 +27,9 @@ _PLANNERS = ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5")
 # strong at reasoning) and is the default reviewer; gpt-5.6-sol is the model
 # behind it on the same agent. The second AGENT (claude) is still what
 # resources.belt('review') adds after both.
-_REVIEWERS = ("gpt-6-astra",)
+# The owner, 2026-09-25: the reviewer is gpt-6-sol at high; it answered
+# `codex exec -m gpt-6-sol -c model_reasoning_effort=high` the same day.
+_REVIEWERS = ("gpt-6-sol",)
 # What the claude rungs of the review belt use when no codex answers. Its own
 # list, and the STRONG model first: these rungs used to reuse `builders()`, so
 # the moment the builder list was reordered to put the fast model first (the owner,

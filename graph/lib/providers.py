@@ -1,7 +1,7 @@
 """Calling a model, and reading the answer honestly.
 
 Two providers: builders on `claude-opus-5-5` or a configured alias, reviewers on
-`codex exec --model gpt-6-astra` or a configured alias. Which model and effort
+`codex exec --model gpt-6-sol` or a configured alias. Which model and effort
 an actual call uses is `model_router.choose`'s pick now (docs/ROUTER.md): a
 Jev decision at medium, raised only from a recorded failed medium attempt on
 the same contract. `MODEL`/`EFFORT`/`REVIEW_MODEL`/`REVIEW_EFFORT` below are
@@ -36,7 +36,7 @@ from tools import READ_ONLY_FLAGS, guard_settings
 
 MODEL = "claude-opus-5-5"
 EFFORT = "medium"               # the default when no task decides (model_router.py does)
-REVIEW_MODEL = "gpt-6-astra"
+REVIEW_MODEL = "gpt-6-sol"
 REVIEW_EFFORT = "medium"        # the default when no task decides (model_router.py does)
 
 
