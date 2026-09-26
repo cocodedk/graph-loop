@@ -6,8 +6,9 @@ The order is the whole point, and every step in it was bought with a failure:
   lock         a task that touches the live stack takes the lock, or waits
   prove red    a gate that has never failed proves nothing
   review       the contract is read before a builder edits anything
-  build        Opus high, work account first, the other on a usage limit or a
-               refused session; a live task is called once, except that a refused
+  build        the routed builder at medium (high only after a failed medium
+               build of the same contract), work account first, the other on a
+               usage limit or a refused session; a live task is called once, except that a refused
                session never reached the model and may try the other account
   names        a card that uses what nothing has made yet is refused, free
   scope        a file outside the task's list refuses the work

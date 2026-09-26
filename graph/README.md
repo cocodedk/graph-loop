@@ -41,7 +41,7 @@ Rules it enforces, each bought with a failure:
   decision service being unavailable all fall back to the first eligible
   independent resource at high effort — the same fallback `GRAPH_ROUTER=off`
   gives explicitly, offline. `review.py` walks the routed belt, Codex reviewers
-  first (`gpt-6-astra`, then `gpt-5.6-sol`).
+  first (`gpt-6-sol` unless `GRAPH_REVIEWERS` names others).
 - `--lanes auto [--lanes-max N]` lets the machine decide instead: lanes in a
   turn are the smallest of the frontier's width, that ceiling, the keeper's
   three and what the machine will take. It starts at the ceiling when one is

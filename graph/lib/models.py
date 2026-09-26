@@ -24,9 +24,9 @@ _BUILDERS = ("claude-sonnet-5", "claude-opus-5-5", "claude-opus-5", "gpt-6-astra
 _PLANNERS = ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5")
 # Checked against the binary, not guessed: gpt-6-astra answered `codex exec
 # -m gpt-6-astra` on 2026-09-08 (the owner: the account's upgrade, high effort,
-# strong at reasoning) and is the default reviewer; gpt-5.6-sol is the model
-# behind it on the same agent. The second AGENT (claude) is still what
-# resources.belt('review') adds after both.
+# strong at reasoning) and was the default reviewer, gpt-5.6-sol behind it,
+# until the choice below. The second AGENT (claude) is still what
+# resources.belt('review') adds after the codex reviewers.
 # The owner, 2026-09-25: the reviewer is gpt-6-sol at high; it answered
 # `codex exec -m gpt-6-sol -c model_reasoning_effort=high` the same day.
 _REVIEWERS = ("gpt-6-sol",)

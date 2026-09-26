@@ -20,7 +20,8 @@ the run, without implementing the production fixes.
 - Accepted commits use Conventional Commits subjects and retain the card ID.
 - A Jev decision selects a configured model and effort for a card: choices
   come from the available resource catalogue, never free-form model names.
-  Start execution at medium; higher effort requires a failed medium attempt.
+  Start a build at medium; higher effort requires a failed medium build. Reviews
+  run at high.
   Route builders and reviewers independently and never let the builder grade
   its own change. Reject malformed or unsupported choices, record the actual
   model, effort and fallback reason, and keep working through a deterministic
