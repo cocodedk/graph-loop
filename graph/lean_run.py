@@ -36,10 +36,10 @@ def build(ws, task: dict, prompt: str, tree, resume: str = "") -> providers.Outc
     """One builder call in the worktree, with the builder tool set for this suite."""
     feature, account = task["id"], accounts.available()[0]
     out = providers.claude(CLAUDE_BIN, prompt, account=account, cwd=tree.path, resume=resume,
-                           allowed_tools=tools.builder_tools(task),
+                           effort=providers.EFFORT, allowed_tools=tools.builder_tools(task),
                            disallowed_tools=tools.builder_denies(task))
     ws.attempt(feature, account=account, kind=out.kind, cost=out.cost, tokens=out.tokens,
-               purpose="build")
+               effort=providers.EFFORT, purpose="build")
     return out
 
 
@@ -57,7 +57,8 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome
               f"## Spec\n\n{spec}\n\n## The diff against main\n\n{diff}\n\n{VERDICT}")
 
     def paid(kind, account, cost, tokens, _text):
-        ws.attempt(feature, account=account, kind=kind, cost=cost, tokens=tokens, purpose="review")
+        ws.attempt(feature, account=account, kind=kind, cost=cost, tokens=tokens,
+                   effort=REVIEW_EFFORT, purpose="review")
     return review.codex(CODEX_BIN, prompt, cwd=cwd, effort=REVIEW_EFFORT, attempt=paid)
 
 
@@ -77,7 +78,8 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
               f"\n\n{specs}\n\n{VERDICT}")
 
     def paid(kind, account, cost, tokens, _text):
-        ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens, purpose="grill")
+        ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens,
+                   effort=REVIEW_EFFORT, purpose="grill")
     out = review.codex(CODEX_BIN, prompt, cwd=repo, effort=REVIEW_EFFORT, attempt=paid)
     questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
     ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=questions[:2000])
