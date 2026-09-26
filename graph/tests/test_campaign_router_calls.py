@@ -50,7 +50,7 @@ class RouterCallsTest(unittest.TestCase):
 
     def test_the_independent_review_call_uses_its_own_route(self):
         root, _, space = repo_with(task(builder_model="claude-sonnet-5", builder_agent="claude"))
-        probe = Decisions(model="gpt-5.6-sol")
+        probe = Decisions(model="gpt-5.6-sol", effort="high")
         response = subprocess.CompletedProcess([], 0, json.dumps(
             {"review": "ACCEPT", "accept": True, "findings": []}), "")
         with patch.dict("os.environ", CATALOG), patch("urllib.request.urlopen", side_effect=probe), \
@@ -59,7 +59,7 @@ class RouterCallsTest(unittest.TestCase):
         self.assertTrue(result.ok)
         argv = call.call_args.args[0]
         self.assertEqual("gpt-5.6-sol", argv[argv.index("--model") + 1])
-        self.assertIn('model_reasoning_effort="medium"', argv)
+        self.assertIn('model_reasoning_effort="high"', argv)
 
     def test_no_independent_reviewer_produces_no_accepted_review(self):
         for metadata in ({"builder_model": "claude-sonnet-5", "builder_agent": "claude"}, {}):
@@ -79,7 +79,7 @@ class RouterCallsTest(unittest.TestCase):
     def test_codex_exhaustion_falls_back_to_a_different_claude_model(self):
         root, _, space = repo_with(task(builder_model="claude-sonnet-5", builder_agent="claude"))
         with patch.dict("os.environ", CATALOG), \
-             patch("urllib.request.urlopen", side_effect=Decisions(model="gpt-5.6-sol")), \
+             patch("urllib.request.urlopen", side_effect=Decisions(model="gpt-5.6-sol", effort="high")), \
              patch("review._one_review", return_value=Outcome("capacity")) as codex_call, \
              patch("review._claude_review", return_value=Outcome(
                  "ok", verdict="ACCEPT", text="REVIEW: ACCEPT")) as claude_call:
@@ -93,13 +93,13 @@ class RouterCallsTest(unittest.TestCase):
         root, _, space = repo_with(task(builder_model="claude-sonnet-5", builder_agent="claude"))
         answers = [Outcome("capacity"), Outcome("ok", verdict="ACCEPT", text="fine")]
         with patch.dict("os.environ", CATALOG), \
-             patch("urllib.request.urlopen", side_effect=Decisions(model="gpt-5.6-sol")), \
+             patch("urllib.request.urlopen", side_effect=Decisions(model="gpt-5.6-sol", effort="high")), \
              patch("review._one_review", side_effect=answers):
             result = graph_commands._real_review("Review this card", cwd=root, space=space, task_id="T1")
         self.assertEqual("ACCEPT", result.verdict)
         actual = [(row["model"], row["effort"]) for row in space.events()
                   if row["kind"] != "routed" and row.get("purpose") == "review" and row.get("model")]
-        self.assertEqual([("gpt-5.6-sol", "medium"), ("gpt-6-astra", "medium")], actual)
+        self.assertEqual([("gpt-5.6-sol", "high"), ("gpt-6-astra", "high")], actual)
 
     def test_count(self):
         self.assertEqual(EXPECTED_TESTS, unittest.defaultTestLoader.loadTestsFromModule(

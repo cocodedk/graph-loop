@@ -3,10 +3,11 @@
 Two providers: builders on `claude-opus-5-5` or a configured alias, reviewers on
 `codex exec --model gpt-6-sol` or a configured alias. Which model and effort
 an actual call uses is `model_router.choose`'s pick now (docs/ROUTER.md): a
-Jev decision at medium, raised only from a recorded failed medium attempt on
-the same contract. `MODEL`/`EFFORT`/`REVIEW_MODEL`/`REVIEW_EFFORT` below are
-what a caller with no route of its own gets — medium, never `max`, which cost
-twelve minutes a review and found what high finds (the owner, 2026-08-30).
+build at medium, raised to high only from a recorded failed medium build on
+the same contract, and every review at `REVIEW_EFFORT`, which both loops read.
+`MODEL`/`EFFORT`/`REVIEW_MODEL`/`REVIEW_EFFORT` below are what a caller with no
+route of its own gets — never `max`, which cost twelve minutes a review and
+found what high finds (the owner, 2026-08-30).
 
 The `kind` an outcome carries decides what the loop may conclude. Only `ok`
 consumes an attempt: a usage limit, a denied tool call, a login failure and
@@ -37,7 +38,7 @@ from tools import READ_ONLY_FLAGS, guard_settings
 MODEL = "claude-opus-5-5"
 EFFORT = "medium"               # the default when no task decides (model_router.py does)
 REVIEW_MODEL = "gpt-6-sol"
-REVIEW_EFFORT = "medium"        # the default when no task decides (model_router.py does)
+REVIEW_EFFORT = "high"          # the owner, 2026-09-25: gpt-6-sol reviews at high (the reviewer cap)
 
 
 @dataclasses.dataclass

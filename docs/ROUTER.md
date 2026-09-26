@@ -15,17 +15,21 @@ exposes `resource`, `effort`, `source` (`jev` or `fallback`) and `why`.
 Use the existing Jev transport, preserving triage's request and answer behavior.
 Confidence must be a finite number in range, not a boolean; low confidence,
 invalid choices, malformed answers and unavailable transport select the first
-eligible configured resource at medium effort, with an explicit reason.
+eligible configured resource at the job's first effort (medium for a build,
+high for a review), with an explicit reason.
 
 When only one eligible model remains (even across accounts), take its first
-resource without calling Jev and record a fallback with that reason. Use medium,
-or high when the existing failed-medium-build evidence permits it.
+resource without calling Jev and record a fallback with that reason. A build
+uses medium, or high when the existing failed-medium-build evidence permits it;
+a review uses high.
 
-All first execution attempts use medium effort. A retry counter alone is not
-proof that medium failed. Higher effort becomes eligible only after the
-campaign records a medium build for this contract followed by a failed work
-gate; an outage or a different card's failure is insufficient. The route record
-binds the choice to `contract_digest(task)`. Review candidates exclude the
+Every review of a change runs at high: `providers.REVIEW_EFFORT`, the one
+value both loops read (the owner, 2026-09-25). The slicer's review of a plan
+stays at medium (`slicer/intelligence.py`). Never `max`. All first builds use
+medium effort. A retry counter alone is not proof that medium failed. Higher
+build effort becomes eligible only after the campaign records a medium build
+for this contract followed by a failed work gate; an outage or a different
+card's failure is insufficient. The route record binds the choice to `contract_digest(task)`. Review candidates exclude the
 builder's model, including fallback (configured names are model identities).
 No eligible independent reviewer means no accepted review, never self-review: `choose` raises `LookupError`, and
 the call site returns an unavailable review without invoking any provider.
@@ -43,7 +47,7 @@ A live probe of the existing transport has separately returned a typed model
 profile successfully; deterministic tests remain the acceptance verdict.
 
 `GRAPH_ROUTER=off` provides an explicit offline mode using the same eligible
-medium fallback; the default is Jev routing. Test process fixtures select
+fallback; the default is Jev routing. Test process fixtures select
 offline mode, and the router gates explicitly enable their mocked transport,
 so running either repository suite never contacts the decision service.
 

@@ -52,7 +52,7 @@ class RouterEvidenceTest(unittest.TestCase):
         self.assertEqual(("medium", "fallback"), (result.effort, result.source))
 
     def test_distinct_configured_models_can_review_each_other(self):
-        probe = Decisions(model="opus")
+        probe = Decisions(model="opus", effort="high")
         with patch.dict("os.environ", {"GRAPH_BUILDERS": "sonnet,opus", "GRAPH_CLAUDE_REVIEWERS": "opus"}), \
              patch("urllib.request.urlopen", side_effect=probe):
             result = self.router.choose(CARD, "review", builder_model="sonnet")

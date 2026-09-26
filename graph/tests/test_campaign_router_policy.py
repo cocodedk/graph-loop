@@ -13,7 +13,7 @@ from contract import contract_digest
 from resources import Resource
 from router_probe import CARD, CATALOG, Decisions
 
-EXPECTED_TESTS = 18
+EXPECTED_TESTS = 19
 
 
 class RouterPolicyTest(unittest.TestCase):
@@ -68,7 +68,7 @@ class RouterPolicyTest(unittest.TestCase):
         self.assertEqual(("high", "jev"), (result.effort, result.source))
 
     def test_review_candidates_exclude_the_builders_model(self):
-        probe = Decisions(model="gpt-5.6-sol")
+        probe = Decisions(model="gpt-5.6-sol", effort="high")
         with patch("urllib.request.urlopen", side_effect=probe):
             result = self.router.choose(CARD, "review", builder_model="claude-sonnet-5")
         self.assertEqual("gpt-5.6-sol", result.resource.model)
@@ -99,8 +99,17 @@ class RouterPolicyTest(unittest.TestCase):
     def test_review_fallback_still_excludes_the_builders_model(self):
         with patch("urllib.request.urlopen", side_effect=Decisions(unavailable=True)):
             result = self.router.choose(CARD, "review", builder_model="claude-sonnet-5")
-        self.assertEqual(("codex", "gpt-6-astra", "medium", "fallback"),
+        self.assertEqual(("codex", "gpt-6-astra", "high", "fallback"),
                          (result.resource.agent, result.resource.model, result.effort, result.source))
+
+    def test_a_review_is_offered_and_chosen_at_the_review_effort(self):
+        with patch("urllib.request.urlopen", side_effect=Decisions(model="gpt-5.6-sol", effort="high")):
+            result = self.router.choose(CARD, "review", builder_model="claude-sonnet-5")
+        self.assertEqual(("gpt-5.6-sol", "high", "jev"),
+                         (result.resource.model, result.effort, result.source))
+        with patch.dict("os.environ", {"GRAPH_ROUTER": "off"}):
+            offline = self.router.choose(CARD, "review", builder_model="claude-sonnet-5")
+        self.assertEqual(("high", "fallback"), (offline.effort, offline.source))
 
     def test_no_independent_candidate_refuses_without_a_decision_call(self):
         with patch("resources.belt", return_value=[Resource("claude", "work", "claude-sonnet-5")]), \
@@ -143,15 +152,16 @@ class RouterPolicyTest(unittest.TestCase):
                                    ("build", [one, other_account], ""),
                                    ("review", [builder, one], builder.model)):
             with self.subTest(job=job, belt=belt):
+                effort = "high" if job == "review" else "medium"
                 _, space = campaign([CARD])
                 with patch("resources.belt", return_value=belt), \
                      patch("model_router.ask") as ask:
                     result = self.router.choose(CARD, job, space=space, builder_model=built_by)
                 ask.assert_not_called()
-                self.assertEqual((one, "medium", "fallback"),
+                self.assertEqual((one, effort, "fallback"),
                                  (result.resource, result.effort, result.source))
                 record = [row for row in space.events() if row["kind"] == "routed"][-1]
-                self.assertEqual((one.model, "medium", "fallback", contract_digest(CARD)),
+                self.assertEqual((one.model, effort, "fallback", contract_digest(CARD)),
                                  (record["model"], record["effort"], record["source"],
                                   record["contract_digest"]))
                 self.assertEqual("only one eligible model", record["why"])
@@ -166,8 +176,9 @@ class RouterPolicyTest(unittest.TestCase):
         space.event("failed", task=CARD["id"], step="gate", why="regression fails")
         for card, job, mode, effort in ((CARD, "build", "jev", "high"),
                                        ({**CARD, "goal": "changed"}, "build", "jev", "medium"),
-                                       (CARD, "review", "jev", "medium"),
-                                       (CARD, "build", "off", "medium")):
+                                       (CARD, "review", "jev", "high"),
+                                       (CARD, "build", "off", "medium"),
+                                       (CARD, "review", "off", "high")):
             with self.subTest(job=job, mode=mode, effort=effort):
                 with patch("resources.belt", return_value=[one]), \
                      patch.dict("os.environ", {"GRAPH_ROUTER": mode}), \
