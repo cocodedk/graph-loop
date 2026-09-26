@@ -51,8 +51,10 @@ fallback; the default is Jev routing. Test process fixtures select
 offline mode, and the router gates explicitly enable their mocked transport,
 so running either repository suite never contacts the decision service.
 
-The build list starts with `gpt-6-astra`; `gpt-*` builders use Codex once per
-model, and other names use Claude on its configured accounts. Codex builds
+The build list is `models.builders()`: the Claude builders first
+(`claude-sonnet-5`, then the Opus models) and `gpt-6-astra` last, unless
+`GRAPH_BUILDERS` names others. `gpt-*` builders use Codex once per model, and
+other names use Claude on its configured accounts. Codex builds
 use `workspace-write` rooted at the card worktree, with no extra writable
 roots, temporary-directory access, network access or approval escalation.
 Reviews remain read-only. Planning and guarded live builds retain their
