@@ -16,15 +16,15 @@ Use the existing Jev transport, preserving triage's request and answer behavior.
 Confidence must be a finite number in range, not a boolean; low confidence,
 invalid choices, malformed answers and unavailable transport select the first
 eligible configured resource at the job's first effort (medium for a build,
-high for a review), with an explicit reason.
+xhigh for a review), with an explicit reason.
 
 When only one eligible model remains (even across accounts), take its first
 resource without calling Jev and record a fallback with that reason. A build
 uses medium, or high when the existing failed-medium-build evidence permits it;
-a review uses high.
+a review uses xhigh.
 
-Every review of a change runs at high: `providers.REVIEW_EFFORT`, the one
-value both loops read (the owner, 2026-09-25). The slicer's review of a plan
+Every review of a change runs at xhigh: `providers.REVIEW_EFFORT`, the one
+value both loops read (the owner, 2026-09-26; high before that). The slicer's review of a plan
 stays at medium (`slicer/intelligence.py`). Never `max`. All first builds use
 medium effort. A retry counter alone is not proof that medium failed. Higher
 build effort becomes eligible only after the campaign records a medium build

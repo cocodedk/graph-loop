@@ -28,7 +28,8 @@ _PLANNERS = ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5")
 # until the choice below. The second AGENT (claude) is still what
 # resources.belt('review') adds after the codex reviewers.
 # The owner, 2026-09-25: the reviewer is gpt-6-sol at high; it answered
-# `codex exec -m gpt-6-sol -c model_reasoning_effort=high` the same day.
+# `codex exec -m gpt-6-sol -c model_reasoning_effort=high` the same day, and at
+# xhigh on 2026-09-26, when the owner raised the review to xhigh.
 _REVIEWERS = ("gpt-6-sol",)
 # What the claude rungs of the review belt use when no codex answers. Its own
 # list, and the STRONG model first: these rungs used to reuse `builders()`, so

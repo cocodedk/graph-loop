@@ -2,7 +2,7 @@
 
 Which model and effort actually build or review a card is `model_router.choose`'s
 call now (docs/ROUTER.md) — a build at medium, raised only from a recorded
-failed medium attempt, never a round counter alone; a review at high. `weight` stays: it
+failed medium attempt, never a round counter alone; a review at xhigh. `weight` stays: it
 is what a card's own shape says about it, read by callers outside the router.
 """
 

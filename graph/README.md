@@ -29,7 +29,7 @@ Rules it enforces, each bought with a failure:
   Jev decision (`model_router.py`, `docs/ROUTER.md`) picks the configured model
   and effort for each build and review from the resource belt it is actually
   offered — never a free-form name. Every first build runs at medium and
-  every review at high; a builder climbs to high only from a recorded medium
+  every review at xhigh; a builder climbs to high only from a recorded medium
   build on this same contract that then failed its gate, never from a round
   counter alone. A refusal before reading skips the unavailable account or
   model and tries the next configured one; the default belt includes Opus and Sonnet
@@ -39,7 +39,7 @@ Rules it enforces, each bought with a failure:
   family: no eligible reviewer left means no accepted review, never a
   self-review. A low or malformed decision, an unlisted choice, or the
   decision service being unavailable all fall back to the first eligible
-  independent resource at high effort — the same fallback `GRAPH_ROUTER=off`
+  independent resource at xhigh effort — the same fallback `GRAPH_ROUTER=off`
   gives explicitly, offline. `review.py` walks the routed belt, Codex reviewers
   first (`gpt-6-sol` unless `GRAPH_REVIEWERS` names others).
 - `--lanes auto [--lanes-max N]` lets the machine decide instead: lanes in a

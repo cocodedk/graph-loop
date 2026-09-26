@@ -39,7 +39,7 @@ from tools import READ_ONLY_FLAGS, guard_settings
 MODEL = "claude-opus-5-5"
 EFFORT = "medium"               # the default when no task decides (model_router.py does)
 REVIEW_MODEL = "gpt-6-sol"
-REVIEW_EFFORT = "high"          # the owner, 2026-09-25: gpt-6-sol reviews at high (the reviewer cap)
+REVIEW_EFFORT = "xhigh"         # the owner, 2026-09-26: gpt-6-sol reviews at xhigh (was high, 2026-09-25)
 
 
 @dataclasses.dataclass

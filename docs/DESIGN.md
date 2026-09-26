@@ -156,7 +156,7 @@ prompt, answer, diff and gate output is a numbered file under the campaign's log
 - Raise effort for a task that keeps failing the same way. Two matching gate failures mean
   the task is wrong, not the model too small, and it is re-sliced. Effort finds a missed edge
   case, not a wrong task: a build can go from medium to high only after one failed medium build
-  of the same contract, reviews run at high, and nothing runs at `max`. (The lean loop
+  of the same contract, reviews run at xhigh, and nothing runs at `max`. (The lean loop
   builds at medium and runs its repair rounds, each handed why the last fell short, at high.)
 - Count a usage limit, a denial, a killed reviewer or malformed output as failure.
 - Stop the campaign for one bad task — it quarantines and carries on. It stops itself only

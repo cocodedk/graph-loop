@@ -1,4 +1,4 @@
-"""The lean loop's reviewer runs at the effort the owner set (2026-09-25: high)."""
+"""The lean loop's reviewer runs at the effort the owner set (2026-09-26: xhigh)."""
 
 import pathlib
 import sys
@@ -12,7 +12,7 @@ import tmp_root  # noqa: F401
 
 
 class LeanReviewEffortTest(unittest.TestCase):
-    def test_the_diff_review_asks_for_high_effort(self):
+    def test_the_diff_review_asks_for_the_owners_effort(self):
         calls = []
 
         def codex(binary, prompt, **kwargs):
@@ -20,7 +20,7 @@ class LeanReviewEffortTest(unittest.TestCase):
             return "outcome"
         with mock.patch.object(lean_run.review, "codex", codex):
             lean_run.judge(mock.Mock(), "feature", "spec", "diff", "/tmp")
-        self.assertEqual("high", calls[0]["effort"])
+        self.assertEqual("xhigh", calls[0]["effort"])
 
 
 if __name__ == "__main__":
