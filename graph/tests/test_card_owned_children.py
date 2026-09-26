@@ -20,6 +20,9 @@ from test_loop import Fakes, loop_for, task
 
 # Double detachment escapes a process group, and closed pipes let the leader
 # return. The marker proves the descendant really started before that return.
+# Its pid is written beside it and renamed into place: a test that reads the
+# marker the moment it exists must never find it empty, or it checks /proc
+# itself, which always exists (seen in CI twice on 2026-09-26).
 DETACH = '''
 import os, pathlib, signal, sys, time
 marker = pathlib.Path(sys.argv[1])
@@ -30,7 +33,9 @@ if os.fork() == 0:
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     for fd in (0, 1, 2):
         os.close(fd)
-    marker.write_text(str(os.getpid()))
+    partial = marker.with_name(marker.name + '.partial')
+    partial.write_text(str(os.getpid()))
+    os.replace(partial, marker)
     time.sleep(30)
     os._exit(0)
 while not marker.exists():
