@@ -53,6 +53,26 @@ class Wiring(unittest.TestCase):
         self.assertFalse(passed)
         self.assertIn("the ring is grey", tail)
 
+    def test_every_call_logs_the_effort_it_ran_at(self):
+        sent = []
+
+        def codex(binary, prompt, *, attempt, effort, **kwargs):
+            sent.append(effort)
+            attempt("ok", "reviewer", 0.1, 10, "")
+            return Outcome("ok", verdict="ACCEPT")
+        spec = pathlib.Path(tempfile.mkdtemp()) / "a.md"
+        spec.write_text("Make it blue.\n")
+        with mock.patch.object(providers, "claude", return_value=Outcome("ok")) as call, \
+                mock.patch.object(review, "codex", codex):
+            lean_run.grill(self.ws, repo(), [str(spec)], "profile.md")
+            lean_run.build(self.ws, {"id": "wiring", "gate": "true"}, "build it", self.tree)
+            lean_run.judge(self.ws, "wiring", "the spec", "+a line", self.tree.path)
+        paid = [(row["purpose"], row.get("effort")) for row in self.ws.events() if row["kind"] == "attempt"]
+        self.assertEqual([("grill", sent[0]), ("build", call.call_args.kwargs["effort"]),
+                          ("review", sent[1])], paid)   # logged is what was sent
+        self.assertEqual([lean_run.REVIEW_EFFORT, providers.EFFORT, lean_run.REVIEW_EFFORT],
+                         [effort for _, effort in paid])
+
 
 if __name__ == "__main__":
     unittest.main()
