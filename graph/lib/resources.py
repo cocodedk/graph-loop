@@ -16,8 +16,7 @@ Every job's belt is the product of what the job can use:
     review   every reviewer model, then claude on every account — a review is
              read-only, so any agent that can read the repository can give one, so no account
     decide   the review belt: a decision reads the repository and answers with
-             text, so whatever can review can decide (the caller spends the
-             first rung at max — one decision is worth the ceiling)
+             text, so whatever can review can decide
 
 Adding a resource is a line of data in `accounts.py` or `models.py`, or an
 environment variable: GRAPH_ACCOUNTS, GRAPH_BUILDERS, GRAPH_REVIEWERS.
@@ -49,8 +48,8 @@ class Resource:
 def belt(job: str) -> list[Resource]:
     """Every resource this job may spend, in the order to try them."""
     if job == "review":
-        # codex first (every reviewer model in models.py's order — astra, then
-        # sol since 2026-09-08), then claude on every account. A review reads
+        # codex first (every reviewer model in models.py's order — gpt-6-sol
+        # alone since 2026-09-25), then claude on every account. A review reads
         # and writes nothing, so the last reviewer can be a different agent —
         # and one must be: when this account's codex offered a single model, a
         # capacity refusal left the loop with no reviewer and changes went in
@@ -64,9 +63,8 @@ def belt(job: str) -> list[Resource]:
     if job == "decide":
         # The same resources, for the same reason: a decision reads and writes
         # nothing. It is its own job because what a planner is worth per call
-        # is not what a reviewer is worth — the caller reads this name to know
-        # it may spend the ceiling on the first rung — and because a decision
-        # must not go unmade while one model is at capacity.
+        # is not what a reviewer is worth, and because a decision must not go
+        # unmade while one model is at capacity.
         return belt("review")
     if job in ("build", "plan"):
         candidates = models._PLANNERS if job == "plan" else models.builders()
