@@ -23,13 +23,13 @@ import providers
 import review
 import tools
 from lean_spec import record
+from providers import REVIEW_EFFORT  # the one review effort, for both loops
 from review_scope import VERDICT
 from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
 
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
 REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
-REVIEW_EFFORT = "high"   # the owner, 2026-09-25: gpt-6-sol reviews at high (the reviewer cap)
 
 
 def build(ws, task: dict, prompt: str, tree, resume: str = "") -> providers.Outcome:

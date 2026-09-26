@@ -4,8 +4,9 @@ Jev picks among resources the loop already has, never a free-form name: each
 candidate is one line of `resources.belt(job)` at one effort, described so the
 answer can be checked against what was actually offered. A low or malformed
 confidence, an unlisted choice, or an unavailable decision service all fall
-back to the first eligible resource at medium effort, exactly as an explicit
-`GRAPH_ROUTER=off` does — the loop keeps working either way.
+back to the first eligible resource at the job's first effort (medium for a
+build, `REVIEW_EFFORT` for a review), exactly as an explicit `GRAPH_ROUTER=off`
+does — the loop keeps working either way.
 
 See `docs/ROUTER.md`.
 """
@@ -20,6 +21,7 @@ import resources
 from backlog_status import is_live
 from contract import contract_digest
 from provider_jev import ask, question
+from providers import REVIEW_EFFORT
 
 CONFIDENCE_FLOOR = 0.5
 INSTRUCTIONS = ("Which offered model and effort should build or review this card? "
@@ -44,7 +46,8 @@ def choose(task: dict, job: str, *, space=None, builder_model: str = "") -> Choi
     if not belt:
         raise LookupError(f"no eligible resource for job {job!r}")
     if os.environ.get("GRAPH_ROUTER", "jev") == "off":
-        return _record(space, task, job, belt[0], "medium", "fallback", "GRAPH_ROUTER=off")
+        return _record(space, task, job, belt[0], _efforts(task, job, None)[0],
+                       "fallback", "GRAPH_ROUTER=off")
 
     if len({resource.model for resource in belt}) == 1:
         return _record(space, task, job, belt[0], _efforts(task, job, space)[-1],
@@ -74,7 +77,10 @@ def candidates(job: str, builder_model: str = "", *, task: dict | None = None) -
 
 
 def _efforts(task: dict, job: str, space) -> tuple[str, ...]:
-    """Medium alone, unless this exact contract already failed a medium build."""
+    """A review at REVIEW_EFFORT; a build at medium alone, unless this exact
+    contract already failed a medium build."""
+    if job == "review":
+        return (REVIEW_EFFORT,)
     if job == "build" and space is not None and _medium_build_then_failed(task, space):
         return ("medium", "high")
     return ("medium",)
