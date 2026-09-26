@@ -4,7 +4,7 @@ Split out of `providers` at the 200-line cap; `providers` stays the front door.
 What a reply MEANS split out of here at the same cap and lives in
 `review_read`, which this module re-exports, so `review._read_review` still
 names the parser wherever it was already called.
-The reviewer is codex (gpt-6-sol, `models.reviewers()`). A review of a change runs at high,
+The reviewer is codex (gpt-6-sol, `models.reviewers()`). A review of a change runs at xhigh,
 `providers.REVIEW_EFFORT`; the slicer's plan review passes medium. Never `max`, which cost
 twelve minutes a review and found what high finds.
 """
