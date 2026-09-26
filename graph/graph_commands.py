@@ -34,7 +34,7 @@ from turn import (  # noqa: F401 — the door stays here
 from waves import say as say_waves
 from workspace import Workspace
 from workspace_claims import say
-from workspace_repo import initial_root
+from workspace_repo import initial_root, project
 
 DEFAULT_WORKSPACE = where.campaign()
 # What a builder may run lives in lib/tools.py: a code task gets a shell, a
@@ -54,7 +54,7 @@ def command_contact(args) -> int:
     if not channel:
         raise SystemExit("contact requires an email address")
     alert_email.send("Campaign contact test", "This campaign can now reach its person.",
-                     subject="graph-loop: can this campaign reach you?",
+                     subject=f"[{project(space)}] graph-loop: can this campaign reach you?",
                      recipient=channel)
     with space.only_writer():
         durable.replace(space.root / "contact", channel + "\n")

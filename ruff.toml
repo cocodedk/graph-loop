@@ -1,0 +1,4 @@
+# The version CI installs (.github/workflows/ci.yml). A different ruff has different
+# default rules: 0.15.10 reported 515 findings on a tree 0.16.8 passes. This makes a
+# mismatched ruff say so instead. Bump it with the pin in ci.yml.
+required-version = "==0.16.8"

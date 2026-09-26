@@ -72,10 +72,10 @@ def build_prompt(task: dict, in_place: bool = False) -> str:
                if findings else (where + "\n" if lost else ""))
     return (
         rebuild
-        + f"Do exactly this, editing ONLY these files: {task.get('files')}\n\n"
+        + f"Do exactly this, editing only these files: {task.get('files')}\n\n"
         f"{task.get('goal')}\n\n"
         f"It is done when: {task.get('done_when')}\n"
-        + ("You may also CREATE new files beside the FILES listed above, in those same "
+        + ("You may also create new files beside the files listed above, in those same "
            "directories, when a split needs them — no new directory, and nothing beside a "
            "directory you were given.\n" if task.get("may_add_files") else "")
         + f"{('Note: ' + task['note']) if task.get('note') else ''}\n\n"
@@ -83,21 +83,16 @@ def build_prompt(task: dict, in_place: bool = False) -> str:
         "You do not need to run the gate yourself — the loop runs it after you finish; "
         "if a denied command prevents a correct edit, say BLOCKED at once.\n"
         + (f"Run it with: bash {gate_script_path(task)}\n"
-           "That file holds the gate above, byte for byte, and is the ONE command you are "
+           "That file holds the gate above, byte for byte, and is the one command you are "
            "granted for it — the gate is a script, and a grant for each program in it does "
            "not authorise the script. Do not improvise a compile or a chained command: "
            "that is what gets denied, and what it leaves in the tree gets the card refused "
            "for writing outside its files.\n" if str(task.get("gate") or "").strip() else "")
-        + "Before you write a rule, find the service or module here that already "
-        "follows it and follow that one: a second copy of an existing rule is how "
-        "three services read the same key three ways and two of them were right. "
-        "If you find a duplicate that is NOT yours to fix, name it in your final "
-        "line and leave it: it becomes its own card with its own proof, and a "
-        "refactor here would take you outside your files. "
-        "Follow this repository's own written rules, CLAUDE.md first if it has one, "
-        "inside your own files and under this gate. Never a tidy-up beside the work. "
-        "Plain human language in every word you write. The simplest thing that "
-        "works. Do not commit. " + stack + "\n\n"
+        + "Where a module here already follows the rule you need, follow that module "
+        "rather than writing a second copy. A duplicate that is not yours to fix goes in "
+        "your final line, because a refactor would take you outside your files. "
+        "Change nothing beside the work. Write in plain language and do the simplest thing "
+        "that works. Do not commit. " + stack + "\n\n"
         + DISTRESS_INSTRUCTION + DISTRESS_TEMPLATE)
 
 

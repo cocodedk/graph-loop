@@ -45,7 +45,7 @@ class ReviewEffortTest(unittest.TestCase):
             argv = pathlib.Path(handle.name).read_text()
         self.assertIn('model_reasoning_effort="medium"', argv)
         self.assertNotIn("max", argv)
-        self.assertEqual("medium", providers.REVIEW_EFFORT)   # the default, when no task decides
+        self.assertEqual("high", providers.REVIEW_EFFORT)   # the owner, 2026-09-25: reviews at high
 
 
 class CodexTest(unittest.TestCase):
@@ -55,8 +55,8 @@ class CodexTest(unittest.TestCase):
             os.environ["OUT"] = handle.name
             out = codex(binary, "review this")
             argv = pathlib.Path(handle.name).read_text()
-        self.assertIn("--model gpt-6-astra", argv)
-        self.assertIn('model_reasoning_effort="medium"', argv)
+        self.assertIn("--model gpt-6-sol", argv)
+        self.assertIn('model_reasoning_effort="high"', argv)
         self.assertEqual("ACCEPT", out.verdict)
 
     def test_a_reject_carries_the_findings(self):

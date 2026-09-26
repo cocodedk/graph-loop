@@ -77,7 +77,9 @@ class AnswerShapeTest(unittest.TestCase):
         self.assertEqual(1, len(made["atoms"]))
         atom = made["atoms"][0]
         contracts._keys(atom, contracts.ATOM, contracts.REQUIRED | {"name", "stage"}, "atom")
-        self.assertEqual(contracts.ATOM, set(atom))
+        # The example shows the required keys; every optional one is still named in the prompt.
+        for key in contracts.ATOM - set(atom):
+            self.assertIn(key, question)
 
 
 class CoveredWorkTest(unittest.TestCase):

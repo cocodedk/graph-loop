@@ -1,10 +1,11 @@
-"""One feature of the lean loop (docs/rfc/lean-loop.md): build, check, land.
+"""One feature of the lean loop (docs/rfc/lean-loop.md): build, check, publish.
 
-A worktree off main; one builder writes the feature and its tests; the
+A worktree off origin/main; one builder writes the feature and its tests; the
 repository's own suite runs masked (`gates.run_gate`); one reviewer reads the
 diff. A red suite or a refused review gets a repair pass with the failure
 text, up to `REPAIRS` of them. Still failing: the person is emailed why, and the feature stops with its
-worktree kept. Passing: the change is committed and landed on main.
+worktree kept. Passing: the change is committed, pushed as `lean/<feature>` and opened
+as a pull request; main never moves. The spec file's front matter records how it ended.
 """
 
 from __future__ import annotations
@@ -17,25 +18,30 @@ import accounts
 import gate_paths
 import gates
 import lean_git
+import lean_spec
 import providers
 import review
 import tools
+from lean_spec import record
+from providers import REVIEW_EFFORT  # the one review effort, for both loops
 from review_scope import VERDICT
-from worktree import Worktree
+from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
 
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
 REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
+REPAIR_EFFORT = "high"   # a repair round is handed why the last one fell short (2026-09-26 trial)
 
 
-def build(ws, task: dict, prompt: str, tree, resume: str = "") -> providers.Outcome:
-    """One builder call in the worktree, with the builder tool set for this suite."""
+def build(ws, task: dict, prompt: str, tree, resume: str = "",
+          effort: str = providers.EFFORT) -> providers.Outcome:
+    """One builder call in the worktree, at `effort`, with the builder tool set for this suite."""
     feature, account = task["id"], accounts.available()[0]
     out = providers.claude(CLAUDE_BIN, prompt, account=account, cwd=tree.path, resume=resume,
-                           allowed_tools=tools.builder_tools(task),
+                           effort=effort, allowed_tools=tools.builder_tools(task),
                            disallowed_tools=tools.builder_denies(task))
     ws.attempt(feature, account=account, kind=out.kind, cost=out.cost, tokens=out.tokens,
-               purpose="build")
+               effort=effort, purpose="build")
     return out
 
 
@@ -53,8 +59,9 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome
               f"## Spec\n\n{spec}\n\n## The diff against main\n\n{diff}\n\n{VERDICT}")
 
     def paid(kind, account, cost, tokens, _text):
-        ws.attempt(feature, account=account, kind=kind, cost=cost, tokens=tokens, purpose="review")
-    return review.codex(CODEX_BIN, prompt, cwd=cwd, attempt=paid)
+        ws.attempt(feature, account=account, kind=kind, cost=cost, tokens=tokens,
+                   effort=REVIEW_EFFORT, purpose="review")
+    return review.codex(CODEX_BIN, prompt, cwd=cwd, effort=REVIEW_EFFORT, attempt=paid)
 
 
 def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
@@ -63,16 +70,19 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
                         for path in spec_paths)
     prompt = (f"You read these specs before anything is built, read-only; the repository's CLAUDE.md, "
               f"its brief and the profile at {profile_path} give the context. A builder implements "
-              f"each spec in order. It edits files only (no chmod, no git, no network), and the suite "
-              f"runs in a sandbox with an empty home and no network. Refuse only for what a person "
+              f"each spec in order. It edits files only (no chmod, no git, no network). The suite is "
+              f"the profile's command, run on this machine with its network and Docker in a scrubbed "
+              f"environment; your own read-only sandbox may be unable to run it, and that is no "
+              f"question for the person. Refuse only for what a person "
               f"must decide first: specs that contradict each other or themselves, a decision the "
               f"builder would have to guess, or a requirement it cannot meet here. Each finding is one "
               f"question to the person. What the builder can settle itself is no question: accept."
               f"\n\n{specs}\n\n{VERDICT}")
 
     def paid(kind, account, cost, tokens, _text):
-        ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens, purpose="grill")
-    out = review.codex(CODEX_BIN, prompt, cwd=repo, attempt=paid)
+        ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens,
+                   effort=REVIEW_EFFORT, purpose="grill")
+    out = review.codex(CODEX_BIN, prompt, cwd=repo, effort=REVIEW_EFFORT, attempt=paid)
     questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
     ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=questions[:2000])
     if questions:
@@ -91,13 +101,15 @@ def slug(path: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", pathlib.Path(path).stem).strip("-") or "feature"
 
 
-def check(ws, feature: str, spec: str, tree, built, command: str, round_: int) -> str:
-    """Why this round is not done, or "" when it is."""
+def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
+          against: str = "") -> str:
+    """Why this round is not done, or "" when it is. The reviewer reads the diff
+    against `against` (the whole feature when revising), else against the base."""
     if not built.ok:
         return f"the builder did not finish ({built.kind}): {built.text[:500]}"
-    diff = tree.diff(against=tree.commit)
-    if not diff.strip():
+    if not tree.diff(against=tree.commit).strip():
         return "the builder changed nothing"
+    diff = tree.diff(against=against or tree.commit)
     passed, tail = masked(ws, command, tree.path)
     ws.event("lean_suite", task=feature, round=round_, passed=passed, tail=tail[-2000:])
     if not passed:
@@ -110,39 +122,54 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int) -
     return ""
 
 
-def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str) -> str:
-    """One spec file, start to end. The new main commit, or "" when it stopped."""
+def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
+                revise: str = "", pr: str = "") -> str:
+    """One spec file, start to end. Its pull request's URL, or "" when it stopped.
+    `revise` is the open pull request's review findings: fix them on its branch."""
     feature = slug(spec_path)
     spec = pathlib.Path(spec_path).read_text("utf-8")
-    tree = Worktree(repo, feature, commit=lean_git.MAIN).create()
+    tree, last, against = lean_spec.start(repo, feature, spec, revise)
     ws.event("lean_feature_started", task=feature, spec=str(spec_path), base=tree.commit,
-             tree=tree.path)
+             tree=tree.path, resumed=bool(last))
     task = {"id": feature, "gate": profile["suite_command"]}
     script = tools.write_gate_script(task)   # the builder may run it: `bash <script>`
     prompt = (f"Implement what this spec asks, including its tests. Follow the repository's "
               f"CLAUDE.md and the profile at {profile_path}. Run the suite with "
               f"`bash {script}` and leave it green. Do not commit: the loop commits.\n\n"
               f"## Spec\n\n{spec}")
-    built = build(ws, task, prompt, tree)
-    why = check(ws, feature, spec, tree, built, profile["suite_command"], 1)
+    built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
+                  "in this checkout: fix that, and keep the suite green." if last else prompt, tree,
+                  effort=providers.EFFORT)
+    why = check(ws, feature, spec, tree, built, profile["suite_command"], 1, against)
     for round_ in range(2, 2 + REPAIRS):
         if not why:
             break
         ws.event("lean_repair", task=feature, why=why[-2000:])
         built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
-                      "Fix that, and keep the suite green.", tree, resume=built.session)
-        why = check(ws, feature, spec, tree, built, profile["suite_command"], round_)
+                      "Fix that, and keep the suite green.", tree, resume=built.session,
+                      effort=REPAIR_EFFORT)
+        why = check(ws, feature, spec, tree, built, profile["suite_command"], round_, against)
     if not why:
         try:
-            work = lean_git.commit(repo, tree.path, tree.commit, f"feat({feature}): {feature}")
-            landed = lean_git.land(repo, work, tree.commit, feature)
+            title = f"feat({feature}): {feature}"
+            work = lean_git.commit(repo, tree.path, tree.commit, title)
+            url = lean_git.update(repo, work, feature, pr) if revise else lean_git.publish(
+                repo, work, feature, title,
+                f"Built by graph-loop's lean loop from `{pathlib.Path(spec_path).name}`: "
+                "the suite is green and an independent reviewer accepted it.")
         except RuntimeError as error:
-            why = f"it passed, but could not land on main: {error}"
+            why = f"it passed, but could not open its pull request: {error}"
         else:
-            ws.event("lean_merged", task=feature, commit=landed)
-            tree.remove()
-            return landed
+            ws.event("lean_published", task=feature, commit=work, pr=url)
+            record(spec_path, lean_status="pr_open", lean_pr=url)
+            try:
+                tree.remove()
+            except OSError as error:   # files a suite's container left as root: tidy later
+                ws.event("lean_tree_left", task=feature, tree=tree.path, error=str(error)[:300])
+            return url
     kept = tree.keep(why)
+    if not revise:                   # a revision that stopped leaves its pull request open
+        record(spec_path, lean_status="stopped", lean_worktree=kept)
     ws.event("lean_stopped", task=feature, why=why[-2000:], tree=kept)
     mail(ws, f"graph-loop needs you: {feature}",
          f"{feature} stopped.\n\nWhy:\n{why}\n\nIts work is kept at {kept}.")

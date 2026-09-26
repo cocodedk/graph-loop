@@ -139,8 +139,10 @@ refusal happens before any building.
 ## When a task fails twice the same way
 
 Two identical gate failures mean **the task is wrong, not the model too small**. Re-slice
-it. Never raise the effort: a failed gate is a specification problem wearing a capability
-problem's clothes.
+it; more effort will not fix a specification problem wearing a capability problem's clothes.
+Effort finds a missed edge case, so a build becomes eligible for high (the router may still
+keep medium) only after one failed medium build of the same contract — never as the answer to
+a task that keeps failing the same way, and never `max`.
 
 ## Reading a campaign
 
