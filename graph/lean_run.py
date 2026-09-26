@@ -30,16 +30,18 @@ from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
 REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
+REPAIR_EFFORT = "high"   # a repair round is handed why the last one fell short (2026-09-26 trial)
 
 
-def build(ws, task: dict, prompt: str, tree, resume: str = "") -> providers.Outcome:
-    """One builder call in the worktree, with the builder tool set for this suite."""
+def build(ws, task: dict, prompt: str, tree, resume: str = "",
+          effort: str = providers.EFFORT) -> providers.Outcome:
+    """One builder call in the worktree, at `effort`, with the builder tool set for this suite."""
     feature, account = task["id"], accounts.available()[0]
     out = providers.claude(CLAUDE_BIN, prompt, account=account, cwd=tree.path, resume=resume,
-                           effort=providers.EFFORT, allowed_tools=tools.builder_tools(task),
+                           effort=effort, allowed_tools=tools.builder_tools(task),
                            disallowed_tools=tools.builder_denies(task))
     ws.attempt(feature, account=account, kind=out.kind, cost=out.cost, tokens=out.tokens,
-               effort=providers.EFFORT, purpose="build")
+               effort=effort, purpose="build")
     return out
 
 
@@ -136,14 +138,16 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
               f"`bash {script}` and leave it green. Do not commit: the loop commits.\n\n"
               f"## Spec\n\n{spec}")
     built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
-                  "in this checkout: fix that, and keep the suite green." if last else prompt, tree)
+                  "in this checkout: fix that, and keep the suite green." if last else prompt, tree,
+                  effort=providers.EFFORT)
     why = check(ws, feature, spec, tree, built, profile["suite_command"], 1, against)
     for round_ in range(2, 2 + REPAIRS):
         if not why:
             break
         ws.event("lean_repair", task=feature, why=why[-2000:])
         built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
-                      "Fix that, and keep the suite green.", tree, resume=built.session)
+                      "Fix that, and keep the suite green.", tree, resume=built.session,
+                      effort=REPAIR_EFFORT)
         why = check(ws, feature, spec, tree, built, profile["suite_command"], round_, against)
     if not why:
         try:

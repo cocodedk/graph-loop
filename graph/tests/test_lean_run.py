@@ -45,14 +45,15 @@ class Rig(unittest.TestCase):
         (self.ws.root / "contact").write_text("person@example.test\n")
         self.spec = pathlib.Path(tempfile.mkdtemp()) / "rest ring.md"
         self.spec.write_text("Show the overdue rest ring in amber.\n")
-        self.prompts, self.suites, self.reviews, self.mails = [], [], [], []
+        self.prompts, self.suites, self.reviews, self.mails, self.efforts = [], [], [], [], []
 
     def builder(self, *writes):
         """Each call writes the next (name, text) into the worktree."""
         queue = list(writes)
 
-        def build(ws, task, prompt, tree, resume=""):
+        def build(ws, task, prompt, tree, resume="", effort=""):
             self.prompts.append(prompt)
+            self.efforts.append(effort)
             if queue:
                 name, text = queue.pop(0)
                 (pathlib.Path(tree.path) / name).write_text(text)
@@ -150,6 +151,11 @@ class Repair(Rig):
         self.assertIn("FAILED: AmberTest > overdue", body)
         stopped = next(row for row in self.ws.events() if row["kind"] == "lean_stopped")
         self.assertEqual("grey2\n", (pathlib.Path(stopped["tree"]) / "ring.py").read_text())
+
+    def test_the_first_build_is_medium_and_each_repair_is_high(self):
+        self.run_it(self.builder(("ring.py", "grey\n"), ("ring.py", "grey1\n"), ("ring.py", "amber\n")),
+                    suites=(False, False, True))
+        self.assertEqual(["medium", "high", "high"], self.efforts)
 
     def test_a_second_refusal_gets_the_second_repair(self):
         refused = Outcome("ok", verdict="REJECT", text="a new finding")
