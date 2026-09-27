@@ -21,7 +21,7 @@ from tree import publish
 
 import slicer
 
-EXPECTED_TESTS = 10
+EXPECTED_TESTS = 11
 
 
 def rig():
@@ -47,6 +47,15 @@ class AncestryTest(unittest.TestCase):
         ):
             with self.subTest(rule=rule):
                 self.assertIn(rule, question)
+
+    def test_the_finishing_gate_goes_through_the_users_entry_point(self):
+        # atoms can each pass their own gate while nothing wires them in
+        question = asking.prompt(pathlib.Path.cwd(), [], [])
+        self.assertIn(
+            "When the claim is behaviour a user reaches and a gate can check — a command, a "
+            "request, a screen a test can drive, a library's public call — the molecule's own gate, or an "
+            "atom's gate in its final stage, goes through that entry point and checks what comes out: parts "
+            "that each pass their own gate but are never wired in leave the claim unbuilt.", question)
 
     def test_a_walls_ancestors_appear_in_the_prompt(self):
         repo, source = rig()
