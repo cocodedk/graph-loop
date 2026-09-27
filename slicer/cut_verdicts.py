@@ -74,7 +74,8 @@ def findings(molecule: object, verdicts: list[Verdict]) -> list[str]:
             continue
         named = [n for n in names if v.id == f"atom:{n}"]
         if named:
-            out.append(f"Atom {named[0]} fails the question {v.question}.")
+            fail = cut_questions._atom()[v.question]["criteria"]["fail"]
+            out.append(f"Atom {named[0]} fails {v.question}: {fail}.")
     return out
 
 

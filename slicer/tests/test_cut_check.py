@@ -77,7 +77,7 @@ class CutCheck(unittest.TestCase):
 
     def test_act_turns_a_fail_into_a_finding(self):
         got = self.run_in("act", Scripted())
-        self.assertEqual(got.findings, ["Atom beta fails the question one_job."])
+        self.assertEqual(got.findings, ["Atom beta fails one_job: it does two or more separate jobs, or its goal is too vague to tell where it ends."])
 
     def test_not_ok_ask_changes_nothing_in_any_state(self):
         for state in ("off", "observe", "act"):

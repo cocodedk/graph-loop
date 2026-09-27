@@ -87,7 +87,7 @@ def contract_prompt(task: dict) -> str:
         "and the done-when say plainly what the test must assert.\n"
         if task.get("gate_files_are_the_work") else
         "\nRefuse it if the builder can edit the test its gate runs: the builder "
-        "must not touch what judges it unless gate_files_are_the_work.\n")
+        "must not touch what judges it.\n")
     return (
         "Read and follow this repository's own written rules, CLAUDE.md first "
         "and the files it links, before judging a gate.\n\n"
@@ -101,12 +101,6 @@ def contract_prompt(task: dict) -> str:
         "deliberately deceptive builder would write (hard-coding the judge's expected values, "
         "a lookup table keyed on test data) is the diff review's finding, not grounds to "
         "refuse a contract.\n"
-        "If a concrete bypass is missing from a frozen judge test, this card's gate must add an "
-        "executed probe: write a small test file beside the project's tests, run it with the "
-        "project's test command, and remove it with a trap on exit. Assert exactly the named "
-        "case so the bypass fails the gate; keep this card's files unchanged and the probe in "
-        "the gate text, never greps or regexes on the source for a behavioural gap. Refuse "
-        "that gap only while the gate lacks this probe; never ask for the judge to change.\n"
         + ("Refuse a rewrite that proves less than the requirement recorded below.\n"
            if task.get("requirement") else "")
         + ("For this judge card, ask what wrong implementation would still pass this judge "

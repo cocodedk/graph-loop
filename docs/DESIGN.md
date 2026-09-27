@@ -159,8 +159,8 @@ prompt, answer, diff and gate output is a numbered file under the campaign's log
   of the same contract, reviews run at xhigh, and nothing runs at `max`. (The lean loop
   builds at medium and runs its repair rounds, each handed why the last fell short, at high.)
 - Count a usage limit, a denial, a killed reviewer or malformed output as failure.
-- Stop the campaign for one bad task — it quarantines and carries on. It stops itself only
-  for hours of work with nothing accepted.
+- Stop the campaign for one bad task — it quarantines and carries on. Hours without
+  progress raise an alert; the campaign continues.
 - Touch the main branch, force-push, or start anything a human holds.
 - Trust its own memory: everything is re-read from files, so any part can be killed and
   restarted at any time.

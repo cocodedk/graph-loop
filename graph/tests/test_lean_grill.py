@@ -46,6 +46,12 @@ class Grill(unittest.TestCase):
         self.assertIn("with its network and Docker", self.prompt)
         self.assertIn("your own read-only sandbox may be unable to run it", self.prompt)
 
+    def test_the_grill_is_told_the_builders_grant_follows_the_suite(self):
+        # a suite that runs chmod grants chmod: the grill must not rule it out
+        self.grill(Outcome("ok", verdict="ACCEPT"))
+        self.assertIn("runs git, the suite and the programs the suite uses", self.prompt)
+        self.assertNotIn("chmod", self.prompt)
+
     def test_every_mail_names_its_project(self):
         inside = pathlib.Path(repo()) / "scratchpad" / "lean"      # a workspace in a checkout
         inside.mkdir(parents=True)

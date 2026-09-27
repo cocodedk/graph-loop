@@ -53,9 +53,11 @@ def masked(ws, command: str, cwd: str) -> tuple[bool, str]:
 
 def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome:
     prompt = (f"You review one change to this repository, read-only. It should implement the "
-              f"spec below, with tests. Refuse only for: something the spec's 'Done when' names "
-              f"that does not hold, a failure a user would meet in ordinary use, a security hole, "
-              f"or behaviour added without tests. List anything rarer as a finding, and accept.\n\n"
+              f"spec below, with tests. Refuse only for: something the spec's 'Done when' or "
+              f"acceptance tests name that does not hold, a failure a user would meet in ordinary "
+              f"use, a security hole, or behaviour added without tests. List anything rarer as a "
+              f"finding, and accept. In this review an ACCEPT may carry findings, whatever the "
+              f"answer rule below says.\n\n"
               f"## Spec\n\n{spec}\n\n## The diff against main\n\n{diff}\n\n{VERDICT}")
 
     def paid(kind, account, cost, tokens, _text):
@@ -68,13 +70,14 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
     """Before anything is built: the questions only a person can answer, or ""."""
     specs = "\n\n".join(f"## {pathlib.Path(path).name}\n\n{pathlib.Path(path).read_text('utf-8')}"
                         for path in spec_paths)
-    prompt = (f"You read these specs before anything is built, read-only; the repository's CLAUDE.md, "
+    prompt = (f"You read this spec before it is built, read-only; the repository's CLAUDE.md, "
               f"its brief and the profile at {profile_path} give the context. A builder implements "
-              f"each spec in order. It edits files only (no chmod, no git, no network). The suite is "
+              f"it next. It edits files and runs git, the suite and the programs the suite uses; it "
+              f"cannot commit or push. The suite is "
               f"the profile's command, run on this machine with its network and Docker in a scrubbed "
               f"environment; your own read-only sandbox may be unable to run it, and that is no "
               f"question for the person. Refuse only for what a person "
-              f"must decide first: specs that contradict each other or themselves, a decision the "
+              f"must decide first: a spec that contradicts itself, a decision the "
               f"builder would have to guess, or a requirement it cannot meet here. Each finding is one "
               f"question to the person. What the builder can settle itself is no question: accept."
               f"\n\n{specs}\n\n{VERDICT}")

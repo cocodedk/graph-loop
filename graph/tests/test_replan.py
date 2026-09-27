@@ -68,7 +68,7 @@ class ReplanTest(unittest.TestCase):
         self.assertIn("its first line, alone, is exactly `set -e -o pipefail`", seen["prompt"])
         self.assertIn("Never pin EXPECTED to a literal, to len(...), or to a value read from HEAD", seen["prompt"])
         self.assertIn("strengthen the gate or remove an unprovable sentence", seen["prompt"])
-        self.assertIn("NEVER add a new claim to the goal or done-when", seen["prompt"])
+        self.assertIn("not add a new claim to the goal or done-when", seen["prompt"])
         self.assertIn("must not narrow the recorded requirement", seen["prompt"])
         self.assertIn("Recorded requirement: {'goal': 'make a.py say two'", seen["prompt"])
         self.assertNotIn("Narrow the goal", seen["prompt"])

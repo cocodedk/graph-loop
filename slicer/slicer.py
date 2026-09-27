@@ -160,7 +160,7 @@ def main(argv: list[str] | None = None) -> int:
                   final=bool(args.answer or repair == 2))
             if args.answer or repair == 2:
                 print(f"validation_refused: {error}", file=sys.stderr); return 2
-            question += "\n\nThe validator refused that answer: " + str(error) + AGAIN
+            question += "\n\nYour answer was:\n" + answer + "\n\nThe validator refused that answer: " + str(error) + AGAIN
             continue
         except (KeyError, OSError) as error:
             print(str(error), file=sys.stderr); return 2
@@ -170,7 +170,8 @@ def main(argv: list[str] | None = None) -> int:
             # planner can act on, and it used to be printed and dropped.
             trace(backlog, "review_refused", attempt=repair + 1, state=state,
                   why=str(detail)[:300])
-            question += f"\n\nAn independent reviewer refused that answer: {detail}" + AGAIN
+            question += ("\n\nYour answer was:\n" + answer
+                         + f"\n\nAn independent reviewer refused that answer: {detail}" + AGAIN)
             continue
         trace(backlog, "ended", state=state, detail=str(detail)[:200])
         print(f"{state}: {detail}")

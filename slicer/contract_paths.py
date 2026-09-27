@@ -32,7 +32,7 @@ def _sources(anchors: object, repo: pathlib.Path, approved: list[pathlib.Path]) 
             # and never touched the anchor (2026-09-18).
             why = (f"a range, and an anchor cites ONE line: write {raw}:{number.split('-')[0]}"
                    if mark and "-" in number else
-                   "no line number: write repo/path:line, such as docs/spec.md:13")
+                   f"no line number: write the path and the one line it cites, such as {raw or number}:1")
             raise ValueError(f"source anchor {anchor!r} is {why}")
         path = _inside(repo, raw, "source")
         if not any(path == root or path.is_relative_to(root) for root in approved):

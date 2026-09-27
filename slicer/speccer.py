@@ -42,7 +42,8 @@ def prompt(goal: str, repo: pathlib.Path) -> str:
         "answer NEEDS_PERSON first, naming it, and plan nothing further until it is answered.\n\n"
         f"Goal: {goal}\nRepository: {repo}\n\n"
         "Answer with YAML only and exactly: result (SPEC or NEEDS_PERSON), reason, spec. "
-        "SPEC requires spec: {name: safe-slug, body: markdown}. The Markdown must contain "
+        "SPEC requires spec: {name: safe-slug, body: markdown}. The Markdown is the spec's prose "
+        "alone, with no front matter, and must contain "
         "## Goal, ## Acceptance and ## Boundaries. NEEDS_PERSON requires spec: null.")
 
 

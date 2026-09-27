@@ -78,5 +78,5 @@ def repaired(question: str, ask_once: Callable[[str], str],
             if state not in REPAIRABLE or last:
                 return state, detail
             why = str(detail)
-        asked = question + "\n\nThat answer was refused: " + why + AGAIN
+        asked = question + "\n\nYour answer was:\n" + answer + "\n\nThat answer was refused: " + why + AGAIN
     raise AssertionError("unreachable: the loop returns or raises")   # pragma: no cover

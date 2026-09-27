@@ -29,7 +29,7 @@ INSTRUCTION = ("Say BLOCKED at once when your tools or inputs are not enough to 
                "and nothing after it:\n")
 
 TEMPLATE = ('{"result": "DONE|BLOCKED|PARTIAL", "blocked": true|false, '
-            '"needs_person": true|false, "why": "one line, empty when DONE"}')
+            '"needs_person": true|false, "why": "one line, empty when DONE unless you have a note"}')
 
 
 @dataclasses.dataclass

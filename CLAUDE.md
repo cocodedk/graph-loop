@@ -9,11 +9,12 @@ in a private worktree, a gate command's exit code is the verdict, a fresh
 reviewer reads the finished diff, and only then is the work committed.
 
 The runtime is here. `graph/` is the driver, `slicer/` is the plan phase that
-writes the cards, `docs/` is the writing and `plugins/graph/` is the skill.
+writes the cards, `docs/` is the writing and `plugins/graph/` holds the two
+skills, `graph` for slicing work into cards and `run` for the lean loop.
 A card is one Obsidian note in a vault inside the repository being built; the
 note is the card, and the loop writes only its front matter.
 
-The loop no longer lives inside what it builds, so four things are
+The loop lives outside what it builds, so four things are
 configuration and nothing else names a particular project: `GRAPH_REPO` (the
 repository being built), `GRAPH_HELPER` (that repository's own command tool, if
 it has one), and `GRAPH_PROVISION_COPY` / `GRAPH_PROVISION_LINK` (the
