@@ -53,9 +53,10 @@ class AncestryTest(unittest.TestCase):
         question = asking.prompt(pathlib.Path.cwd(), [], [])
         self.assertIn(
             "When the claim is behaviour a user reaches and a gate can check — a command, a "
-            "request, a screen a test can drive, a library's public call — the molecule's own gate when it "
-            "has no atoms, else an atom's gate in its final stage, goes through that entry point and checks "
-            "what comes out: parts that each pass their own gate but are never wired in leave the claim "
+            "request, a screen a test can drive, a library's public call — the gate that finishes the "
+            "molecule goes through that entry point and checks what comes out: the molecule's own gate "
+            "when it has no atoms, else an atom's gate in a stage after every other atom whose work it "
+            "checks. Parts that each pass their own gate but are never wired in leave the claim "
             "unbuilt.", question)
 
     def test_a_walls_ancestors_appear_in_the_prompt(self):
