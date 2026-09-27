@@ -20,7 +20,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 from worktree_provision import carried, provision
 
-EXPECTED_TESTS = 7
+EXPECTED_TESTS = 8
 
 
 def trees() -> tuple[pathlib.Path, pathlib.Path]:
@@ -81,6 +81,14 @@ class ProvisionTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"GRAPH_PROVISION_LINK": ":cache"}):
             provision(str(tree), str(repo))
             self.assertIn("?? :cache", carried(str(tree)))
+
+    def test_an_inherited_literal_pathspec_setting_changes_nothing(self):
+        repo, tree = trees()
+        checkout(tree, "interpreter/\n")
+        with mock.patch.dict(os.environ, {"GRAPH_PROVISION_LINK": "interpreter",
+                                          "GIT_LITERAL_PATHSPECS": "1"}):
+            provision(str(tree), str(repo))
+            self.assertIn("?? interpreter", carried(str(tree)))
 
     def test_a_trailing_slash_in_the_setting_names_the_same_path(self):
         repo, tree = trees()
