@@ -32,18 +32,19 @@ class ReplanStallsTest(unittest.TestCase):
                 self.assertNotIn(rule, code)
                 self.assertIn("executed probe to THIS card's gate", code)
 
-    def test_replan_and_contract_review_close_a_judge_gap_with_a_gate_probe(self):
+    def test_replan_closes_a_judge_gap_with_a_probe_the_contract_review_never_demands(self):
+        # a kept judge's gaps belong to the judge card's own review, never the code card's
         task = book_with().task("T1")
-        for make in (prompt_for, contract_prompt):
-            with self.subTest(prompt=make.__name__):
-                prompt = make(task)
-                for phrase in ("concrete bypass", "frozen judge test", "executed probe",
-                               "beside the project's tests", "project's test command",
-                               "trap on exit", "exactly the named case", "bypass fails the gate",
-                               "files unchanged", "gate text", "greps or regexes",
-                               "never ask for the judge to change"):
-                    self.assertIn(phrase, prompt)
-        self.assertIn("Refuse that gap only while the gate lacks this probe", contract_prompt(task))
+        prompt = prompt_for(task)
+        for phrase in ("concrete bypass", "frozen judge test", "executed probe",
+                       "beside the project's tests", "project's test command",
+                       "trap on exit", "exactly the named case", "bypass fails the gate",
+                       "files unchanged", "gate text", "greps or regexes",
+                       "never ask for the judge to change"):
+            self.assertIn(phrase, prompt)
+        review = contract_prompt(task)
+        self.assertNotIn("executed probe", review)
+        self.assertIn("do not require bypass probes or refuse this card for gaps in that judge", review)
 
     def test_diff_review_does_not_reopen_the_accepted_contract(self):
         prompt = diff_prompt(book_with().task("T1"), "diff")

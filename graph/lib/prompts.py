@@ -47,8 +47,9 @@ def build_prompt(task: dict, in_place: bool = False) -> str:
     stack = (f"The live stack ({LIVE_STACK}) is reached through the helper "
              f"`{helper()} <verb>` — this task's commands, exactly: "
              f"{'; '.join(f'`{c}`' for c in helper_commands(task)) or 'none named'} (the "
-             "file's header describes each verb). Your tools allow no other shell command: "
-             "no docker, no curl, no python. The gate proves what happened from durable "
+             "file's header describes each verb). Besides cat, ls, head and tail, your tools "
+             "allow no other shell command: no docker, no curl, no python. The gate proves what "
+             "happened from durable "
              "state, and anything outside the task's named verbs and targets fails it. "
              if live else "Touch no container. ")
     # paid edits that could not be carried onto the moved base are a diff the
@@ -87,10 +88,11 @@ def build_prompt(task: dict, in_place: bool = False) -> str:
            "granted for it — the gate is a script, and a grant for each program in it does "
            "not authorise the script. Do not improvise a compile or a chained command: "
            "that is what gets denied, and what it leaves in the tree gets the card refused "
-           "for writing outside its files.\n" if str(task.get("gate") or "").strip() else "")
+           "for writing outside its files.\n" if str(task.get("gate") or "").strip() and not live else "")
         + "Where a module here already follows the rule you need, follow that module "
         "rather than writing a second copy. A duplicate that is not yours to fix goes in "
-        "your final line, because a refactor would take you outside your files. "
+        "your final line, because a refactor would take you outside your files: name it "
+        "in `why`, even when you are DONE. "
         "Change nothing beside the work. Write in plain language and do the simplest thing "
         "that works. Do not commit. " + stack + "\n\n"
         + DISTRESS_INSTRUCTION + DISTRESS_TEMPLATE)

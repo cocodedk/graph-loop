@@ -64,5 +64,6 @@ def assert_one_owner(name: str, made: dict, rows: list[dict], target: dict | Non
                 raise ValueError(
                     f"{owner} already holds {path}, and {claimed} would hold it too with "
                     f"nothing ordering them: two builders would write that file apart from "
-                    f"each other. If this work is {owner}'s work, answer NO_GAP — it is "
-                    f"already planned. If it genuinely comes after it, say so in needs.")
+                    f"each other. If this work is {owner}'s work, "
+                    + (f"leave {path} to it" if target else "answer NO_GAP — it is already planned")
+                    + ". If it genuinely comes after it, say so in needs.")

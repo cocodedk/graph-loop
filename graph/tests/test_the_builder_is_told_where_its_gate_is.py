@@ -25,7 +25,7 @@ from gate_script import gate_script_path
 from prompts import build_prompt
 from tools import builder_tools
 
-EXPECTED_TESTS = 5
+EXPECTED_TESTS = 6
 
 GATE = 'set -e -o pipefail\nWORK="$(mktemp -d)"\njavac -d "$WORK" src/A.java\njava -cp "$WORK" A\n'
 
@@ -63,6 +63,12 @@ class TheBuilderCanFindItsGate(unittest.TestCase):
 
     def test_a_card_with_no_gate_is_told_nothing(self):
         self.assertNotIn("Run it with:", build_prompt(card(gate="")))
+
+    def test_a_live_card_is_not_told_to_run_a_gate_it_has_no_grant_for(self):
+        # a live gate performs the work, and a live builder holds no `bash <script>` grant
+        live = card(gate_has_side_effects=True)
+        self.assertNotIn("Bash(bash ", builder_tools(live, "/tmp/tree"))
+        self.assertNotIn("Run it with:", build_prompt(live))
 
 
 class Count(unittest.TestCase):

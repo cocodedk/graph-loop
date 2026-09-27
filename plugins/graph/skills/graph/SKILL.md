@@ -154,8 +154,8 @@ away. When something looks wrong:
 - **What can start now?** A long chain behind one brick is a stalled run, not a busy one.
 - **Is the supervisor alive?** The driver is a process and processes die; the supervisor
   restarts it and gives up after repeated immediate failures.
-- **What did the loop say when it stopped?** It quarantines a bad task and carries on. It
-  stops itself only for hours of work with nothing accepted.
+- **What did the loop say when it stopped?** It quarantines a bad task and carries on.
+  Hours without progress raise an alert; the campaign continues.
 
 A run that produced nothing is usually a backlog being debugged, and that is the cheapest
 place to find out.

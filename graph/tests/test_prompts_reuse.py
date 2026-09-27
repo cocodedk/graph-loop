@@ -29,6 +29,9 @@ class ReuseTest(unittest.TestCase):
         self.assertIn("Where a module here already follows the rule you need, follow that module", prompt)
         self.assertIn("rather than writing a second copy", prompt)
         self.assertIn("goes in your final line, because a refactor", prompt)   # report, never refactor
+        # the note rides in `why`, so the template appended below must let a DONE carry one
+        self.assertIn("name it in `why`, even when you are DONE", prompt)
+        self.assertIn('"why": "one line, empty when DONE unless you have a note"', prompt)
 
     def test_the_reviewer_reports_only_a_second_copy_introduced_by_this_change(self):
         prompt = diff_prompt(task(), "diff")

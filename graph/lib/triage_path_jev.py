@@ -63,8 +63,9 @@ def choose(space, task: dict, stall: str, evidence: dict) -> dict:
                 path = out.verdict
         else:
             # Same finite belt as cause triage, asked the SAME path question.
-            prompt = (INSTRUCTIONS + " Answer with one JSON object with exactly two string "
-                      "keys: verdict and why.\n" + json.dumps(question, default=str))
+            prompt = (INSTRUCTIONS + " Before the distress line, answer with this JSON object "
+                      'alone, no other text and no code fence: {"verdict":"<the path you choose>",'
+                      '"why":"<your reason>"}.\n' + json.dumps(question, default=str))
             fallback = text_call(prompt, space)
             answer = _read(fallback.text, tuple(options)) if fallback.ok else None
             source, why = "model", answer.why if answer else fallback.text

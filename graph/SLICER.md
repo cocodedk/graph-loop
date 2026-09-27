@@ -181,6 +181,11 @@ LIVE authority or run in the supervisor.
   also the runnable atom and there are no numbered files.
 - If it needs pieces, the parent is `sliced` and each runnable leaf is an
   `NN-name.md` atom. Lower numbers run first; equal numbers may run together.
+- The gate that finishes a molecule, its own or an atom's in a stage after every
+  other atom whose work it checks (equal stages may run together), goes
+  through the way a user reaches the outcome (a command, a request, a screen a
+  test can drive, a library's public call) whenever a gate can check it. Pieces
+  that each pass alone but are never wired in do not finish it.
 - Re-slicing any runnable leaf creates a new molecule whose `molecule.md`
   names that leaf in `sliced_from`. The child inherits the leaf's external
   prerequisites but never waits on the leaf itself. The old leaf becomes

@@ -73,7 +73,7 @@ class TheRefusalSaysToKeepWhatWasRight(unittest.TestCase):
 
         def ask_once(question: str) -> str:
             asked.append(question)
-            return "answer"
+            return "needs: [kept-need]"
 
         def write(_: str) -> tuple[str, object]:
             if len(asked) < 2:
@@ -82,13 +82,15 @@ class TheRefusalSaysToKeepWhatWasRight(unittest.TestCase):
 
         repair.repaired("plan it", ask_once, write)
         self.assertIn("Change only what was refused", asked[1])
+        self.assertIn("needs: [kept-need]", asked[1])     # the refused answer itself, shown back
 
     def test_the_slicer_command_says_so(self):
-        replies = [Reply(True, "{}"), Reply(True, molecule())]
+        replies = [Reply(True, "result: MOLECULE\nneeds: [kept-need]\n"), Reply(True, molecule())]
         with mock.patch.object(slicer, "ask", side_effect=replies) as ask:
             slicer.main(["--repo", str(self.repo), "--backlog", str(self.backlog),
                          "--source", "specs"])
         self.assertIn("Change only what was refused", ask.call_args.args[0])
+        self.assertIn("needs: [kept-need]", ask.call_args.args[0])
 
 
 class Count(unittest.TestCase):

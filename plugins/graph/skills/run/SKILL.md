@@ -43,7 +43,8 @@ Without a proven contact, `lean.py` refuses to start.
 Copy the closest file from `$GL/profiles/` into the repository as
 `profile-<name>.md` and link it from the repository's `CLAUDE.md`, or pass it with
 `--profile`. Under `## suite_command`, `## build_command` and `## artifact`, the loop
-reads the first indented line of each.
+reads the first indented line of each. It refuses a profile that lacks one, so add
+any the copy does not have.
 
 Before any spec, run the suite on `main` the way the loop will run it: from a clean
 checkout, with a scrubbed environment and an empty `HOME`. It must pass. A suite that
@@ -76,9 +77,10 @@ The run first fetches origin. Then a reviewer reads the spec before anything is 
   branch and pushes to the same PR, so rerun the same spec after a review.
 - **Exit 0:** the pull request is open, its branch was built, and the person got a
   "ready for review" mail with the PR link and the artifact.
-- **Exit 1:** the feature stopped, or its build was red. The mail says which, and the
-  spec's front matter names the kept worktree. Read the workspace log before changing
-  anything.
+- **Exit 1:** the feature stopped, or its build was red. The mail says which. A stopped
+  feature's worktree is kept and the mail names it; the spec's front matter names it
+  too (`lean_worktree`) unless the run was fixing an open pull request. A red build
+  leaves its pull request open. Read the workspace log before changing anything.
 
 Runs take hours, so run it in the background.
 
