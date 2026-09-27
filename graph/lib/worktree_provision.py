@@ -43,8 +43,9 @@ def carried(path: str) -> list[str]:
                if os.path.lexists(os.path.join(path, name))]
     if not present:
         return []
-    # a name is a path, never pathspec magic (`:cache` would read as `cache`); the flag,
-    # unlike a `:(literal)` prefix, means the same whatever GIT_*_PATHSPECS says
+    # a name is a path, never pathspec magic (`:cache` would read as `cache`). Unlike a
+    # `:(literal)` prefix the flag survives GIT_LITERAL_PATHSPECS and GIT_NOGLOB_PATHSPECS;
+    # with GIT_GLOB_ or GIT_ICASE_PATHSPECS set git refuses, and the probe fails closed
     shown = subprocess.run(["git", "--literal-pathspecs", "-C", path, "status", "--porcelain",
                             "--untracked-files=all", "--", *present],
                            capture_output=True, text=True, check=True)

@@ -82,13 +82,21 @@ class ProvisionTest(unittest.TestCase):
             provision(str(tree), str(repo))
             self.assertIn("?? :cache", carried(str(tree)))
 
-    def test_an_inherited_literal_pathspec_setting_changes_nothing(self):
-        repo, tree = trees()
-        checkout(tree, "interpreter/\n")
-        with mock.patch.dict(os.environ, {"GRAPH_PROVISION_LINK": "interpreter",
-                                          "GIT_LITERAL_PATHSPECS": "1"}):
-            provision(str(tree), str(repo))
-            self.assertIn("?? interpreter", carried(str(tree)))
+    def test_an_inherited_pathspec_setting_never_hides_a_link(self):
+        # it is either still found, or git refuses and the probe fails closed
+        for setting, found in (("GIT_LITERAL_PATHSPECS", True), ("GIT_NOGLOB_PATHSPECS", True),
+                               ("GIT_GLOB_PATHSPECS", False), ("GIT_ICASE_PATHSPECS", False)):
+            with self.subTest(setting=setting):
+                repo, tree = trees()
+                checkout(tree, "interpreter/\n")
+                with mock.patch.dict(os.environ, {"GRAPH_PROVISION_LINK": "interpreter",
+                                                  setting: "1"}):
+                    provision(str(tree), str(repo))
+                    if found:
+                        self.assertIn("?? interpreter", carried(str(tree)))
+                    else:
+                        with self.assertRaises(subprocess.CalledProcessError):
+                            carried(str(tree))
 
     def test_a_trailing_slash_in_the_setting_names_the_same_path(self):
         repo, tree = trees()
