@@ -24,8 +24,8 @@ a card naming a thing whose writer nobody had read (`observation`, `gpt-5.6`,
   rewrites that one atom. In both cases it reads spec AND code — reading the
   code is never optional.
 - **The slicer's law** (landed as the naming law, `lib/molecule.py`): every
-  name an atom uses must exist in the repository, or the atom that creates it
-  must come first in its molecule.
+  name an atom uses must exist in the repository, or a card the atom waits for
+  — an earlier atom in its molecule, or one already published — must create it.
 - **Folder per molecule** — decided in the same conversation.
 - **The slicer is part of the loop, not the supervisor.** Slicing needs the
   backlog lock, the campaign log, the claims and the resource belt, which live

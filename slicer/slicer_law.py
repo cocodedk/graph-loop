@@ -22,8 +22,17 @@ def assert_wall(task: dict) -> None:
         raise ValueError(f"{task.get('id')} is not a stuck CODE card the slicer may take")
 
 
-def available(leaves: list[dict], repo: pathlib.Path, tip: str = "HEAD") -> None:
+def available(leaves: list[dict], rows: list[dict], repo: pathlib.Path,
+              tip: str = "HEAD") -> None:
+    """Every name a leaf uses is in the tip, or promised before the leaf runs.
+
+    Promised means what the loop counts (`molecule.unknown_names`): an earlier
+    stage of this molecule, the leaf itself, or a card the leaf waits for. The
+    last was missing here, so a leaf waiting for a published, unbuilt card was
+    refused a name the loop would have let it use.
+    """
     read, prior, prior_files = reader(repo, tip), set(), set()
+    promised = {str(row.get("id")): row.get("creates") or [] for row in rows}
     staged: dict[int, list[dict]] = {}
     for leaf in leaves:
         staged.setdefault(int(leaf.get("stage") or 1), []).append(leaf)
@@ -39,10 +48,12 @@ def available(leaves: list[dict], repo: pathlib.Path, tip: str = "HEAD") -> None
             own = set(leaf.get("creates") or [])
             for name in own:
                 names.split(name)
+            waited = {made for need in leaf.get("needs") or [] for made in promised.get(need, [])}
             for name in leaf.get("uses") or []:
                 path, text = names.split(name)
                 body = read(path)
-                if name not in prior and name not in own and (body is None or text not in body):
+                if not names.covered(name, prior | own | waited) \
+                        and (body is None or text not in body):
                     raise ValueError(f"{leaf.get('name', 'molecule')} uses unavailable name {name}")
             created_here |= own
             files_here |= set(leaf["files"])
