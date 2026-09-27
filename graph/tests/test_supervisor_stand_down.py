@@ -34,7 +34,8 @@ def run_supervisor(case: unittest.TestCase, run_exit: int,
                    email_ok_after: int = 0,
                    sleep_hook: str = "",
                    disk_full: bool = False,
-                   plan_exit: int = 0) -> tuple[str, int, pathlib.Path]:
+                   plan_exit: int = 0,
+                   provision_refused: str = "") -> tuple[str, int, pathlib.Path]:
     """Run the real supervisor.sh against a stub driver exiting `run_exit` at
     once, with sleep a no-op so the backoffs collapse; returns the log, the
     exit code and the campaign directory. `camp` reuses an earlier run's
@@ -74,6 +75,10 @@ def run_supervisor(case: unittest.TestCase, run_exit: int,
         # the disk probe answers in the board's own words, or says nothing at all
         + ('  *view_pulse.py*) echo "  DISK NEARLY FULL — 3.1 GB free where the worktrees live"'
            " ;;\n" if disk_full else "  *view_pulse.py*) exit 1 ;;\n") +
+        # the provisioning probe: exit 0 is safe; `provision_refused` is what it
+        # prints before a non-zero exit, a refusal or the traceback of a failed probe
+        (f'  *provision_check.py*) echo "{provision_refused}"; exit 1 ;;\n'
+         if provision_refused else "  *provision_check.py*) exit 0 ;;\n") +
         f'  *alert_email.py*) n=$(_count {camp}/mail.count);'
         f' [ "$n" -ge {email_ok_after or 10**6} ] && exit 0; exit 1 ;;\n'
         f'  *) exec "{real}" "$@" ;;\n'
