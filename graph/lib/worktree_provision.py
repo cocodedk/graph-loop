@@ -43,8 +43,10 @@ def carried(path: str) -> list[str]:
                if os.path.lexists(os.path.join(path, name))]
     if not present:
         return []
+    # `:(literal)`: a name is a path, never pathspec magic (`:cache` would read as `cache`)
     shown = subprocess.run(["git", "-C", path, "status", "--porcelain", "--untracked-files=all",
-                            "--", *present], capture_output=True, text=True, check=True)
+                            "--", *(f":(literal){name}" for name in present)],
+                           capture_output=True, text=True, check=True)
     return [line for line in shown.stdout.splitlines() if line.strip()]
 
 

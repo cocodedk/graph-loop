@@ -20,7 +20,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 from worktree_provision import carried, provision
 
-EXPECTED_TESTS = 6
+EXPECTED_TESTS = 7
 
 
 def trees() -> tuple[pathlib.Path, pathlib.Path]:
@@ -72,6 +72,15 @@ class ProvisionTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"GRAPH_PROVISION_COPY": "runtime"}):
             provision(str(tree), str(repo))
             self.assertEqual([], carried(str(tree)))
+
+    def test_a_name_git_would_read_as_magic_is_asked_literally(self):
+        # `:cache` is pathspec magic to git; the question is about the path itself
+        repo, tree = trees()
+        (repo / ":cache").mkdir()
+        checkout(tree, "interpreter\n")
+        with mock.patch.dict(os.environ, {"GRAPH_PROVISION_LINK": ":cache"}):
+            provision(str(tree), str(repo))
+            self.assertIn("?? :cache", carried(str(tree)))
 
     def test_a_trailing_slash_in_the_setting_names_the_same_path(self):
         repo, tree = trees()
