@@ -16,41 +16,38 @@ release on the oldest TV it serves.
 
 ## build_command
 
-    npm run package
+    npm run stage
 
-Packages the app's own files, never its tests or tooling, into `dist/app.wgt` with
-`tizen package -t wgt -s "$TIZEN_PROFILE"`. The Tizen CLI and the signing profile live outside the
-repository.
+Copies the app's own files, never its tests or tooling, into `dist/app/`. Signing is not part of
+the build: it needs the owner's certificates, which never enter a gate box (see on_the_tv).
 
 ## artifact
 
-    dist/app.wgt
+    dist/app/config.xml
+
+The staged folder, which `tizen package` signs; its `config.xml` shows the staging finished.
 
 ## paths_the_gate_needs
 
     $PLAYWRIGHT_BROWSERS_PATH  the Playwright browser builds, read-only
     node_modules               installed once in the main checkout and linked into each worktree
                                with GRAPH_PROVISION_LINK=node_modules, so no gate downloads packages
-    $TIZEN_STUDIO              the Tizen CLI, read-only; only the build command needs it
-    the security profile       `-s` names a profile registered in the CLI's data directory
-                               (`profiles.xml`), which names the author and distributor
-                               certificates and their password files; only the build needs them
 
 A gate box hides the home directory, and a link does not carry what it points at into the box.
 Bind each of these that lives under the home directory by its absolute, expanded path in the
 workspace's `gate-paths.json`, such as `{"read_only": ["/opt/cache/ms-playwright",
 "/srv/app/node_modules"]}` with your own paths, and export `PLAYWRIGHT_BROWSERS_PATH` to the bound
-path before the run. Every gate sees what that file binds, suite gates included: binding the
-security profile hands every gate's code those keys, the same trade as the Android profile's
-debug keystore. Packaging inside a gate box has not been tried; if it fails there, package
-outside the box.
+path before the run. Never bind the Tizen CLI's data directory or any certificate: every gate sees
+what that file binds and the box keeps the network, so a test could read the keys and send them
+away. For the same reason, keep the certificates and their password files under the home
+directory, which the box hides, and run a campaign only where the box works: without it a gate
+runs in a plain shell that can read every file.
 
 ## machine_is_ready
 
     node -e "require('playwright').chromium.launch().then(function (b) { return b.close(); })"
 
-Fails when Playwright, its browser build or the libraries the browser needs are missing. A build
-that packages also needs `tizen version` and `tizen security-profiles list` to succeed. The box
+Fails when Playwright, its browser build or the libraries the browser needs are missing. The box
 hides the real home directory, so anything the check needs from there must be bound; a probe that
 passes in your own shell can still fail inside the box.
 
@@ -58,16 +55,14 @@ passes in your own shell can still fail inside the box.
 
     Executable doesn't exist at
     Host system is missing dependencies
-    tizen: command not found
 
 A gate ending with one of these failed on the machine, not the card. The loop does not know these
 lines, so run machine_is_ready before a run, not after rounds are spent.
 
 ## red_first
 
-A Playwright drive is red when the screen or state its keys should reach does not exist yet; a unit
-test is red when the function it calls is missing. Either must fail for that reason, never for a
-missing browser.
+A Playwright drive or a unit test must fail because the behaviour the card requires is missing or
+wrong, never because a browser or another dependency is missing.
 
 ## house
 
@@ -92,16 +87,19 @@ missing browser.
 
 ## on_the_tv
 
-Outside any gate. The person turns on the TV's developer mode (Apps, or App Settings where the TV
-has it, then 1 2 3 4 5, then this machine's IP address, then restart the TV). A set that requires
-it also needs "Permit to install applications" from Tizen Studio's Device Manager before the
-first install. Then:
+Outside any gate, after review. The person turns on the TV's developer mode (Apps, or App
+Settings where the TV has it, then 1 2 3 4 5, then this machine's IP address, then restart the
+TV). A set that requires it also needs "Permit to install applications" from Tizen Studio's
+Device Manager before the first install. `tizen version` and `tizen security-profiles list`
+confirm the CLI and the signing profile. Then:
 
+    tizen package -t wgt -s "$TIZEN_PROFILE" -- dist/app
     sdb connect <tv-ip>:26101
-    tizen install -n app.wgt -t <device-name> -- dist
+    tizen install -n app.wgt -t <device-name> -- dist/app
     tizen run -p <application-id> -t <device-name>
 
-Run them from the checkout the build used. `-t` takes the name `sdb devices` prints, not
+Run them from the checkout the build used. `tizen package` names the `.wgt` after `config.xml`'s
+`<name>`, so rename it to `app.wgt` before installing. `-t` takes the name `sdb devices` prints, not
 `ip:port`, and the application ID is the one `config.xml` declares, such as `AbCdE12345.MyApp`.
 If a retail set rejects the self-signed install, sign with a Samsung certificate that has the
 TV's DUID registered.
