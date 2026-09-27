@@ -33,6 +33,10 @@ The staged folder, which `tizen package` signs; its `config.xml` shows the stagi
     node_modules               installed once in the main checkout and linked into each worktree
                                with GRAPH_PROVISION_LINK=node_modules, so no gate downloads packages
 
+In `.gitignore`, write `node_modules`, not `node_modules/`. In a worktree it is a link, which git
+treats as a file, and a pattern ending in `/` matches only folders. A run whose checkouts would carry
+a provisioned path into the diff does not start.
+
 A gate box hides the home directory, and a link does not carry what it points at into the box.
 Bind each of these that lives under the home directory by its absolute, expanded path in the
 workspace's `gate-paths.json`, such as `{"read_only": ["/opt/cache/ms-playwright",

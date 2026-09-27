@@ -33,6 +33,7 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "lib"))
 
+import provision_check
 import where
 from backlog import Backlog
 from campaign_of import branch_of
@@ -84,6 +85,11 @@ def command_run(args) -> int:
     if not (space.root / "approved").exists():
         raise SystemExit("not approved — run `graph-goal.py approve` first")
     if not args.dry_run:   # only a driver claims the campaign; a dry run writes nothing
+        # Before the claim: a run whose checkouts carry provisioned material into
+        # every diff can keep no card, so it never starts.
+        refused = provision_check.refusal(str(where.repo(space, persist=False)), branch_of(space))
+        if refused:
+            raise SystemExit(refused)
         space.only_driver()
         space.event("driver_started", pid=os.getpid(), started=_started(os.getpid()))
         with run_accounts(space) as remaining:

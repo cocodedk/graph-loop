@@ -111,6 +111,15 @@ while true; do
     stand_down "${disk#  }. No driver is started until it is clear; then start this again: bash graph/supervisor.sh" \
                "a disk about to fill: standing down for a person"
   fi
+  # What the loop links or copies into each checkout must stay out of every
+  # diff. A link a folder pattern did not match cost one campaign 352 attempts
+  # and no kept card, so it is asked before any plan phase is paid for
+  # (lib/provision_check.py). Only exit 0 is safe: a refusal and a probe that
+  # failed are the same stand-down as the disk, with what it printed inside.
+  if ! refused="$(python3 "$HERE/lib/provision_check.py" "$W" 2>&1)"; then
+    stand_down "$refused Then start this again: bash graph/supervisor.sh" \
+               "provisioning that git would carry, or a probe that failed: standing down for a person"
+  fi
   # The plan phase, before every driver. The two phases never overlap and the
   # driver writes no cards, so a card the build phase parked has exactly one
   # next actor: `plan`, which re-slices the walls, drops what the loop itself
