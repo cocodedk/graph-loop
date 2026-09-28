@@ -165,6 +165,30 @@ class Repair(Rig):
         self.assertEqual(3, len(self.prompts))
         self.assertEqual("c\n", show(self.repo, "lean/rest-ring", "ring.py"))
 
+    def test_a_usage_limit_ends_the_run_without_spending_a_repair(self):
+        def limited(ws, task, prompt, tree, resume="", effort=""):
+            self.prompts.append(prompt)
+            return Outcome("limit", text="You've hit your session limit · resets 2:10pm")
+        landed = self.run_it(limited, suites=(), reviews=())
+        self.assertEqual("", landed)
+        self.assertEqual(1, len(self.prompts))           # no repair on an account that cannot answer
+        self.assertEqual(["lean_feature_started", "lean_stopped"], self.kinds())
+        self.assertIn("resets 2:10pm", self.mails[0][1])
+
+    def test_a_reviewer_that_cannot_answer_spends_no_repair(self):
+        landed = self.run_it(self.builder(("ring.py", "amber\n")), suites=(True,),
+                             reviews=(Outcome("limit", text="usage limit reached"),))
+        self.assertEqual("", landed)
+        self.assertEqual(1, len(self.prompts))           # the work was never judged: no rebuild
+        self.assertEqual("lean_stopped", self.kinds()[-1])
+
+    def test_a_builder_that_crashed_spends_no_repair(self):
+        def crashed(ws, task, prompt, tree, resume="", effort=""):
+            self.prompts.append(prompt)
+            return Outcome("crash", text="the builder's process died")
+        self.assertEqual("", self.run_it(crashed, suites=(), reviews=()))
+        self.assertEqual(1, len(self.prompts))           # only a real answer is worth a repair
+
     def test_a_builder_that_changes_nothing_is_not_reviewed(self):
         self.run_it(self.builder(), suites=(), reviews=())
         self.assertEqual([], self.suites)
