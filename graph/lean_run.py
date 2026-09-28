@@ -1,18 +1,18 @@
 """One feature of the lean loop (docs/rfc/lean-loop.md): build, check, publish.
 
-A worktree off origin/main; one builder writes the feature and its tests; the
-repository's own suite runs masked (`gates.run_gate`); one reviewer reads the diff.
-A red suite or a refused review gets a repair pass with the failure text, up to
-`REPAIRS` of them. A builder or reviewer that gave no real answer (a limit, a busy
-provider, a lapsed sign-in, a crash) gets none. Still red, or unanswered: the person is
-emailed why, and the feature stops with its worktree kept. Green, with the reviewer's
-verdict: the change is committed, pushed as `lean/<feature>` and opened as a pull
-request carrying the reviewer's findings, accepted or still refused; main never moves.
-The spec file's front matter records how it ended.
+A worktree off origin/main; one builder writes the feature and its tests; the suite
+runs masked (`gates.run_gate`); one reviewer reads the diff. A red suite or a refused
+review gets a repair pass with the failure text, up to `REPAIRS` of them; a model that
+gave no real answer gets none. Green, with the reviewer's verdict: pushed as
+`lean/<feature>` with a pull request carrying its findings; main never moves. Otherwise
+the person is emailed why and the feature stops, its worktree kept. The spec file's
+front matter records how it ended.
 """
 
 from __future__ import annotations
 
+import contextlib
+import json
 import os
 import pathlib
 import re
@@ -131,8 +131,12 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
     return "", verdict
 
 
-def pr_body(spec_path: str, why: str, found: str) -> str:
-    """What a new pull request says: the suite, the reviewer's verdict, its findings."""
+def pr_body(spec_path: str, why: str, verdict) -> str:
+    """What a new pull request says: the suite, the reviewer's verdict and what it found. A
+    clean ACCEPT's text is its bare answer, one JSON document, which finds nothing."""
+    found = verdict.text.strip()
+    with contextlib.suppress(ValueError):
+        found = "" if verdict.verdict == "ACCEPT" and json.loads(found) is not None else found
     said = "accepted it" if not why else "still did not accept it after the last repair"
     return (f"Built by graph-loop's lean loop from `{pathlib.Path(spec_path).name}`: the suite "
             f"is green, and an independent reviewer {said}."
@@ -169,15 +173,14 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                       effort=REPAIR_EFFORT)
         why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], round_,
                              bool(revise))
-    # A reply without findings keeps its answer as its text, which the parser reads as a
-    # verdict. Green, and accepted or still refused for named findings: published, with them.
-    found = "" if verdict is None or review._read_review(verdict.text)[0] else verdict.text.strip()
-    if not why or (verdict is not None and verdict.verdict == "REJECT" and found):
+    # Green, and accepted or still refused after the last repair: published, with what the
+    # reviewer found, for whoever merges it. Anything else stops below.
+    if not why or (verdict is not None and verdict.verdict == "REJECT"):
         try:
             title = f"feat({feature}): {feature}"
             work = lean_git.commit(repo, tree.path, tree.commit, title)
             url = lean_git.update(repo, work, feature, pr) if revise else lean_git.publish(
-                repo, work, feature, title, pr_body(spec_path, why, found))
+                repo, work, feature, title, pr_body(spec_path, why, verdict))
         except RuntimeError as error:
             why = f"it passed, but could not open its pull request: {error}"
         else:

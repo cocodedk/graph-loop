@@ -44,12 +44,12 @@ class Published(Rig):
                     suites=(True, True, True), reviews=(refused, refused, refused))
         self.assertIn("{} as input crashes the endpoint", self.bodies[0])
 
-    def test_a_refusal_that_names_no_finding_is_not_published(self):
-        bare = Outcome("ok", verdict="REJECT", text='{"review":"REJECT","accept":false,"findings":[]}\n')
+    def test_a_refusal_in_the_older_line_form_is_published_with_its_text(self):
+        older = Outcome("ok", verdict="REJECT", text="REVIEW: REJECT\n1. Dark mode is broken")
         url = self.run_it(self.builder(("ring.py", "a\n"), ("ring.py", "b\n"), ("ring.py", "c\n")),
-                          suites=(True, True, True), reviews=(bare, bare, bare))
-        self.assertEqual("", url)                                      # a refusal must say why
-        self.assertEqual([], self.prs)
+                          suites=(True, True, True), reviews=(older, older, older))
+        self.assertTrue(url)
+        self.assertIn("Dark mode is broken", self.bodies[0])
 
 
 class Stopped(Rig):
