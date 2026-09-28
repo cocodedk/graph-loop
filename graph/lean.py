@@ -124,9 +124,10 @@ def main(argv: list[str] | None = None) -> int:
                       + ("\n\nIts own pull request has no unresolved review threads to fix." if own else ""))
         return 3
     # Questions first, nothing on a guess: once, before a spec's first build. A spec
-    # with a lean_status was grilled then. The status does not prove the text is
+    # carrying on after a stop was grilled then. The status does not prove the text is
     # unchanged: a spec whose requirements change starts afresh without its lean_ fields.
-    if not info.get("lean_status") and lean_run.grill(ws, repo, [spec], path):
+    if not revise and info.get("lean_status") != "stopped" \
+            and lean_run.grill(ws, repo, [spec], path):
         return 2
     url = lean_run.run_feature(ws, repo, spec, profile, path, revise, str(info.get("lean_pr", "")))
     if not url:

@@ -179,6 +179,14 @@ class Entry(unittest.TestCase):
         grill.assert_not_called()
         feature.assert_called_once()
 
+    def test_a_status_the_loop_never_writes_is_still_grilled(self):
+        (self.ws.root / "contact").write_text("person@example.test\n")
+        self.spec.write_text("---\nlean_status: ready\n---\nRestyle the Log screen.\n")
+        with mock.patch.object(lean_run, "grill", return_value="Which colour?"), \
+                mock.patch.object(lean_run, "run_feature") as feature:
+            self.assertEqual(2, lean.main(self.argv()))
+        feature.assert_not_called()
+
     def test_questions_stop_the_run_before_any_build(self):
         (self.ws.root / "contact").write_text("person@example.test\n")
         with mock.patch.object(lean_run, "grill", return_value="Which colour?"), \
