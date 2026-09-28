@@ -166,6 +166,12 @@ class Repair(Rig):
         self.assertEqual(3, len(self.prompts))
         self.assertEqual("c\n", show(self.repo, "lean/rest-ring", "ring.py"))
 
+    def test_the_builder_reads_the_lessons_and_the_reviewer_does_not(self):
+        (self.spec.parent / "lessons.md").write_text("- ES modules need a web server.\n")
+        self.run_it(self.builder(("ring.py", "amber\n")))
+        self.assertIn("ES modules need a web server.", self.prompts[0])
+        self.assertNotIn("ES modules need a web server.", self.reviews[0])   # the diff, never the lessons
+
     def test_a_builder_that_changes_nothing_is_not_reviewed(self):
         self.run_it(self.builder(), suites=(), reviews=())
         self.assertEqual([], self.suites)

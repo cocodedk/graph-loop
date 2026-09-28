@@ -1,12 +1,10 @@
 """One feature of the lean loop (docs/rfc/lean-loop.md): build, check, publish.
 
-A worktree off origin/main; one builder writes the feature and its tests; the suite
-runs masked (`gates.run_gate`); one reviewer reads the diff. A red suite or a refused
-review gets a repair pass with the failure text, up to `REPAIRS` of them; a model that
-gave no real answer gets none. Green, with the reviewer's verdict: pushed as
-`lean/<feature>` with a pull request carrying its findings; main never moves. Otherwise
-the person is emailed why and the feature stops, its worktree kept. The spec file's
-front matter records how it ended.
+A worktree off origin/main; one builder writes the feature and its tests; the suite runs masked
+(`gates.run_gate`); one reviewer reads the diff. A red suite or a refused review gets a repair with
+the failure text, up to `REPAIRS`; a model that gave no real answer gets none. Green, with a verdict:
+pushed as `lean/<feature>` with a pull request carrying the findings. Otherwise the person is emailed
+why and the feature stops, its worktree kept; the spec's front matter records how it ended.
 """
 
 from __future__ import annotations
@@ -23,7 +21,7 @@ import lean_spec
 import providers
 import review
 import tools
-from lean_spec import record
+from lean_spec import lessons, record
 from providers import REVIEW_EFFORT  # the one review effort, for both loops
 from review_scope import VERDICT
 from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
@@ -85,7 +83,7 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
               f"each, to where it ends, and names a design reference (a mock, a sketch or an existing "
               f"screen) to match. Ask about anything vague, contradictory or likely to confuse a user. "
               f"Each finding is one question to the person. What the builder can settle itself is "
-              f"no question: accept.\n\n{specs}\n\n{VERDICT}")
+              f"no question: accept.{lessons(pathlib.Path(spec_paths[0]).parent)}\n\n{specs}\n\n{VERDICT}")
 
     def paid(kind, account, cost, tokens, _text):
         ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens,
@@ -155,7 +153,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     prompt = (f"Implement what this spec asks, including its tests. Follow the repository's "
               f"CLAUDE.md and the profile at {profile_path}. Run the suite with "
               f"`bash {script}` and leave it green. Do not commit: the loop commits.\n\n"
-              f"## Spec\n\n{spec}")
+              f"## Spec\n\n{spec}{lessons(pathlib.Path(spec_path).parent)}")
     built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
                   "in this checkout: fix that, and keep the suite green." if last else prompt, tree,
                   effort=providers.EFFORT)

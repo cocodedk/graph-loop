@@ -52,3 +52,13 @@ def start(repo: str, feature: str, spec: str, revise: str = "") -> tuple[Worktre
         return tree.reuse(str(kept)), last
     except HeadMoved:                          # the kept work no longer fits main: start over
         return Worktree(repo, feature, commit=lean_git.BASE).create(), ""
+
+
+def lessons(folder) -> str:
+    """The project's lessons from earlier runs, `lessons.md` beside its specs, as a prompt section,
+    or "" when there are none. People write them, one fact per line with its evidence; the loop only
+    reads them. They go to the grill and the builder, never to the reviewer, whose judgement stays
+    its own."""
+    path = pathlib.Path(folder) / "lessons.md"
+    text = path.read_text("utf-8").strip() if path.is_file() else ""
+    return f"\n\n## Lessons from earlier runs of this project (hints to check, never proof)\n\n{text}" if text else ""

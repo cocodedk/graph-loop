@@ -58,6 +58,16 @@ class Grill(unittest.TestCase):
                       "every page and state", "empty, loading and error", "design reference"):
             self.assertIn(asked, self.prompt)
 
+    def test_the_grill_reads_the_projects_lessons_beside_the_spec(self):
+        (self.spec.parent / "lessons.md").write_text("- Say which earlier tests the builder may change.\n")
+        self.grill(Outcome("ok", verdict="ACCEPT"))
+        self.assertIn("Lessons from earlier runs of this project (hints to check, never proof)", self.prompt)
+        self.assertIn("Say which earlier tests the builder may change.", self.prompt)
+
+    def test_without_lessons_the_grill_prompt_has_none(self):
+        self.grill(Outcome("ok", verdict="ACCEPT"))
+        self.assertNotIn("Lessons from earlier runs", self.prompt)
+
     def test_every_mail_names_its_project(self):
         inside = pathlib.Path(repo()) / "scratchpad" / "lean"      # a workspace in a checkout
         inside.mkdir(parents=True)
