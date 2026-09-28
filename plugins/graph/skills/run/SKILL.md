@@ -67,7 +67,9 @@ the run.
 python3 $GL/graph/lean.py --workspace <ws> --repo <repo> --spec docs/lean/01-first.md [--profile <file>]
 ```
 
-The run first fetches origin. Then a reviewer reads the spec before anything is built:
+The run first fetches origin. Then, before a spec's first build, a reviewer reads it
+(a spec that carries on after a stop is not read again; if its requirements change,
+delete its `lean_` front matter so it starts afresh):
 
 - **Exit 2:** its questions have been emailed and nothing was built. Answer them in
   the specs, then run again.
