@@ -11,8 +11,6 @@ front matter records how it ended.
 
 from __future__ import annotations
 
-import contextlib
-import json
 import os
 import pathlib
 import re
@@ -131,12 +129,8 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
     return "", verdict
 
 
-def pr_body(spec_path: str, why: str, verdict) -> str:
-    """What a new pull request says: the suite, the reviewer's verdict and what it found. A
-    clean ACCEPT's text is its bare answer, one JSON document, which finds nothing."""
-    found = verdict.text.strip()
-    with contextlib.suppress(ValueError):
-        found = "" if verdict.verdict == "ACCEPT" and json.loads(found) is not None else found
+def pr_body(spec_path: str, why: str, found: str) -> str:
+    """What a new pull request says: the suite, the reviewer's verdict and its findings."""
     said = "accepted it" if not why else "still did not accept it after the last repair"
     return (f"Built by graph-loop's lean loop from `{pathlib.Path(spec_path).name}`: the suite "
             f"is green, and an independent reviewer {said}."
@@ -173,14 +167,16 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                       effort=REPAIR_EFFORT)
         why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], round_,
                              bool(revise))
-    # Green, and accepted or still refused after the last repair: published, with what the
-    # reviewer found, for whoever merges it. Anything else stops below.
-    if not why or (verdict is not None and verdict.verdict == "REJECT"):
+    # Findings are the reviewer's text unless the parser reads that text as its answer (a
+    # reply with none keeps its answer as its text). Green, and accepted or still refused
+    # for named findings after the last repair: published with them. Else it stops below.
+    found = "" if verdict is None or review._read_review(verdict.text)[0] else verdict.text.strip()
+    if not why or (verdict is not None and verdict.verdict == "REJECT" and found):
         try:
             title = f"feat({feature}): {feature}"
             work = lean_git.commit(repo, tree.path, tree.commit, title)
             url = lean_git.update(repo, work, feature, pr) if revise else lean_git.publish(
-                repo, work, feature, title, pr_body(spec_path, why, verdict))
+                repo, work, feature, title, pr_body(spec_path, why, found))
         except RuntimeError as error:
             why = f"it passed, but could not open its pull request: {error}"
         else:
