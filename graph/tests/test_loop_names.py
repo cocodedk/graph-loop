@@ -17,7 +17,7 @@ import molecule
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 from test_loop import Fakes, loop_for, task
 
-EXPECTED_TESTS = 9
+EXPECTED_TESTS = 10
 
 
 def repo(**files) -> pathlib.Path:
@@ -40,6 +40,13 @@ class BeforeABuilderIsPaid(unittest.TestCase):
 
     def test_the_card_it_waits_for_can_make_the_name(self):
         self.producer["creates"] = ["app_py:outcome_facts"]
+        self.assertEqual(
+            molecule.unknown_names(self.reader, [self.producer, self.reader], self.root), "")
+
+    def test_a_name_inside_what_it_creates_is_made_too(self):
+        # `path:text` promises the text is in the file, so a longer promise
+        # holds a shorter name: the containment the file itself is asked.
+        self.producer["creates"] = ["app_py:def outcome_facts"]
         self.assertEqual(
             molecule.unknown_names(self.reader, [self.producer, self.reader], self.root), "")
 

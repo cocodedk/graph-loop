@@ -136,7 +136,7 @@ def validate(answer: dict, *, repo: pathlib.Path, sources: list[pathlib.Path],
         _task(atom, repo, known, siblings=siblings)
     assert_order(name, made, rows, target)
     assert_one_owner(name, made, rows, target)
-    available(leaves, repo, tip)
+    available(leaves, rows, repo, tip)
     if target:
         old = {signature(row) for row in lineage(target, rows)}
         if any(signature(atom) in old for atom in leaves):

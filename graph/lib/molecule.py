@@ -6,8 +6,8 @@ field `outcome_facts`, an `observation` field on the story — and each cost the
 loop a day of refusals. The mistake is always the same shape, so the check is
 one rule:
 
-    every name an atom uses must already exist, or an earlier atom in the
-    same molecule must say it creates it.
+    every name an atom uses must already exist, or a card the atom waits
+    for must say it creates it.
 
 A name is written `path:text` — the file that must contain it, and the text
 that must be in that file. Existence is asked of the repository, never of a
@@ -77,9 +77,21 @@ def unavailable(atoms: list[dict], look) -> list[tuple[str, str]]:
             split(name)
             made.add(name)
         for name in atom.get("uses") or []:
-            if name not in made and not look(name):
+            if not covered(name, made) and not look(name):
                 missing.append((str(atom.get("id") or "?"), name))
     return missing
+
+
+def covered(name: str, made) -> bool:
+    """Whether a `creates` in `made` promises this name.
+
+    A name is text inside a file, so the question is the one `present` asks of
+    the file: `path:def load` promises the file will hold "def load", and so
+    "load". Asked by exact text, the plan phase refused `path:load` against it
+    until the file was built, and the loop accepted the same card afterwards.
+    """
+    path, text = split(name)
+    return any(where == path and text in said for where, said in map(split, made))
 
 
 def ordered(folder: pathlib.Path) -> list[pathlib.Path]:
