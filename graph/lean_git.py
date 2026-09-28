@@ -70,11 +70,6 @@ def pull_request(repo: str, branch: str, title: str, body: str) -> str:
     return done.stdout.strip().splitlines()[-1]
 
 
-def fork_point(repo: str, feature: str) -> str:
-    """Where lean/<feature> left origin's main: the reviewer diffs the whole feature."""
-    return git(repo, "merge-base", BASE, f"refs/remotes/origin/lean/{feature}")
-
-
 def update(repo: str, work: str, feature: str, url: str) -> str:
     """Push commit `work` (made on the branch's tip) onto lean/<feature>, the same
     pull request. A plain push: git refuses it unless it is a fast-forward."""
