@@ -9,7 +9,9 @@ The lean loop builds one spec file per run. One Claude builder works in a fresh
 worktree off origin's `main`. The project's suite is the gate, and a Codex reviewer
 reads the diff. After up to two repair passes (none when the builder or reviewer gives no
 real answer, such as on a usage limit: that stops the run at once), the work is pushed as the branch
-`lean/<feature>` with a pull request; `main` never moves. The spec file's front matter
+`lean/<feature>` with a pull request; `main` never moves. A green change the reviewer
+still refuses after the last repair is pushed too, its findings in the pull request's
+description for whoever merges it. The spec file's front matter
 gets `lean_status` (`pr_open` or `stopped`) and `lean_pr` or `lean_worktree`. While any
 branch on origin is unmerged, the loop's own or anyone's, the run builds nothing. So
 the next spec waits until the person has merged (or deleted) every open branch. You set

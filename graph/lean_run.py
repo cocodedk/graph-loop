@@ -1,12 +1,14 @@
 """One feature of the lean loop (docs/rfc/lean-loop.md): build, check, publish.
 
 A worktree off origin/main; one builder writes the feature and its tests; the
-repository's own suite runs masked (`gates.run_gate`); one reviewer reads the
-diff. A red suite or a refused review gets a repair pass with the failure
-text, up to `REPAIRS` of them; a builder or reviewer that gave no real answer (a limit,
-a busy provider, a lapsed sign-in, a crash) gets none and stops at once. Still failing: the person is emailed why, and the feature stops with its
-worktree kept. Passing: the change is committed, pushed as `lean/<feature>` and opened
-as a pull request; main never moves. The spec file's front matter records how it ended.
+repository's own suite runs masked (`gates.run_gate`); one reviewer reads the diff.
+A red suite or a refused review gets a repair pass with the failure text, up to
+`REPAIRS` of them. A builder or reviewer that gave no real answer (a limit, a busy
+provider, a lapsed sign-in, a crash) gets none. Still red, or unanswered: the person is
+emailed why, and the feature stops with its worktree kept. Green, with the reviewer's
+verdict: the change is committed, pushed as `lean/<feature>` and opened as a pull
+request carrying the reviewer's findings, accepted or still refused; main never moves.
+The spec file's front matter records how it ended.
 """
 
 from __future__ import annotations
@@ -129,6 +131,16 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
     return "", verdict
 
 
+def pr_body(spec_path: str, why: str, verdict) -> str:
+    """What a new pull request says: the suite, the reviewer's verdict, its findings. A
+    clean ACCEPT's text is its bare answer line (`review_read._read_review`), not a finding."""
+    said = "accepted it" if not why else "still did not accept it after the last repair"
+    found = "" if verdict.text.lstrip().startswith("{") else verdict.text.strip()
+    return (f"Built by graph-loop's lean loop from `{pathlib.Path(spec_path).name}`: the suite "
+            f"is green, and an independent reviewer {said}."
+            + (f"\n\nThe reviewer's findings:\n\n{found}" if found else ""))
+
+
 def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                 revise: str = "", pr: str = "") -> str:
     """One spec file, start to end. Its pull request's URL, or "" when it stopped.
@@ -159,14 +171,14 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                       effort=REPAIR_EFFORT)
         why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], round_,
                              bool(revise))
-    if not why:
+    # A green suite whose reviewer gave a verdict is published, refused or not: after the
+    # last repair, what the reviewer still finds goes to the pull request, not to a stop.
+    if not why or (verdict is not None and verdict.verdict in ("ACCEPT", "REJECT")):
         try:
             title = f"feat({feature}): {feature}"
             work = lean_git.commit(repo, tree.path, tree.commit, title)
             url = lean_git.update(repo, work, feature, pr) if revise else lean_git.publish(
-                repo, work, feature, title,
-                f"Built by graph-loop's lean loop from `{pathlib.Path(spec_path).name}`: "
-                "the suite is green and an independent reviewer accepted it.")
+                repo, work, feature, title, pr_body(spec_path, why, verdict))
         except RuntimeError as error:
             why = f"it passed, but could not open its pull request: {error}"
         else:
