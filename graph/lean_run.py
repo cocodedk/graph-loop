@@ -2,16 +2,16 @@
 
 A worktree off origin/main; one builder writes the feature and its tests; the suite runs masked
 (`gates.run_gate`); one reviewer reads the diff. A red suite or a refused review gets a repair with
-the failure text, up to `REPAIRS`; a model that gave no real answer gets none. Green, with a verdict:
-pushed as `lean/<feature>` with a pull request carrying the findings. Otherwise the person is emailed
-why and the feature stops, its worktree kept; the spec's front matter records how it ended.
+the failure text, up to `REPAIRS`, while repairs change something; a model that gave no real answer
+gets none. Green, with a verdict: pushed as `lean/<feature>` with a pull request carrying the
+findings. Otherwise the person is emailed why and the feature stops, its worktree kept; the spec's
+front matter records how it ended.
 """
 
 from __future__ import annotations
 
 import os
 import pathlib
-import re
 
 import accounts
 import gate_paths
@@ -21,7 +21,7 @@ import lean_spec
 import providers
 import review
 import tools
-from lean_spec import lessons, record
+from lean_spec import lessons, record, slug
 from providers import REVIEW_EFFORT  # the one review effort, for both loops
 from review_scope import VERDICT
 from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
@@ -103,10 +103,6 @@ def mail(ws, subject: str, body: str) -> None:
     ws.mail_person(subject, body)
 
 
-def slug(path: str) -> str:
-    return re.sub(r"[^A-Za-z0-9._-]+", "-", pathlib.Path(path).stem).strip("-") or "feature"
-
-
 def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
           revising: bool = False) -> tuple[str, providers.Outcome | None]:
     """Why this round is not done ("" when it is), and the reviewer's answer when it
@@ -159,14 +155,19 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                   effort=providers.EFFORT)
     why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], 1, bool(revise))
     for round_ in range(2, 2 + REPAIRS):
-        # Only a real answer is worth a repair (`Outcome.consumes_attempt`): a builder or a
-        # reviewer that hit a limit, was busy, signed out or broke stops the run, rounds kept.
+        # Only a real answer is worth a repair (`Outcome.consumes_attempt`): a limit, a busy or
+        # signed-out account or a crash stops the run, rounds kept. So does a repair that changed
+        # nothing, a builder that cannot (a refused command) or will not: the next would do the same.
         if not why or not built.ok or (verdict is not None and not verdict.ok):
             break
         ws.event("lean_repair", task=feature, why=why[-2000:])
+        before = tree.diff(binary=True, against=tree.commit)
         built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
                       "Fix that, and keep the suite green.", tree, resume=built.session,
                       effort=REPAIR_EFFORT)
+        if built.ok and tree.diff(binary=True, against=tree.commit) == before:
+            why = f"the repair changed nothing. The builder said:\n{built.text[:1500]}\n\n{why}"
+            break
         why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], round_,
                              bool(revise))
     # Findings are the reviewer's text unless the parser reads that text as its answer (a

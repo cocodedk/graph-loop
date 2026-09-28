@@ -8,6 +8,7 @@ pull request has review findings is revised on its own branch.
 from __future__ import annotations
 
 import pathlib
+import re
 
 import cardfile
 import lean_git
@@ -62,3 +63,8 @@ def lessons(folder) -> str:
     path = pathlib.Path(folder) / "lessons.md"
     text = path.read_text("utf-8").strip() if path.is_file() else ""
     return f"\n\n## Lessons from earlier runs of this project (hints to check, never proof)\n\n{text}" if text else ""
+
+
+def slug(path: str) -> str:
+    """The feature's name, from its spec file's name."""
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", pathlib.Path(path).stem).strip("-") or "feature"
