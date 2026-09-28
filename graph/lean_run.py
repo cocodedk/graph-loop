@@ -131,11 +131,9 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
     return "", verdict
 
 
-def pr_body(spec_path: str, why: str, verdict) -> str:
-    """What a new pull request says: the suite, the reviewer's verdict, its findings. A
-    clean ACCEPT's text is its bare answer line (`review_read._read_review`), not a finding."""
+def pr_body(spec_path: str, why: str, found: str) -> str:
+    """What a new pull request says: the suite, the reviewer's verdict, its findings."""
     said = "accepted it" if not why else "still did not accept it after the last repair"
-    found = "" if verdict.text.lstrip().startswith("{") else verdict.text.strip()
     return (f"Built by graph-loop's lean loop from `{pathlib.Path(spec_path).name}`: the suite "
             f"is green, and an independent reviewer {said}."
             + (f"\n\nThe reviewer's findings:\n\n{found}" if found else ""))
@@ -171,14 +169,15 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                       effort=REPAIR_EFFORT)
         why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], round_,
                              bool(revise))
-    # A green suite whose reviewer gave a verdict is published, refused or not: after the
-    # last repair, what the reviewer still finds goes to the pull request, not to a stop.
-    if not why or (verdict is not None and verdict.verdict in ("ACCEPT", "REJECT")):
+    # A reply without findings keeps its answer as its text, which the parser reads as a
+    # verdict. Green, and accepted or still refused for named findings: published, with them.
+    found = "" if verdict is None or review._read_review(verdict.text)[0] else verdict.text.strip()
+    if not why or (verdict is not None and verdict.verdict == "REJECT" and found):
         try:
             title = f"feat({feature}): {feature}"
             work = lean_git.commit(repo, tree.path, tree.commit, title)
             url = lean_git.update(repo, work, feature, pr) if revise else lean_git.publish(
-                repo, work, feature, title, pr_body(spec_path, why, verdict))
+                repo, work, feature, title, pr_body(spec_path, why, found))
         except RuntimeError as error:
             why = f"it passed, but could not open its pull request: {error}"
         else:

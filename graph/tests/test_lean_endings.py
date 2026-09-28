@@ -38,6 +38,19 @@ class Published(Rig):
         self.assertIn("accepted it", self.bodies[0])
         self.assertNotIn("{", self.bodies[0])                          # never the bare answer line
 
+    def test_a_finding_that_starts_with_a_brace_is_kept(self):
+        refused = Outcome("ok", verdict="REJECT", text="{} as input crashes the endpoint")
+        self.run_it(self.builder(("ring.py", "a\n"), ("ring.py", "b\n"), ("ring.py", "c\n")),
+                    suites=(True, True, True), reviews=(refused, refused, refused))
+        self.assertIn("{} as input crashes the endpoint", self.bodies[0])
+
+    def test_a_refusal_that_names_no_finding_is_not_published(self):
+        bare = Outcome("ok", verdict="REJECT", text='{"review":"REJECT","accept":false,"findings":[]}\n')
+        url = self.run_it(self.builder(("ring.py", "a\n"), ("ring.py", "b\n"), ("ring.py", "c\n")),
+                          suites=(True, True, True), reviews=(bare, bare, bare))
+        self.assertEqual("", url)                                      # a refusal must say why
+        self.assertEqual([], self.prs)
+
 
 class Stopped(Rig):
     def test_a_usage_limit_ends_the_run_without_spending_a_repair(self):
