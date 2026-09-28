@@ -3,7 +3,8 @@
 A worktree off origin/main; one builder writes the feature and its tests; the
 repository's own suite runs masked (`gates.run_gate`); one reviewer reads the
 diff. A red suite or a refused review gets a repair pass with the failure
-text, up to `REPAIRS` of them. Still failing: the person is emailed why, and the feature stops with its
+text, up to `REPAIRS` of them; a builder whose account cannot answer (a limit, a busy
+provider, a lapsed sign-in) gets none and stops at once. Still failing: the person is emailed why, and the feature stops with its
 worktree kept. Passing: the change is committed, pushed as `lean/<feature>` and opened
 as a pull request; main never moves. The spec file's front matter records how it ended.
 """
@@ -145,8 +146,8 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                   effort=providers.EFFORT)
     why = check(ws, feature, spec, tree, built, profile["suite_command"], 1, against)
     for round_ in range(2, 2 + REPAIRS):
-        if not why:
-            break
+        if not why or built.kind in ("limit", "capacity", "auth"):   # the account, not the work:
+            break                                                    # stop now, keep every round
         ws.event("lean_repair", task=feature, why=why[-2000:])
         built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
                       "Fix that, and keep the suite green.", tree, resume=built.session,
