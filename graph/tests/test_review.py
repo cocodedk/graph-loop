@@ -108,9 +108,9 @@ class UntrustedVerdictTest(unittest.TestCase):
         self.assertEqual("malformed", out.kind)
         self.assertIsNone(out.verdict)
 
-    def test_more_than_three_findings_is_malformed(self):
+    def test_more_than_ten_findings_is_malformed(self):
         binary = fake("""echo '{"review": "ACCEPT", "accept": true, """
-                      """"findings": ["a", "b", "c", "d"]}'""")
+                      """"findings": ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"]}'""")
         out = codex(binary, "review this")
         self.assertEqual("malformed", out.kind)
         self.assertIsNone(out.verdict)
