@@ -1,5 +1,6 @@
 """How a lean run ends when a repair cannot help: a green change is published with the
-reviewer's findings, and a model that gave no real answer stops the run at once.
+reviewer's findings, and a model that gave no real answer, or a repair that changed nothing,
+stops the run at once.
 Git is real; the rest is faked (`test_lean_run.Rig`)."""
 
 import pathlib
@@ -93,6 +94,19 @@ class Stopped(Rig):
         self.assertEqual("", self.run_it(crashed, suites=(), reviews=()))
         self.assertEqual(1, len(self.prompts))           # only a real answer is worth a repair
 
+
+    def test_a_repair_that_changes_nothing_stops_with_the_builders_words(self):
+        def blocked(ws, task, prompt, tree, resume="", effort=""):
+            self.prompts.append(prompt)
+            if len(self.prompts) == 1:
+                (pathlib.Path(tree.path) / "ring.py").write_text("grey\n")
+            return Outcome("ok", session="s1", text="I need permission to start a web server.")
+        self.assertEqual("", self.run_it(blocked, suites=(False, False, False)))
+        self.assertEqual(2, len(self.prompts))           # one repair: a second would do the same
+        body = self.mails[0][1]
+        self.assertIn("the repair changed nothing", body)
+        self.assertIn("I need permission to start a web server.", body)
+        self.assertIn("FAILED: AmberTest > overdue", body)   # the failure it could not fix
 
 if __name__ == "__main__":
     unittest.main()
