@@ -3,8 +3,8 @@
 A worktree off origin/main; one builder writes the feature and its tests; the
 repository's own suite runs masked (`gates.run_gate`); one reviewer reads the
 diff. A red suite or a refused review gets a repair pass with the failure
-text, up to `REPAIRS` of them; a builder whose account cannot answer (a limit, a busy
-provider, a lapsed sign-in) gets none and stops at once. Still failing: the person is emailed why, and the feature stops with its
+text, up to `REPAIRS` of them; a builder or reviewer that gave no real answer (a limit,
+a busy provider, a lapsed sign-in, a crash) gets none and stops at once. Still failing: the person is emailed why, and the feature stops with its
 worktree kept. Passing: the change is committed, pushed as `lean/<feature>` and opened
 as a pull request; main never moves. The spec file's front matter records how it ended.
 """
@@ -106,24 +106,25 @@ def slug(path: str) -> str:
 
 
 def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
-          against: str = "") -> str:
-    """Why this round is not done, or "" when it is. The reviewer reads the diff
-    against `against` (the whole feature when revising), else against the base."""
+          against: str = "") -> tuple[str, providers.Outcome | None]:
+    """Why this round is not done ("" when it is), and the reviewer's answer when it
+    was asked. The reviewer reads the diff against `against` (the whole feature when
+    revising), else against the base."""
     if not built.ok:
-        return f"the builder did not finish ({built.kind}): {built.text[:500]}"
+        return f"the builder did not finish ({built.kind}): {built.text[:500]}", None
     if not tree.diff(against=tree.commit).strip():
-        return "the builder changed nothing"
+        return "the builder changed nothing", None
     diff = tree.diff(against=against or tree.commit)
     passed, tail = masked(ws, command, tree.path)
     ws.event("lean_suite", task=feature, round=round_, passed=passed, tail=tail[-2000:])
     if not passed:
-        return f"the suite is red ({command}):\n{tail}"
+        return f"the suite is red ({command}):\n{tail}", None
     verdict = judge(ws, feature, spec, diff, tree.path)
     ws.event("lean_review", task=feature, round=round_, outcome=verdict.kind,
              verdict=verdict.verdict, findings=verdict.text[:1000])
     if verdict.verdict != "ACCEPT":
-        return f"the review did not accept ({verdict.kind}, {verdict.verdict}): {verdict.text}"
-    return ""
+        return f"the review did not accept ({verdict.kind}, {verdict.verdict}): {verdict.text}", verdict
+    return "", verdict
 
 
 def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
@@ -144,15 +145,18 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
                   "in this checkout: fix that, and keep the suite green." if last else prompt, tree,
                   effort=providers.EFFORT)
-    why = check(ws, feature, spec, tree, built, profile["suite_command"], 1, against)
+    why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], 1, against)
     for round_ in range(2, 2 + REPAIRS):
-        if not why or built.kind in ("limit", "capacity", "auth"):   # the account, not the work:
-            break                                                    # stop now, keep every round
+        # Only a real answer is worth a repair (`Outcome.consumes_attempt`): a builder or a
+        # reviewer that hit a limit, was busy, signed out or broke stops the run, rounds kept.
+        if not why or not built.ok or (verdict is not None and not verdict.ok):
+            break
         ws.event("lean_repair", task=feature, why=why[-2000:])
         built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
                       "Fix that, and keep the suite green.", tree, resume=built.session,
                       effort=REPAIR_EFFORT)
-        why = check(ws, feature, spec, tree, built, profile["suite_command"], round_, against)
+        why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], round_,
+                             against)
     if not why:
         try:
             title = f"feat({feature}): {feature}"
