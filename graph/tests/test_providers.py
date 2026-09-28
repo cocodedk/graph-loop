@@ -123,13 +123,13 @@ class ClaudeTest(unittest.TestCase):
         for family in ("Bash", "Edit", "Write", "Monitor", "WebFetch"):   # an inherited MCP tool too
             self.assertIn(family, argv.split("--disallowedTools")[1])
 
-    def test_the_effort_is_medium_and_the_model_is_opus(self):
+    def test_the_effort_is_medium_and_the_model_is_sonnet_5_5(self):
         binary = fake("cat > /dev/null; echo \"$@\" > $OUT; echo '" + result() + "'")
         with tempfile.NamedTemporaryFile("r", delete=False) as handle:
             os.environ["OUT"] = handle.name
             claude(binary, "prompt", account="work")
             argv = pathlib.Path(handle.name).read_text()
-        self.assertIn("--model claude-opus-5", argv)
+        self.assertIn("--model claude-sonnet-5-5", argv)
         self.assertIn("--effort medium", argv)
         self.assertNotIn("xhigh", argv)
         self.assertNotIn("max", argv)

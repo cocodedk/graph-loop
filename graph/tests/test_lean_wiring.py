@@ -1,6 +1,8 @@
 """The lean loop's real call sites, with only the providers themselves faked."""
 
+import json
 import pathlib
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -37,6 +39,15 @@ class Wiring(unittest.TestCase):
         self.assertIn("Bash(git push *)", kw["disallowed_tools"])
         paid = next(row for row in self.ws.events() if row["kind"] == "attempt")
         self.assertEqual(("wiring", "build", 0.5), (paid["task"], paid["purpose"], paid["cost"]))
+
+    def test_the_builder_runs_on_sonnet_5_5(self):
+        body = json.dumps({"result": "done", "session_id": "s1", "total_cost_usd": 0.1,
+                           "usage": {"input_tokens": 1, "output_tokens": 1}, "permission_denials": []})
+        done = subprocess.CompletedProcess([], 0, body, "")
+        with mock.patch.object(providers, "_run", return_value=done) as run:
+            lean_run.build(self.ws, {"id": "wiring", "gate": "./run-tests --all"}, "build it", self.tree)
+        argv = run.call_args.args[0]
+        self.assertEqual("claude-sonnet-5-5", argv[argv.index("--model") + 1])
 
     def test_a_repair_build_sends_and_logs_its_own_effort(self):
         with mock.patch.object(providers, "claude", return_value=Outcome("ok")) as call:
