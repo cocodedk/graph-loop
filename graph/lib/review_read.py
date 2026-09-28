@@ -105,4 +105,7 @@ def _json_verdict(line: str) -> tuple[str | None, str] | None:
             or accept != (word == "ACCEPT")
             or len(found) > 3):
         return None, ""
-    return word, "; ".join(found)
+    named = [one for one in found if one.strip()]
+    if word == "REJECT" and not named:   # the answer rule: a refusal names what is wrong
+        return None, ""
+    return word, "; ".join(named)
