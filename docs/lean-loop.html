@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lean Loop Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #f3f5f2;
+    --panel: #fdfefd;
+    --ink: #1b231f;
+    --muted: #56635d;
+    --line: #87948d;
+    --accent: #0c7564;
+    --accent-soft: #dcefe9;
+    --wait: #9c5807;
+    --wait-soft: #f6e6cf;
+    --bubble: #1b231f;
+    --bubble-ink: #eef3f0;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #111614;
+      --panel: #18211d;
+      --ink: #e1e8e3;
+      --muted: #9aa8a0;
+      --line: #66746c;
+      --accent: #43c3ac;
+      --accent-soft: #11382f;
+      --wait: #e6a44d;
+      --wait-soft: #3a2911;
+      --bubble: #e1e8e3;
+      --bubble-ink: #111614;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #111614;
+    --panel: #18211d;
+    --ink: #e1e8e3;
+    --muted: #9aa8a0;
+    --line: #66746c;
+    --accent: #43c3ac;
+    --accent-soft: #11382f;
+    --wait: #e6a44d;
+    --wait-soft: #3a2911;
+    --bubble: #e1e8e3;
+    --bubble-ink: #111614;
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    padding-inline: 16px;
+    padding-block: 28px 48px;
+    background: var(--ground);
+    color: var(--ink);
+    font: 15px/1.55 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 860px; margin: 0 auto; display: grid; gap: 18px; }
+  h1 {
+    margin: 0;
+    font: 600 clamp(26px, 4.2vw, 36px)/1.15 "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .lede { margin: 0; max-width: 65ch; color: var(--muted); }
+  code { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 0.9em; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+  .legend li { display: flex; align-items: center; gap: 8px; }
+  .legend svg { width: 28px; height: 18px; flex: none; }
+  .key-step { fill: var(--panel); stroke: var(--line); stroke-width: 1.4; }
+  .key-ok { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.4; }
+  .key-wait { fill: var(--wait-soft); stroke: var(--wait); stroke-width: 1.4; }
+
+  figure { margin: 0; display: grid; gap: 10px; }
+  .diagram { overflow-x: auto; }
+  .canvas { position: relative; min-width: 620px; max-width: 820px; margin: 0 auto; }
+  .canvas > svg { display: block; width: 100%; height: auto; }
+  figcaption { font-size: 13px; color: var(--muted); max-width: 65ch; }
+
+  .edge { fill: none; stroke: var(--line); stroke-width: 1.4; }
+  .arrowhead { fill: var(--line); }
+  .edge-label {
+    fill: var(--muted);
+    font: 500 11px "IBM Plex Sans", system-ui, sans-serif;
+    paint-order: stroke;
+    stroke: var(--ground);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+  }
+  .node { cursor: pointer; outline: none; }
+  .node .shape { fill: var(--panel); stroke: var(--line); stroke-width: 1.4; transition: stroke-width 0.12s; }
+  .node.end-ok .shape { fill: var(--accent-soft); stroke: var(--accent); }
+  .node.end-wait .shape { fill: var(--wait-soft); stroke: var(--wait); }
+  .node.start .shape { fill: var(--ink); stroke: var(--ink); }
+  .node .label { fill: var(--ink); font: 600 13px "IBM Plex Sans", system-ui, sans-serif; }
+  .node .sub { fill: var(--muted); font: 400 10.5px "IBM Plex Mono", ui-monospace, monospace; }
+  .node.start .label, .node.start .sub { fill: var(--ground); }
+  .node:hover .shape, .node:focus-visible .shape, .node.active .shape { stroke: var(--accent); stroke-width: 2.6; }
+  .node.end-wait:hover .shape, .node.end-wait:focus-visible .shape, .node.end-wait.active .shape { stroke: var(--wait); }
+  .tag rect { fill: var(--accent); }
+  .tag text { fill: var(--ground); font: 600 9.5px "IBM Plex Sans", system-ui, sans-serif; letter-spacing: 0.06em; }
+
+  .bubble {
+    position: absolute;
+    z-index: 2;
+    width: min(300px, 70vw);
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--bubble);
+    color: var(--bubble-ink);
+    font-size: 13.5px;
+    line-height: 1.5;
+    box-shadow: 0 10px 28px rgb(0 0 0 / 0.22);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.12s, transform 0.12s;
+  }
+  .bubble.shown { opacity: 1; transform: none; }
+  .bubble strong { display: block; margin-bottom: 4px; font-weight: 600; }
+  .bubble .kind { display: block; margin-top: 8px; font: 400 11px "IBM Plex Mono", ui-monospace, monospace; opacity: 0.75; }
+  @media (prefers-reduced-motion: reduce) {
+    .bubble, .node .shape { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>One run of the lean loop</h1>
+  </header>
+  <p class="lede">Every decision one run of <code>graph/lean.py</code> makes, from a spec file to a pull request.
+    Point at a step, or tap it, to read what it does. Steps tagged <strong>new</strong> changed on 28 September 2026.</p>
+  <ul class="legend" aria-label="Legend">
+    <li><svg viewBox="0 0 28 18" aria-hidden="true"><rect class="key-step" x="1" y="2" width="26" height="14" rx="3"/></svg>A step</li>
+    <li><svg viewBox="0 0 28 18" aria-hidden="true"><polygon class="key-step" points="14,1 27,9 14,17 1,9"/></svg>A decision</li>
+    <li><svg viewBox="0 0 28 18" aria-hidden="true"><rect class="key-ok" x="1" y="2" width="26" height="14" rx="7"/></svg>Done: a pull request is ready</li>
+    <li><svg viewBox="0 0 28 18" aria-hidden="true"><rect class="key-wait" x="1" y="2" width="26" height="14" rx="7"/></svg>Stops and waits for you</li>
+  </ul>
+  <figure>
+    <div class="diagram">
+      <div class="canvas" id="canvas">
+        <svg id="flow" viewBox="0 0 800 1540" role="img"
+             aria-label="Flowchart of one lean-loop run: preflight checks, the grill, the build, the suite, the review, up to two repairs, then a pull request and a build of its branch."></svg>
+        <div class="bubble" id="bubble" role="tooltip"></div>
+      </div>
+    </div>
+    <figcaption>One spec per run, one pull request per spec, and <code>main</code> never moves.
+      The loop repairs at most twice, and a model that gives no real answer ends the run without spending a round.</figcaption>
+  </figure>
+</main>
+<script>
+(() => {
+  const KIND = { start: "start", step: "step", decision: "decision", "end-ok": "done", "end-wait": "stops and waits for you" };
+  const STEPS = [
+    { id: "start", kind: "start", x: 400, y: 40, label: "Run one spec", sub: "lean.py --spec NN-name.md",
+      text: "One run of graph/lean.py takes one spec file and turns it into one pull request. It never pushes to main." },
+    { id: "ready", kind: "decision", x: 400, y: 130, label: "Ready to run?",
+      text: "Two things must be in place: a mail contact proven with graph-goal.py contact, and a profile naming the project's suite command, build command and artifact. If either is missing, nothing runs." },
+    { id: "refuse", kind: "end-wait", x: 670, y: 130, label: "Refuses to start", sub: "says what is missing",
+      text: "Nothing was built. The message says what to fix: prove the contact, or copy a profile from graph-loop's profiles folder and link it from the project's CLAUDE.md." },
+    { id: "branches", kind: "decision", x: 400, y: 225, label: "Unmerged branches?",
+      text: "The run fetches origin first. Any branch not merged into main blocks new work, so unreviewed changes never pile up. The one exception is this spec's own pull request with open review threads: the run goes on to fix those." },
+    { id: "wait", kind: "end-wait", x: 670, y: 225, label: "Waits for a merge", sub: "exit 3",
+      text: "Nothing was built. You get a mail listing the unmerged branches, this spec's own pull request included when it has no open review threads. Merge or delete them, then run the spec again." },
+    { id: "first_build", kind: "decision", x: 400, y: 320, label: "First build?", changed: true,
+      text: "The grill runs once, before a spec's first build. A spec carrying on after a stop, or a revision of its own pull request, goes straight to the checkout. Changed on 28 September (#169): a resumed spec used to be grilled again every time." },
+    { id: "grill", kind: "step", x: 400, y: 410, label: "Grill the spec", sub: "Codex · xhigh",
+      text: "Codex reads the spec before anything is built, read-only. It looks only for what a person has to decide: a contradiction, a choice the builder would have to guess, or a requirement that cannot be met on this machine." },
+    { id: "questions", kind: "decision", x: 400, y: 500, label: "Questions for you?",
+      text: "If the grill found anything, the questions go to you by mail and nothing is built. Anything the builder can settle itself is not a question." },
+    { id: "asks", kind: "end-wait", x: 670, y: 500, label: "Mails you questions", sub: "exit 2",
+      text: "Nothing was built. Answer the questions in the spec, then run it again." },
+    { id: "checkout", kind: "step", x: 400, y: 590, label: "Check out", sub: "a private git worktree",
+      text: "The builder gets its own git worktree: fresh from origin/main for a new spec, the kept worktree of a stopped spec so paid work carries on, or the pull request's branch for a revision." },
+    { id: "build", kind: "step", x: 400, y: 675, label: "Build", sub: "Claude · medium, repairs high",
+      text: "One Claude builder writes the feature and its tests, and may run the suite itself. The first build runs at medium effort. Each repair runs at high and is told exactly why the last attempt fell short." },
+    { id: "real_answer", kind: "decision", x: 400, y: 765, label: "Real answer?", changed: true,
+      text: "A usage limit, a busy provider, a lapsed sign-in or a crash is not an answer. The run stops at once and keeps every repair round for the next run. Changed on 28 September (#170): a limit used to burn all the rounds within seconds." },
+    { id: "stop_builder", kind: "end-wait", x: 670, y: 765, label: "Stops, keeps the work", sub: "exit 1 · no round spent",
+      text: "The worktree is kept and named in the mail. A new spec is marked lean_status: stopped and carries on in that worktree when run again, for example once the limit resets; a stopped revision starts again from its pull request." },
+    { id: "suite", kind: "decision", x: 400, y: 860, label: "Suite green?",
+      text: "The profile's suite command runs in a sandbox with no secrets and an empty home. A red suite, or a builder that changed nothing, goes to a repair." },
+    { id: "revision", kind: "decision", x: 400, y: 955, label: "Revision?", changed: true,
+      text: "A revision fixes review threads on the spec's open pull request. The suite judges it here, and whoever raised the threads, CodeRabbit or a person, reads it again on the pull request. Changed on 28 September (#171): the loop no longer re-reviews the whole feature." },
+    { id: "review", kind: "step", x: 400, y: 1045, label: "Review", sub: "Codex · xhigh",
+      text: "Codex reads the diff against main, read-only. It refuses only for something the spec asks that does not hold, a failure a user would meet in ordinary use, a security hole, or behaviour without tests. Anything smaller is a finding, and it accepts." },
+    { id: "verdict", kind: "decision", x: 400, y: 1135, label: "Verdict?", changed: true,
+      text: "ACCEPT goes on to publish. REJECT goes to a repair, carrying the findings. No real answer, such as a limit or a malformed reply, stops the run at once, as it does for the builder (#170)." },
+    { id: "stop_reviewer", kind: "end-wait", x: 670, y: 1135, label: "Stops at once", sub: "exit 1 · no round spent",
+      text: "The reviewer could not answer. The work is kept and no repair round was spent. A new spec carries on in its worktree when run again; a stopped revision starts again from its pull request." },
+    { id: "repairs_left", kind: "decision", x: 130, y: 1135, label: "Repairs left?",
+      text: "Up to two repairs follow the first build. Each goes back to the builder with the reason: the suite's output or the reviewer's findings." },
+    { id: "refused_green", kind: "decision", x: 130, y: 1230, label: "Refused, but green?", changed: true,
+      text: "Out of repairs: if the suite is green and the reviewer still refuses for named findings, the change is published anyway, with the findings in the pull request for you to judge. Changed on 28 September (#172): this used to stop and wait for you." },
+    { id: "stop_final", kind: "end-wait", x: 130, y: 1320, label: "Stops, keeps the work", sub: "exit 1",
+      text: "A suite still red after the last repair, or a refusal that names no finding, stops the run. The worktree is kept: a new spec carries on in it when run again, and a stopped revision starts again from its pull request." },
+    { id: "publish", kind: "step", x: 400, y: 1230, label: "Publish", sub: "branch lean/<feature> · PR",
+      text: "The worktree becomes one commit on top of origin/main, pushed as lean/<feature> with a pull request. Its description says whether the reviewer accepted and lists every finding. A revision pushes to the same pull request." },
+    { id: "build_branch", kind: "step", x: 400, y: 1320, label: "Build the branch", sub: "the profile's build command",
+      text: "The profile's build command runs on the pushed branch in a fresh checkout, and the artifact the profile names must exist." },
+    { id: "built", kind: "decision", x: 400, y: 1410, label: "Built?",
+      text: "A green build that produced its artifact means the pull request is ready for a person." },
+    { id: "build_red", kind: "end-wait", x: 670, y: 1410, label: "Build red", sub: "exit 1 · PR stays open",
+      text: "The pull request stays open, and the mail carries the build's output." },
+    { id: "ready_for_review", kind: "end-ok", x: 400, y: 1495, label: "Ready for review", sub: "exit 0 · you merge",
+      text: "You get a mail with the pull request and the artifact to try. Merging is yours, and the next spec starts once nothing is left unmerged." },
+  ];
+  const EDGES = [
+    { pts: [[400, 63], [400, 98]] },
+    { pts: [[500, 130], [570, 130]], label: "no", at: [535, 122] },
+    { pts: [[400, 162], [400, 193]], label: "yes", at: [410, 181], start: true },
+    { pts: [[500, 225], [570, 225]], label: "yes", at: [535, 217] },
+    { pts: [[400, 257], [400, 288]], label: "none", at: [410, 276], start: true },
+    { pts: [[300, 225], [60, 225], [60, 590], [290, 590]], label: "own PR, threads open", at: [180, 217] },
+    { pts: [[300, 320], [60, 320]], label: "no", at: [180, 312], open: true },
+    { pts: [[400, 352], [400, 387]], label: "yes", at: [410, 373], start: true },
+    { pts: [[400, 433], [400, 468]] },
+    { pts: [[500, 500], [570, 500]], label: "yes", at: [535, 492] },
+    { pts: [[400, 532], [400, 567]], label: "no", at: [410, 553], start: true },
+    { pts: [[400, 613], [400, 652]] },
+    { pts: [[400, 698], [400, 733]] },
+    { pts: [[500, 765], [570, 765]], label: "no", at: [535, 757] },
+    { pts: [[400, 797], [400, 828]], label: "yes", at: [410, 816], start: true },
+    { pts: [[300, 860], [130, 860], [130, 1103]], label: "red, or no change", at: [215, 852] },
+    { pts: [[400, 892], [400, 923]], label: "green", at: [410, 911], start: true },
+    { pts: [[500, 955], [785, 955], [785, 1230], [510, 1230]], label: "yes", at: [535, 947] },
+    { pts: [[400, 987], [400, 1022]], label: "no", at: [410, 1008], start: true },
+    { pts: [[400, 1068], [400, 1103]] },
+    { pts: [[500, 1135], [570, 1135]], label: "no answer", at: [535, 1127] },
+    { pts: [[400, 1167], [400, 1207]], label: "ACCEPT", at: [410, 1191], start: true },
+    { pts: [[300, 1135], [230, 1135]], label: "REJECT", at: [265, 1127] },
+    { pts: [[30, 1135], [14, 1135], [14, 675], [290, 675]], label: "yes: repair with the reason", at: [152, 667] },
+    { pts: [[130, 1167], [130, 1198]], label: "no", at: [140, 1187], start: true },
+    { pts: [[230, 1230], [290, 1230]], label: "yes", at: [260, 1222] },
+    { pts: [[130, 1262], [130, 1297]], label: "no", at: [140, 1283], start: true },
+    { pts: [[400, 1253], [400, 1297]] },
+    { pts: [[400, 1343], [400, 1378]] },
+    { pts: [[500, 1410], [570, 1410]], label: "no", at: [535, 1402] },
+    { pts: [[400, 1442], [400, 1472]], label: "yes", at: [410, 1461], start: true },
+  ];
+
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById("flow");
+  const canvas = document.getElementById("canvas");
+  const bubble = document.getElementById("bubble");
+  const make = (name, attrs, parent) => {
+    const el = document.createElementNS(NS, name);
+    for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, value);
+    if (parent) parent.appendChild(el);
+    return el;
+  };
+  const text = (parent, attrs, value) => { make("text", attrs, parent).textContent = value; };
+
+  const defs = make("defs", {}, svg);
+  const marker = make("marker", { id: "arrow", viewBox: "0 0 8 8", refX: "7.5", refY: "4",
+    markerWidth: "8", markerHeight: "8", orient: "auto-start-reverse" }, defs);
+  make("path", { d: "M0,0 L8,4 L0,8 z", class: "arrowhead" }, marker);
+
+  for (const edge of EDGES) {
+    const line = make("polyline", { class: "edge", points: edge.pts.map((p) => p.join(",")).join(" ") }, svg);
+    if (!edge.open) line.setAttribute("marker-end", "url(#arrow)");
+    if (edge.label) {
+      text(svg, { class: "edge-label", x: edge.at[0], y: edge.at[1],
+        "text-anchor": edge.start ? "start" : "middle" }, edge.label);
+    }
+  }
+
+  for (const step of STEPS) {
+    const g = make("g", { class: `node ${step.kind}`, tabindex: "0", role: "button",
+      "aria-label": `${step.label}. ${step.text}`, "data-id": step.id }, svg);
+    const { x, y } = step;
+    if (step.kind === "decision") {
+      make("polygon", { class: "shape", points: `${x},${y - 32} ${x + 100},${y} ${x},${y + 32} ${x - 100},${y}` }, g);
+    } else if (step.kind === "step") {
+      make("rect", { class: "shape", x: x - 110, y: y - 23, width: 220, height: 46, rx: 6 }, g);
+    } else {
+      make("rect", { class: "shape", x: x - 100, y: y - 23, width: 200, height: 46, rx: 23 }, g);
+    }
+    text(g, { class: "label", x, y: step.sub ? y - 3 : y + 4.5, "text-anchor": "middle" }, step.label);
+    if (step.sub) text(g, { class: "sub", x, y: y + 13, "text-anchor": "middle" }, step.sub);
+    if (step.changed) {
+      const tag = make("g", { class: "tag", "aria-hidden": "true" }, g);
+      const tx = step.kind === "decision" ? x + 42 : x + 74;
+      const ty = step.kind === "decision" ? y - 40 : y - 32;
+      make("rect", { x: tx, y: ty, width: 34, height: 16, rx: 8 }, tag);
+      text(tag, { x: tx + 17, y: ty + 11.5, "text-anchor": "middle" }, "NEW");
+    }
+    g.addEventListener("mouseenter", () => show(g, step));
+    g.addEventListener("mouseleave", hide);
+    g.addEventListener("focus", () => show(g, step));
+    g.addEventListener("blur", hide);
+    g.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (g.classList.contains("active")) hide(); else show(g, step);
+    });
+  }
+
+  let current = null;
+  function show(g, step) {
+    if (current && current !== g) current.classList.remove("active");
+    current = g;
+    g.classList.add("active");
+    bubble.innerHTML = "";
+    const title = document.createElement("strong");
+    title.textContent = step.label;
+    const body = document.createElement("span");
+    body.textContent = step.text;
+    const kind = document.createElement("span");
+    kind.className = "kind";
+    kind.textContent = KIND[step.kind] + (step.changed ? " · changed 28 Sep 2026" : "");
+    bubble.append(title, body, kind);
+    const box = g.getBoundingClientRect();
+    const frame = canvas.getBoundingClientRect();
+    const width = bubble.offsetWidth;
+    const gap = 12;
+    let left = box.right - frame.left + gap;
+    if (left + width > frame.width) left = box.left - frame.left - gap - width;
+    if (left < 0) left = Math.max(0, Math.min(frame.width - width, box.left - frame.left));
+    let top = box.top - frame.top;
+    if (left === Math.max(0, Math.min(frame.width - width, box.left - frame.left))
+        && (box.right - frame.left + gap + width > frame.width) && (box.left - frame.left - gap - width < 0)) {
+      top = box.bottom - frame.top + gap;
+    }
+    top = Math.max(0, Math.min(top, frame.height - bubble.offsetHeight));
+    bubble.style.left = `${left}px`;
+    bubble.style.top = `${top}px`;
+    bubble.classList.add("shown");
+  }
+  function hide() {
+    if (current) current.classList.remove("active");
+    current = null;
+    bubble.classList.remove("shown");
+  }
+  document.addEventListener("click", hide);
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") hide(); });
+
+  // WebMCP: the owner's rule for every page. Two read-only tools, fed by the same table
+  // as the drawing; nothing happens where the browser has no document.modelContext.
+  const byId = new Map(STEPS.map((step) => [step.id, step]));
+  const tools = [
+    {
+      name: "describe",
+      title: "What this page shows",
+      description: "Says what this page shows and lists the ids of every step in the lean loop's flow.",
+      inputSchema: { type: "object", properties: {} },
+      annotations: { readOnlyHint: true },
+      execute: async () => ({
+        page: "The decision flow of one run of graph-loop's lean loop (graph/lean.py), from a spec file to a pull request; pointing at a step shows what it does.",
+        steps: STEPS.map((step) => step.id),
+        changed_2026_09_28: STEPS.filter((step) => step.changed).map((step) => step.id),
+      }),
+    },
+    {
+      name: "explain_step",
+      title: "Explain one step",
+      description: "Returns the name, kind and plain-language description of one step, given its id from describe.",
+      inputSchema: { type: "object", properties: { id: { type: "string", enum: STEPS.map((step) => step.id) } }, required: ["id"] },
+      annotations: { readOnlyHint: true },
+      execute: async (input) => {
+        const id = input && typeof input === "object" && !Array.isArray(input) && typeof input.id === "string" ? input.id : "";
+        const step = byId.get(id);
+        if (!step) return { ok: false, error: "Unknown step id. Call describe for the list of ids." };
+        return { ok: true, id: step.id, name: step.label, kind: KIND[step.kind], text: step.text, changed: Boolean(step.changed) };
+      },
+    },
+  ];
+  const registry = document.modelContext;
+  if (registry && typeof registry.registerTool === "function") {
+    for (const tool of tools) {
+      try {
+        Promise.resolve(registry.registerTool(tool)).catch(() => {});
+      } catch (error) {
+        // one refused tool never stops the page or the other tool
+      }
+    }
+  }
+})();
+</script>
+</body>
+</html>
