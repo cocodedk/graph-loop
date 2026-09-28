@@ -29,8 +29,8 @@ from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
 REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
-BUILD_EFFORT = "xhigh"   # the owner, 2026-09-28: Sonnet 5.5 builds at xhigh, an experiment (was medium)
-REPAIR_EFFORT = BUILD_EFFORT   # a repair round is handed why the last one fell short (was high)
+BUILD_EFFORT = "high"   # 2026-09-28 benchmark: Sonnet 5.5 at medium was still refused after two repairs
+REPAIR_EFFORT = "high"   # a repair round is handed why the last one fell short (2026-09-26 trial)
 
 
 def build(ws, task: dict, prompt: str, tree, resume: str = "",
