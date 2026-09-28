@@ -68,8 +68,8 @@ class Rig(unittest.TestCase):
             passed = suites.pop(0)
             return passed, "" if passed else "FAILED: AmberTest > overdue"
 
-        def judge(ws, feature, spec, diff, cwd):
-            self.reviews.append(diff)
+        def codex(_bin, prompt, **_kw):                  # the real judge's prompt, a fake reviewer
+            self.reviews.append(prompt)
             return reviews.pop(0)
         def pull_request(repo, branch, title, body):
             self.prs.append((branch, title))
@@ -78,7 +78,7 @@ class Rig(unittest.TestCase):
         with mock.patch.object(lean_run, "build", build), \
                 mock.patch.object(lean_git, "pull_request", pull_request), \
                 mock.patch.object(lean_run, "masked", masked), \
-                mock.patch.object(lean_run, "judge", judge), \
+                mock.patch.object(lean_run.review, "codex", codex), \
                 mock.patch.object(alert_email, "send",
                                   lambda body, flags, **kw: self.mails.append((kw, body))):
             return lean_run.run_feature(self.ws, self.repo, str(self.spec), PROFILE, "profile.md",
@@ -165,6 +165,12 @@ class Repair(Rig):
         self.assertTrue(landed)
         self.assertEqual(3, len(self.prompts))
         self.assertEqual("c\n", show(self.repo, "lean/rest-ring", "ring.py"))
+
+    def test_the_builder_reads_the_lessons_and_the_reviewer_does_not(self):
+        (self.spec.parent / "lessons.md").write_text("- ES modules need a web server.\n")
+        self.run_it(self.builder(("ring.py", "amber\n")))
+        self.assertIn("ES modules need a web server.", self.prompts[0])
+        self.assertNotIn("ES modules need a web server.", self.reviews[0])   # the reviewer's whole prompt
 
     def test_a_builder_that_changes_nothing_is_not_reviewed(self):
         self.run_it(self.builder(), suites=(), reviews=())
