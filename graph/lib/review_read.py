@@ -62,7 +62,8 @@ def _read_review(text: str) -> tuple[str | None, str]:
         return whole["review"], text        # the raw text: `validate` re-reads it
     said: set[str | None] = set()
     findings = ""
-    for line in [one.strip() for one in text.splitlines() if one.strip()]:
+    lines = [one.strip() for one in text.splitlines() if one.strip()]
+    for line in lines:
         if line.startswith("{"):
             answer = _json_verdict(line)
             if answer is None:
@@ -74,6 +75,8 @@ def _read_review(text: str) -> tuple[str | None, str]:
                      if one in ("ACCEPT", "REJECT")}
     if len(said) != 1 or None in said:
         return None, text
+    if said == {"REJECT"} and not findings and all(one.startswith(("{", "REVIEW:")) for one in lines):
+        return None, text                 # the answer rule: a refusal names what is wrong
     return said.pop(), findings or text
 
 

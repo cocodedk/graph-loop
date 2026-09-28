@@ -26,6 +26,12 @@ class RefusalNamesWhatIsWrong(unittest.TestCase):
         said = read('{"review":"REJECT","accept":false,"findings":["ring is grey", ""]}')
         self.assertEqual(("REJECT", "ring is grey"), (said.verdict, said.text))
 
+    def test_a_refusal_in_the_older_line_form_needs_words_beside_its_verdict(self):
+        self.assertEqual(("malformed", None), (read("REVIEW: REJECT").kind, read("REVIEW: REJECT").verdict))
+        said = read("REVIEW: REJECT\n1. Dark mode is broken")
+        self.assertEqual("REJECT", said.verdict)
+        self.assertIn("Dark mode is broken", said.text)
+
     def test_an_accept_still_needs_no_finding(self):
         self.assertEqual("ACCEPT", read('{"review":"ACCEPT","accept":true,"findings":[]}').verdict)
 
