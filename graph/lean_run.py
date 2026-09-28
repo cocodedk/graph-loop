@@ -106,19 +106,21 @@ def slug(path: str) -> str:
 
 
 def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
-          against: str = "") -> tuple[str, providers.Outcome | None]:
+          revising: bool = False) -> tuple[str, providers.Outcome | None]:
     """Why this round is not done ("" when it is), and the reviewer's answer when it
-    was asked. The reviewer reads the diff against `against` (the whole feature when
-    revising), else against the base."""
+    was asked. A revision answers review threads on its open pull request: the suite
+    judges it here, and the reviewer who raised the threads reads it there."""
     if not built.ok:
         return f"the builder did not finish ({built.kind}): {built.text[:500]}", None
-    if not tree.diff(against=tree.commit).strip():
+    diff = tree.diff(against=tree.commit)
+    if not diff.strip():
         return "the builder changed nothing", None
-    diff = tree.diff(against=against or tree.commit)
     passed, tail = masked(ws, command, tree.path)
     ws.event("lean_suite", task=feature, round=round_, passed=passed, tail=tail[-2000:])
     if not passed:
         return f"the suite is red ({command}):\n{tail}", None
+    if revising:
+        return "", None
     verdict = judge(ws, feature, spec, diff, tree.path)
     ws.event("lean_review", task=feature, round=round_, outcome=verdict.kind,
              verdict=verdict.verdict, findings=verdict.text[:1000])
@@ -133,7 +135,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     `revise` is the open pull request's review findings: fix them on its branch."""
     feature = slug(spec_path)
     spec = pathlib.Path(spec_path).read_text("utf-8")
-    tree, last, against = lean_spec.start(repo, feature, spec, revise)
+    tree, last = lean_spec.start(repo, feature, spec, revise)
     ws.event("lean_feature_started", task=feature, spec=str(spec_path), base=tree.commit,
              tree=tree.path, resumed=bool(last))
     task = {"id": feature, "gate": profile["suite_command"]}
@@ -145,7 +147,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
                   "in this checkout: fix that, and keep the suite green." if last else prompt, tree,
                   effort=providers.EFFORT)
-    why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], 1, against)
+    why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], 1, bool(revise))
     for round_ in range(2, 2 + REPAIRS):
         # Only a real answer is worth a repair (`Outcome.consumes_attempt`): a builder or a
         # reviewer that hit a limit, was busy, signed out or broke stops the run, rounds kept.
@@ -156,7 +158,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                       "Fix that, and keep the suite green.", tree, resume=built.session,
                       effort=REPAIR_EFFORT)
         why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], round_,
-                             against)
+                             bool(revise))
     if not why:
         try:
             title = f"feat({feature}): {feature}"

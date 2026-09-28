@@ -1,5 +1,6 @@
 """The lean loop revises its own open pull request: review threads in, a push to the
-same branch out, and a reviewer who sees the whole feature. Git is real; the rest is faked."""
+same branch out, judged by the suite: the reviewer who raised the threads reads the fix on
+the pull request. Git is real; the rest is faked."""
 
 import json
 import pathlib
@@ -21,7 +22,8 @@ class Revise(Rig):
         subprocess.run(("git", "-C", self.repo, "fetch", "-q", "origin"), check=True)
         tip = sha(self.origin, "refs/heads/lean/rest-ring")
         self.prompts.clear()
-        again = self.run_it(self.builder(("guard.py", "block\n")),
+        reviewed, suites = len(self.reviews), len(self.suites)
+        again = self.run_it(self.builder(("guard.py", "block\n")), reviews=(),
                             revise="ring.py:1\nBlock an allow with an unsafe category.", pr=url)
         self.assertEqual(url, again)
         self.assertEqual(1, len(self.prs))                        # no second pull request
@@ -31,8 +33,8 @@ class Revise(Rig):
         parent = subprocess.run(("git", "-C", self.origin, "rev-parse", "lean/rest-ring^"),
                                 capture_output=True, text=True, check=True).stdout.strip()
         self.assertEqual(tip, parent)                             # a fast-forward of the PR
-        self.assertIn("ring.py", self.reviews[-1])                # the whole feature is reviewed
-        self.assertIn("guard.py", self.reviews[-1])
+        self.assertEqual(suites + 1, len(self.suites))            # the suite judges the fix
+        self.assertEqual(reviewed, len(self.reviews))             # the threads' reviewer reads it
         self.assertEqual(self.base, sha(self.origin, "refs/heads/main"))
 
 
