@@ -178,7 +178,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             url = lean_git.update(repo, work, feature, pr) if revise else lean_git.publish(
                 repo, work, feature, title, pr_body(spec_path, why, found))
         except RuntimeError as error:
-            why = f"it passed, but could not open its pull request: {error}"
+            why = f"it passed, but could not open its pull request: {error}\n\n{why}".strip()
         else:
             ws.event("lean_published", task=feature, commit=work, pr=url)
             record(spec_path, lean_status="pr_open", lean_pr=url)

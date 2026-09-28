@@ -3,6 +3,7 @@ reviewer's findings, and a model that gave no real answer stops the run at once.
 Git is real; the rest is faked (`test_lean_run.Rig`)."""
 
 import pathlib
+import subprocess
 import sys
 import unittest
 
@@ -25,6 +26,17 @@ class Published(Rig):
         self.assertEqual("c\n", show(self.repo, "lean/rest-ring", "ring.py"))
         self.assertEqual([], self.mails)                                # no stop, no person paged
         self.assertIn("lean_status: pr_open", self.spec.read_text())
+
+    def test_a_refused_change_that_cannot_open_its_pull_request_keeps_the_findings(self):
+        subprocess.run(("git", "-C", self.repo, "branch", "lean/rest-ring"), check=True)
+        refused = Outcome("ok", verdict="REJECT", text="the ring ignores dark mode")
+        url = self.run_it(self.builder(("ring.py", "a\n"), ("ring.py", "b\n"), ("ring.py", "c\n")),
+                          suites=(True, True, True), reviews=(refused, refused, refused))
+        self.assertEqual("", url)
+        stopped = next(row for row in self.ws.events() if row["kind"] == "lean_stopped")
+        self.assertIn("could not open its pull request", stopped["why"])
+        self.assertIn("the ring ignores dark mode", stopped["why"])   # the refusal is not lost
+        self.assertIn("the ring ignores dark mode", self.mails[0][1])
 
     def test_an_accepted_reviews_findings_reach_the_pull_request(self):
         noted = Outcome("ok", verdict="ACCEPT", text="the ring has no dark-mode test")
