@@ -110,7 +110,7 @@
   .bubble {
     position: absolute;
     z-index: 2;
-    width: min(300px, 70vw);
+    width: min(340px, 78vw);
     padding: 12px 14px;
     border-radius: 8px;
     background: var(--bubble);
@@ -136,8 +136,9 @@
   <header>
     <h1>One run of the lean loop</h1>
   </header>
-  <p class="lede">Every decision one run of <code>graph/lean.py</code> makes, from a spec file to a pull request.
-    Point at a step, or tap it, to read what it does. Steps tagged <strong>new</strong> changed on 28 September 2026.</p>
+  <p class="lede">A spec is a short description of one feature. This page shows every decision graph-loop's lean loop
+    (<code>graph/lean.py</code>) makes while it turns one spec into one pull request for you to review.
+    Point at a step, or tap it, to read what happens there and why. Steps tagged <strong>NEW</strong> changed on 28 September 2026.</p>
   <ul class="legend" aria-label="Legend">
     <li><svg viewBox="0 0 28 18" aria-hidden="true"><rect class="key-step" x="1" y="2" width="26" height="14" rx="3"/></svg>A step</li>
     <li><svg viewBox="0 0 28 18" aria-hidden="true"><polygon class="key-step" points="14,1 27,9 14,17 1,9"/></svg>A decision</li>
@@ -152,8 +153,9 @@
         <div class="bubble" id="bubble" role="tooltip"></div>
       </div>
     </div>
-    <figcaption>One spec per run, one pull request per spec, and <code>main</code> never moves.
-      The loop repairs at most twice, and a model that gives no real answer ends the run without spending a round.</figcaption>
+    <figcaption>Every run ends in one of two ways: a pull request for you to review, or a stop with an email saying why.
+      The main branch never changes without you. A run tries at most two repairs, and when an AI model cannot answer at all,
+      the run stops at once without using one.</figcaption>
   </figure>
 </main>
 <script>
@@ -161,57 +163,57 @@
   const KIND = { start: "start", step: "step", decision: "decision", "end-ok": "done", "end-wait": "stops and waits for you" };
   const STEPS = [
     { id: "start", kind: "start", x: 400, y: 40, label: "Run one spec", sub: "lean.py --spec NN-name.md",
-      text: "One run of graph/lean.py takes one spec file and turns it into one pull request. It never pushes to main." },
+      text: "This is where a run begins. A spec is a short document describing one feature: what it should do and how to tell it is done. One run of graph-loop's lean loop (the program graph/lean.py) turns one spec into one pull request: a proposed change that a person reviews before it joins the project. The loop never changes the main branch itself." },
     { id: "ready", kind: "decision", x: 400, y: 130, label: "Ready to run?",
-      text: "Two things must be in place: a mail contact proven with graph-goal.py contact, and a profile naming the project's suite command, build command and artifact. If either is missing, nothing runs." },
+      text: "Before spending anything on AI models, the loop checks two things. It must be able to reach you: a test email, sent with graph-goal.py contact, has to have arrived. And it must know how to test and build this project: a profile file names those commands. If either is missing, the run stops here." },
     { id: "refuse", kind: "end-wait", x: 670, y: 130, label: "Refuses to start", sub: "says what is missing",
-      text: "Nothing was built. The message says what to fix: prove the contact, or copy a profile from graph-loop's profiles folder and link it from the project's CLAUDE.md." },
+      text: "Nothing was built and nothing was spent. The message says what to add: send the test email, or copy a profile from graph-loop's profiles folder into the project and link it from the project's CLAUDE.md. Then start the run again." },
     { id: "branches", kind: "decision", x: 400, y: 225, label: "Unmerged branches?",
-      text: "The run fetches origin first. Any branch not merged into main blocks new work, so unreviewed changes never pile up. The one exception is this spec's own pull request with open review threads: the run goes on to fix those." },
+      text: "A branch is a line of work that has not joined the main code yet. The loop first fetches the latest state from GitHub. If any branch is still waiting to be merged, it stops, so unreviewed changes never pile up on top of each other. One exception: when the waiting branch is this spec's own pull request and a reviewer left comments on it, the loop goes on to fix those comments." },
     { id: "wait", kind: "end-wait", x: 670, y: 225, label: "Waits for a merge", sub: "exit 3",
-      text: "Nothing was built. You get a mail listing the unmerged branches, this spec's own pull request included when it has no open review threads. Merge or delete them, then run the spec again." },
+      text: "Nothing was built. You get an email listing the branches still waiting, including this spec's own pull request when it has no comments left to fix. Merge or delete them on GitHub, then start the run again. The exit code, 3 here, is the number the run hands back so a script can tell how it ended." },
     { id: "first_build", kind: "decision", x: 400, y: 320, label: "First build?", changed: true,
-      text: "The grill runs once, before a spec's first build. A spec carrying on after a stop, or a revision of its own pull request, goes straight to the checkout. Changed on 28 September (#169): a resumed spec used to be grilled again every time." },
+      text: "Only a spec's first build is grilled, because that is when an unanswered question costs the most. A spec carrying on after an earlier stop, or a revision of its own pull request, goes straight to the checkout. New on 28 September (#169): a resumed spec used to be grilled again every time, which cost minutes and could stop the run for no new reason." },
     { id: "grill", kind: "step", x: 400, y: 410, label: "Grill the spec", sub: "Codex · xhigh",
-      text: "Codex reads the spec before anything is built, read-only. It looks only for what a person has to decide: a contradiction, a choice the builder would have to guess, or a requirement that cannot be met on this machine." },
+      text: "Before any code is written, a second AI model, Codex, reads the spec without changing anything. It looks only for what a person must decide: a spec that contradicts itself, a choice the builder would otherwise guess, or something impossible on this machine. Settling these now costs far less than finding them after a build." },
     { id: "questions", kind: "decision", x: 400, y: 500, label: "Questions for you?",
-      text: "If the grill found anything, the questions go to you by mail and nothing is built. Anything the builder can settle itself is not a question." },
+      text: "If the grill found such questions, they go to you by email and nothing is built. Anything the builder can settle on its own is not asked. With no questions, the loop moves on to the checkout." },
     { id: "asks", kind: "end-wait", x: 670, y: 500, label: "Mails you questions", sub: "exit 2",
-      text: "Nothing was built. Answer the questions in the spec, then run it again." },
+      text: "Nothing was built. Answer the questions by editing the spec, for example by writing down which colour or rule you want, then start the run again. The grill reads the updated spec before the first build." },
     { id: "checkout", kind: "step", x: 400, y: 590, label: "Check out", sub: "a private git worktree",
-      text: "The builder gets its own git worktree: fresh from origin/main for a new spec, the kept worktree of a stopped spec so paid work carries on, or the pull request's branch for a revision." },
+      text: "The builder gets its own private copy of the code, called a worktree, so its work never touches your files. A new spec starts from the latest main code. A spec that stopped earlier reuses its kept worktree, so work already paid for is not lost. A revision starts from its pull request's branch." },
     { id: "build", kind: "step", x: 400, y: 675, label: "Build", sub: "Claude · medium, repairs high",
-      text: "One Claude builder writes the feature and its tests, and may run the suite itself. The first build runs at medium effort. Each repair runs at high and is told exactly why the last attempt fell short." },
+      text: "One AI builder, Claude, writes the feature and its tests in the worktree, and may run the project's tests itself while it works. The first attempt runs at medium effort. Each repair runs at high effort and is told exactly what went wrong last time." },
     { id: "real_answer", kind: "decision", x: 400, y: 765, label: "Real answer?", changed: true,
-      text: "A usage limit, a busy provider, a lapsed sign-in or a crash is not an answer. The run stops at once and keeps every repair round for the next run. Changed on 28 September (#170): a limit used to burn all the rounds within seconds." },
+      text: "Sometimes the builder cannot work at all: the account reached its usage limit, the AI service is busy, the sign-in expired, or the program crashed. There is nothing to judge, so the run stops at once and keeps its repairs for the next run. New on 28 September (#170): a usage limit used to use up every repair within seconds." },
     { id: "stop_builder", kind: "end-wait", x: 670, y: 765, label: "Stops, keeps the work", sub: "exit 1 · no round spent",
-      text: "The worktree is kept and named in the mail. A new spec is marked lean_status: stopped and carries on in that worktree when run again, for example once the limit resets; a stopped revision starts again from its pull request." },
+      text: "The run stops, and the worktree with everything written so far is kept; the email says where. A new spec is marked lean_status: stopped in its file, and the next run carries on in that worktree, for example once the usage limit resets. A revision that stops starts again from its pull request." },
     { id: "suite", kind: "decision", x: 400, y: 860, label: "Suite green?",
-      text: "The profile's suite command runs in a sandbox with no secrets and an empty home. A red suite, or a builder that changed nothing, goes to a repair." },
+      text: "The project's tests, together called the suite, run in a sandbox: an isolated space with no passwords and an empty home folder, so no test can lean on anything private. Green means every test passed. A failing test, or a builder that changed nothing, sends the work to a repair." },
     { id: "revision", kind: "decision", x: 400, y: 955, label: "Revision?", changed: true,
-      text: "A revision fixes review threads on the spec's open pull request. The suite judges it here, and whoever raised the threads, CodeRabbit or a person, reads it again on the pull request. Changed on 28 September (#171): the loop no longer re-reviews the whole feature." },
+      text: "A revision is a run that fixes review comments on a pull request that is already open. The tests have just checked the fix, and whoever wrote the comments, a person or an automatic reviewer such as CodeRabbit, reads it again on the pull request, so the loop's own review is skipped. New on 28 September (#171): the loop used to re-review the whole feature, which added rounds and could stop the run." },
     { id: "review", kind: "step", x: 400, y: 1045, label: "Review", sub: "Codex · xhigh",
-      text: "Codex reads the diff against main, read-only. It refuses only for something the spec asks that does not hold, a failure a user would meet in ordinary use, a security hole, or behaviour without tests. Anything smaller is a finding, and it accepts." },
+      text: "A second AI model, Codex, reads the change without editing it, the way a colleague reviews code. It refuses only for serious problems: something the spec asks for that does not hold, a failure an ordinary user would meet, a security hole, or new behaviour without tests. Smaller remarks become findings, and it accepts." },
     { id: "verdict", kind: "decision", x: 400, y: 1135, label: "Verdict?", changed: true,
-      text: "ACCEPT goes on to publish. REJECT goes to a repair, carrying the findings. No real answer, such as a limit or a malformed reply, stops the run at once, as it does for the builder (#170)." },
+      text: "The review ends with a verdict. ACCEPT means the change can be published. REJECT sends it to a repair, carrying the reviewer's findings to the builder. If the reviewer could not answer at all, such as at a usage limit or with a garbled reply, the run stops at once, just as it does for the builder (#170)." },
     { id: "stop_reviewer", kind: "end-wait", x: 670, y: 1135, label: "Stops at once", sub: "exit 1 · no round spent",
-      text: "The reviewer could not answer. The work is kept and no repair round was spent. A new spec carries on in its worktree when run again; a stopped revision starts again from its pull request." },
+      text: "The reviewer gave no answer, so there is nothing to judge. The work is kept and no repair was used. Running the spec again carries on in its worktree; a revision starts again from its pull request." },
     { id: "repairs_left", kind: "decision", x: 130, y: 1135, label: "Repairs left?",
-      text: "Up to two repairs follow the first build. Each goes back to the builder with the reason: the suite's output or the reviewer's findings." },
+      text: "A repair is another build attempt that is told exactly what went wrong: the test output or the reviewer's findings. After the first build, a run allows up to two repairs, so it never keeps paying for a change that is not getting better." },
     { id: "refused_green", kind: "decision", x: 130, y: 1230, label: "Refused, but green?", changed: true,
-      text: "Out of repairs: if the suite is green and the reviewer still refuses for named findings, the change is published anyway, with the findings in the pull request for you to judge. Changed on 28 September (#172): this used to stop and wait for you." },
+      text: "Asked once the repairs are used up. If every test passes and the reviewer still refuses for named findings, the change is published anyway, with those findings written into the pull request for you to judge; you always decide at merge. New on 28 September (#172): this case used to stop the run and wait for you." },
     { id: "stop_final", kind: "end-wait", x: 130, y: 1320, label: "Stops, keeps the work", sub: "exit 1",
-      text: "A suite still red after the last repair, or a refusal that names no finding, stops the run. The worktree is kept: a new spec carries on in it when run again, and a stopped revision starts again from its pull request." },
+      text: "The tests still fail after the last repair, or the reviewer refused without naming a reason. The worktree is kept and the email says why. A new spec carries on in that worktree next run; a revision starts again from its pull request." },
     { id: "publish", kind: "step", x: 400, y: 1230, label: "Publish", sub: "branch lean/<feature> · PR",
-      text: "The worktree becomes one commit on top of origin/main, pushed as lean/<feature> with a pull request. Its description says whether the reviewer accepted and lists every finding. A revision pushes to the same pull request." },
+      text: "The work becomes one commit, a saved snapshot of the change, on top of the latest main code. It is pushed to GitHub as the branch lean/<feature>, and a pull request is opened whose description says whether the reviewer accepted and lists every finding. A revision updates the same pull request instead." },
     { id: "build_branch", kind: "step", x: 400, y: 1320, label: "Build the branch", sub: "the profile's build command",
-      text: "The profile's build command runs on the pushed branch in a fresh checkout, and the artifact the profile names must exist." },
+      text: "The loop builds the published branch once more in a fresh copy, with the build command from the profile, and checks that the expected result exists, such as the app file or the web page. This proves the pull request builds on its own, not only inside the builder's copy." },
     { id: "built", kind: "decision", x: 400, y: 1410, label: "Built?",
-      text: "A green build that produced its artifact means the pull request is ready for a person." },
+      text: "If the build succeeded and produced its result, the pull request is ready for a person to look at." },
     { id: "build_red", kind: "end-wait", x: 670, y: 1410, label: "Build red", sub: "exit 1 · PR stays open",
-      text: "The pull request stays open, and the mail carries the build's output." },
+      text: "The build failed. The pull request stays open, and the email includes the build's output so you can see what broke." },
     { id: "ready_for_review", kind: "end-ok", x: 400, y: 1495, label: "Ready for review", sub: "exit 0 · you merge",
-      text: "You get a mail with the pull request and the artifact to try. Merging is yours, and the next spec starts once nothing is left unmerged." },
+      text: "You get an email with the pull request and the built result to try. Merging is your decision: the loop never merges. Once nothing is left unmerged, the next spec can start. Exit code 0 means the run ended well." },
   ];
   const EDGES = [
     { pts: [[400, 63], [400, 98]] },
