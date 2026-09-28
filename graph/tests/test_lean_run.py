@@ -153,10 +153,10 @@ class Repair(Rig):
         stopped = next(row for row in self.ws.events() if row["kind"] == "lean_stopped")
         self.assertEqual("grey2\n", (pathlib.Path(stopped["tree"]) / "ring.py").read_text())
 
-    def test_the_first_build_is_medium_and_each_repair_is_high(self):
+    def test_the_first_build_and_each_repair_run_at_xhigh(self):
         self.run_it(self.builder(("ring.py", "grey\n"), ("ring.py", "grey1\n"), ("ring.py", "amber\n")),
                     suites=(False, False, True))
-        self.assertEqual(["medium", "high", "high"], self.efforts)
+        self.assertEqual(["xhigh", "xhigh", "xhigh"], self.efforts)
 
     def test_a_second_refusal_gets_the_second_repair(self):
         refused = Outcome("ok", verdict="REJECT", text="a new finding")

@@ -29,7 +29,8 @@ from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
 REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
-REPAIR_EFFORT = "high"   # a repair round is handed why the last one fell short (2026-09-26 trial)
+BUILD_EFFORT = "xhigh"   # the owner, 2026-09-28: Sonnet 5.5 builds at xhigh, an experiment (was medium)
+REPAIR_EFFORT = BUILD_EFFORT   # a repair round is handed why the last one fell short (was high)
 
 
 def build(ws, task: dict, prompt: str, tree, resume: str = "",
@@ -152,7 +153,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
               f"## Spec\n\n{spec}{lessons(pathlib.Path(spec_path).parent)}")
     built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
                   "in this checkout: fix that, and keep the suite green." if last else prompt, tree,
-                  effort=providers.EFFORT)
+                  effort=BUILD_EFFORT)
     why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], 1, bool(revise))
     for round_ in range(2, 2 + REPAIRS):
         # Only a real answer is worth a repair (`Outcome.consumes_attempt`): a limit, a busy or

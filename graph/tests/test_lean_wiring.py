@@ -53,9 +53,9 @@ class Wiring(unittest.TestCase):
         with mock.patch.object(providers, "claude", return_value=Outcome("ok")) as call:
             lean_run.build(self.ws, {"id": "wiring", "gate": "true"}, "fix it", self.tree,
                            resume="s1", effort=lean_run.REPAIR_EFFORT)
-        self.assertEqual(("high", "s1"), (call.call_args.kwargs["effort"], call.call_args.kwargs["resume"]))
+        self.assertEqual(("xhigh", "s1"), (call.call_args.kwargs["effort"], call.call_args.kwargs["resume"]))
         paid = next(row for row in self.ws.events() if row["kind"] == "attempt")
-        self.assertEqual("high", paid["effort"])
+        self.assertEqual("xhigh", paid["effort"])
 
     def test_the_reviewer_reads_the_tree_and_is_asked_for_the_closed_verdict(self):
         with mock.patch.object(review, "codex", return_value=Outcome("ok", verdict="ACCEPT")) as call:
