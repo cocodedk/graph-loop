@@ -74,14 +74,18 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
     prompt = (f"You read this spec before it is built, read-only; the repository's CLAUDE.md, "
               f"its brief and the profile at {profile_path} give the context. A builder implements "
               f"it next. It edits files and runs git, the suite and the programs the suite uses; it "
-              f"cannot commit or push. The suite is "
-              f"the profile's command, run on this machine with its network and Docker in a scrubbed "
-              f"environment; your own read-only sandbox may be unable to run it, and that is no "
-              f"question for the person. Refuse only for what a person "
-              f"must decide first: a spec that contradicts itself, a decision the "
-              f"builder would have to guess, or a requirement it cannot meet here. Each finding is one "
-              f"question to the person. What the builder can settle itself is no question: accept."
-              f"\n\n{specs}\n\n{VERDICT}")
+              f"cannot commit or push. The suite is the profile's command, run on this machine with "
+              f"its network and Docker in a scrubbed environment; your own read-only sandbox may be "
+              f"unable to run it, and that is no question for the person. Refuse only for what a "
+              f"person must decide first: a spec that contradicts itself, a decision the builder "
+              f"would have to guess, or a requirement it cannot meet here. If the feature has a user "
+              f"interface, be critical of every word the spec says about it: refuse until it defines "
+              f"the whole journey, from where the feature starts through every page and state the "
+              f"user meets (empty, loading and error included) and what the user sees and can do at "
+              f"each, to where it ends, and names a design reference (a mock, a sketch or an existing "
+              f"screen) to match. Ask about anything vague, contradictory or likely to confuse a user. "
+              f"Each finding is one question to the person. What the builder can settle itself is "
+              f"no question: accept.\n\n{specs}\n\n{VERDICT}")
 
     def paid(kind, account, cost, tokens, _text):
         ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens,

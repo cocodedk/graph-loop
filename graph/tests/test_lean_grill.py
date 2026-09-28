@@ -52,6 +52,12 @@ class Grill(unittest.TestCase):
         self.assertIn("runs git, the suite and the programs the suite uses", self.prompt)
         self.assertNotIn("chmod", self.prompt)
 
+    def test_the_grill_interrogates_a_user_interface_before_building(self):
+        self.grill(Outcome("ok", verdict="ACCEPT"))
+        for asked in ("user interface", "be critical of every word", "the whole journey",
+                      "every page and state", "empty, loading and error", "design reference"):
+            self.assertIn(asked, self.prompt)
+
     def test_every_mail_names_its_project(self):
         inside = pathlib.Path(repo()) / "scratchpad" / "lean"      # a workspace in a checkout
         inside.mkdir(parents=True)
