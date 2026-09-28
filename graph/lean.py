@@ -11,8 +11,8 @@ One exception: when the only unmerged branch is this spec's own open pull reques
 and it has unresolved review threads, the run fixes those on that branch and
 pushes to the same pull request.
 The run also refuses to start without a proven contact (`graph-goal.py
-contact`), and builds nothing while a reviewer reading the spec first has
-questions for the person: they are emailed, and the run exits 2. The profile,
+contact`), and builds nothing while a reviewer reading the spec before its first
+build has questions for the person: they are emailed, and the run exits 2. The profile,
 by default the `profile-*.md` the repository's CLAUDE.md links to, gives three
 commands under `## suite_command`, `## build_command` and `## artifact`, each an
 indented line. A run that opened a pull request ends by building that branch
@@ -123,7 +123,9 @@ def main(argv: list[str] | None = None) -> int:
                       f"Nothing was built. Merge or delete these branches first:\n{names}"
                       + ("\n\nIts own pull request has no unresolved review threads to fix." if own else ""))
         return 3
-    if not revise and lean_run.grill(ws, repo, [spec], path):   # questions first: nothing on a guess
+    # Questions first, nothing on a guess: once, before a spec's first build. A spec
+    # with a lean_status was grilled then, and its person has answered since.
+    if not info.get("lean_status") and lean_run.grill(ws, repo, [spec], path):
         return 2
     url = lean_run.run_feature(ws, repo, spec, profile, path, revise, str(info.get("lean_pr", "")))
     if not url:
