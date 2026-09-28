@@ -16,7 +16,7 @@ REQUIREMENTS = {"goal", "done_when", "gate", "note", "safety", "simplicity"}
 VERDICT = (
     'Answer with exactly one JSON object on one line and no other text: '
     '{"review":"ACCEPT|REJECT","accept":true,"findings":["what is wrong, in one sentence"]}. '
-    'Exactly those three keys. `findings` holds at most three plain strings, never objects. '
+    'Exactly those three keys. `findings` lists every finding, at most ten plain strings, never objects. '
     'ACCEPT requires accept=true and no findings; REJECT requires accept=false and at '
     'least one finding.')
 

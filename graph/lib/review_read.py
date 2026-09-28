@@ -29,7 +29,7 @@ def _read_review(text: str) -> tuple[str | None, str]:
     for (`prompts.py`): exactly `review`, `accept` and `findings`, nothing
     else — `review` the literal word the prompt declared, not any casing of
     it. `review` and `accept` naming different verdicts, `findings` holding
-    anything but a short list of strings, at most three (the count
+    anything but a short list of strings, at most ten (the count
     `prompts.py` promises the model), or a key added or missing, is not a
     verdict to trust — it is malformed, the same as no verdict at all.
 
@@ -103,7 +103,7 @@ def _json_verdict(line: str) -> tuple[str | None, str] | None:
             or not isinstance(found, list)
             or not all(isinstance(one, str) for one in found)
             or accept != (word == "ACCEPT")
-            or len(found) > 3):
+            or len(found) > 10):
         return None, ""
     named = [one for one in found if one.strip()]
     if word == "REJECT" and not named:   # the answer rule: a refusal names what is wrong
