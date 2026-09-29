@@ -21,7 +21,8 @@ with status 2.
 
 The project's specs are the `*.md` files in its `docs/lean/` folder except `lessons.md`, sorted by file
 name. For a number, the project folder is that loop's `--repo`. A spec's **name** is its file name
-without `.md`, as `lean_spec.slug` gives it. Each spec gets one mark; the first that holds wins:
+without `.md`, **as `lean_spec.slug` gives it** (a file name with spaces or punctuation shows as its
+slug, the name the loop's branch and commits use). A running loop's `--spec` is matched by the same slug. Each spec gets one mark; the first that holds wins:
 
 1. `▶ building`: a running loop (the finder of spec 02) has this project folder as its `--repo` and this
    spec as its `--spec`.
@@ -41,7 +42,7 @@ say `pr_open` in its file, and it must show as built.
 
 ```
 fits-api  22 specs: 7 built · 1 building · 1 pr open · 13 waiting
-  loop: building 12m03s
+  loop: 02f-routes building 12m03s
 
 ✔ built     00-openrouter-provider
 ✔ built     01-parity-judge
@@ -50,8 +51,10 @@ fits-api  22 specs: 7 built · 1 building · 1 pr open · 13 waiting
 ```
 
 The first line is the project's folder name and the count of its specs, with the counts of each mark
-that is not zero, in the order of the list above. The `loop:` line appears only when a loop runs on this
-project and gives its step and the time in it, as spec 02 defines them. Then a blank line and one line
+that is not zero, in the order built, building, stopped, pr open, waiting (the order the sample shows;
+the numbered list above only says which mark wins). Under it comes one `loop:` line for each loop
+running on this project, lowest process id first, `loop: <spec> <step> <time in step>` as spec 02
+defines the step and the time; there is none when no loop runs here. Then a blank line and one line
 per spec: the mark padded to the longest mark, two spaces, the name. The counts on the first line
 always cover every spec, whatever the filter.
 
@@ -59,8 +62,18 @@ always cover every spec, whatever the filter.
 
 `--only built` shows the `✔ built` specs. `--only open` shows every spec that is not built.
 `--only attention` shows the `✖ stopped` and `● pr open` specs, the ones a person may have to act on.
-A filter that matches no spec prints `no specs match`, after the first line. Any other value for
+A filter that matches no spec prints `no specs match`, after the first line and its `loop:` lines. A
+project whose `docs/lean` holds no spec prints `no specs` in the same place, with `0 specs` on the first
+line, whatever the filter. Any other value for
 `--only` is refused with the usage line and status 2.
+
+## When something cannot be read
+
+- If `git` fails or the project is not a git repository, no spec is built: the marks fall through to the
+  front matter, and a line `git history unreadable: nothing is marked built` follows the `loop:` lines.
+  The exit status stays 0.
+- A spec file that cannot be read, or whose front matter does not parse, is treated as having none:
+  it is `· waiting` unless built or building. No message, no crash, status 0.
 
 ## Done when
 
@@ -76,9 +89,11 @@ prove:
 4. Both forms of `<which>` and both error messages with their status.
 5. The first line's counts (zero counts left out), the `loop:` line with and without a running loop,
    and the aligned lines.
-6. Each filter, `no specs match`, and the refused value.
-7. The command writes nothing; every file stays under the cap.
-8. Every earlier test still passes, unchanged. The builder adds new test files as the checks above
+6. Each filter, `no specs match`, `no specs`, and the refused value; two loops on one project, and a
+   spec name with spaces or punctuation shown and matched as its slug.
+7. Git failing, and an unreadable or unparsable spec file, as above.
+8. The command writes nothing; every file stays under the cap.
+9. Every earlier test still passes, unchanged. The builder adds new test files as the checks above
    need.
 
 ## Out of scope
