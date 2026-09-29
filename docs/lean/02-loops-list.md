@@ -27,16 +27,16 @@ is the last part of the resolved `--repo` path. The **spec** is `--spec`'s file 
 
 ## The list
 
-One line per running loop, oldest first by process id, numbered from 1:
+One line per running loop, sorted by process id from the lowest, numbered from 1:
 
 ```
-1  sitrep           01-capture-core   grilling  2m10s   loop up 31m
-2  fits-api         02f-routes        building  12m03s  loop up 45m
+1  sitrep    01-capture-core  grilling  2m10s   loop up 31m00s
+2  fits-api  02f-routes       building  12m03s  loop up 45m00s
 ```
 
 Columns, in order: the number; the project; the spec; the **step**; how long the loop has been in that
-step; and `loop up` with the process's age. Columns are padded to the longest value in their column
-plus two spaces. Durations show seconds under a minute (`45s`), minutes and seconds under an hour
+step; and `loop up` with the process's age, in the same duration format as the time in the step. Every column
+except the last is padded to the longest value in it plus two spaces (the sample follows this rule). Durations show seconds under a minute (`45s`), minutes and seconds under an hour
 (`2m10s`), and hours and minutes above (`1h05m`).
 
 With no loop running the command prints `no lean loops running`.
@@ -56,6 +56,15 @@ Read from the last line of the loop's event log, `<workspace>/events.jsonl` (the
 A line of the log that is not valid JSON is skipped. A loop whose workspace cannot be read still
 appears, as `starting`.
 
+## When something cannot be read
+
+- If `ps` cannot be run, or exits with a non-zero status, the command prints `cannot read the process
+  list` and exits with status 1.
+- If a matching process's working directory cannot be read (it ended meanwhile, or is not ours), the
+  loop still appears. Absolute `--repo` and `--workspace` paths are used as they are; a relative
+  `--repo` shows its project as `?`, and a relative `--workspace` counts as unreadable, so its step is
+  `starting`.
+
 ## Done when
 
 The driver's and the slicer's tests pass, and new tests, with no real process, clock or loop (the
@@ -70,8 +79,10 @@ process list, the working directories, the clock and the event logs are passed i
 4. The duration format at 45 seconds, 2 minutes 10 seconds, 1 hour 5 minutes and exactly one minute.
 5. The line layout with two loops of different name lengths, the numbering, the order, and the
    message for no loops.
-6. The command writes nothing and exits 0, and `graph/loops.py` is under the cap with its modules.
-7. Every earlier test still passes, unchanged. The builder adds new test files as the checks above
+6. `ps` failing, and a working directory that cannot be read, with an absolute and with a relative path.
+7. The command writes nothing and exits 0 when it can read, and `graph/loops.py` is under the cap with
+   its modules.
+8. Every earlier test still passes, unchanged. The builder adds new test files as the checks above
    need.
 
 ## Out of scope
