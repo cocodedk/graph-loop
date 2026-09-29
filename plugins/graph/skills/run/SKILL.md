@@ -110,3 +110,5 @@ Runs take hours, so run it in the background.
 The loop commits with `git commit-tree`, so the repository's commit hooks never run on
 its commits. The pull request's CI is the check. Merging stays with the person; delete
 the branch on merge, or it will block the next run.
+
+To watch a running loop, and see which of a project's specs are built, use the `graph:dashboard` skill.
