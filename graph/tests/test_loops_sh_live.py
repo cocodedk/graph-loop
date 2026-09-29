@@ -26,7 +26,6 @@ class Live(Rig):
         proc.stdin.write("f")
         proc.stdin.flush()
         (self.dir / "go").write_text("")
-        proc.stdin.close()
         out, _ = proc.communicate(timeout=30)
         self.assertEqual(0, proc.returncode)
         self.assertEqual(["-", "built"], self.filters())
