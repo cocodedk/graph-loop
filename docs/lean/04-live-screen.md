@@ -20,12 +20,16 @@ options of `graph/loops.py` that this spec adds:
 
 - `--screen [<project-folder>] [--only <filter>]` prints the whole screen: the list of spec 02, a
   blank line, the project view of spec 03 for the folder given (or, with none given, for the first
-  running loop's project; with no loop running and none given, only the list's message), a blank line,
-  and the key line below.
-- `--path <N>` prints the folder of loop number N from the list, and nothing when there is no such loop.
+  running loop whose project folder can be resolved; with no loop running and none given, only the
+  list's message `no lean loops running`), a blank line, and the key line below. The key line is always
+  printed, so `f` and `q` work with no loop.
+- `--path <N>` prints the folder of loop number N from the list, and nothing when there is no such loop
+  or its project folder cannot be resolved (spec 02's `?`).
+- `--refresh <seconds>` (15 when absent) is only what the key line says: `every <seconds>s`.
 
-The key line reads `keys: 1-9 switch loop · f filter (<current filter>) · q quit · every 15s`, where the
-filter is `all`, `built`, `open` or `attention`.
+The key line reads `keys: 1-9 switch loop · f filter (<current filter>) · q quit · every <N>s`, where
+the filter is `all`, `built`, `open` or `attention` and N is `LOOPS_REFRESH` (below), passed as
+`--refresh`.
 
 ## The keys
 
@@ -49,7 +53,11 @@ A selected folder stays selected when its loop ends, so the person keeps seeing 
 - A selected folder that is not a project prints spec 03's `not a project with docs/lean: <path>` line
   where the project view would be, and the screen goes on refreshing.
 - The live screen clears the terminal before each print, as `watch.sh` does; `-1` does not clear.
-- If standard input ends or is not a terminal (no more keys), the script behaves as if `q` was pressed.
+- Keys are read from standard input whatever it is, a terminal or a pipe: piped keys are processed one
+  by one until the input ends, and at the end of input the script behaves as if `q` was pressed.
+- Each refresh builds the whole screen first, then clears and prints it in one go, so the person never
+  sees an empty screen. A key pressed while `loops.py` is still running is not lost: it is read at the
+  next wait.
 - If `graph/loops.py` exits with a non-zero status (for example `cannot read the process list`), its
   output is shown as it is and the live screen keeps refreshing; with `-1` the script exits with that
   same status.
@@ -64,8 +72,10 @@ The driver's and the slicer's tests pass, and new tests prove:
 3. With `LOOPS_CMD` faked and `LOOPS_REFRESH` set short, keys piped in: a digit switches the folder, a
    digit with no loop keeps it, `f` cycles through the four filters and back, an unknown key only
    refreshes, and `q` ends with `stopped watching.` and status 0.
-4. Each edge above: a tenth loop, `0`, a folder that is not a project, end of input, and a failing
-   `loops.py` live and with `-1`.
+4. Each edge above: a tenth loop, `0`, a folder that is not a project, piped keys and end of input, a
+   failing `loops.py` live and with `-1`, the key line with no loop and with a `LOOPS_REFRESH` other
+   than 15, and a first loop whose folder cannot be resolved (skipped for the default view; `--path`
+   prints nothing).
 5. The script and its Python stay under the cap, and it starts nothing and writes nothing.
 6. Every earlier test still passes, unchanged. The builder adds new test files as the checks above
    need.
