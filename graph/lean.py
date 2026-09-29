@@ -31,6 +31,7 @@ import tempfile
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "lib"))
 
+import accounts
 import lean_git
 import lean_run
 import lean_spec
@@ -38,6 +39,7 @@ from workspace import Workspace
 from worktree import Worktree
 
 FIELDS = ("suite_command", "build_command", "artifact")
+OPTIONAL = ("account",)   # the one account the project spends, by the name GRAPH_ACCOUNTS gives it
 
 
 def profile_path(repo: str, given: str = "") -> str:
@@ -52,13 +54,13 @@ def profile_path(repo: str, given: str = "") -> str:
 
 
 def read_profile(path: str) -> dict:
-    """The first indented line under each of the three headings."""
+    """The first indented line under each of the three headings, and under `## account` if any."""
     values: dict = {}
     heading = ""
     for line in pathlib.Path(path).read_text("utf-8").splitlines():
         if line.startswith("## "):
             heading = line[3:].strip()
-        elif heading in FIELDS and heading not in values and line[:1] in (" ", "\t") and line.strip():
+        elif heading in FIELDS + OPTIONAL and heading not in values and line[:1] in (" ", "\t") and line.strip():
             values[heading] = line.strip()
     missing = [field for field in FIELDS if field not in values]
     if missing:
@@ -110,6 +112,11 @@ def main(argv: list[str] | None = None) -> int:
                       f"profile-<name>.md and link it from CLAUDE.md:\n{names}")
         raise
     profile = read_profile(path)
+    try:
+        accounts.restrict(profile.get("account", ""))
+    except SystemExit as unknown:            # never another account's login: told what to add
+        lean_run.mail(ws, "graph-loop needs the project's account", str(unknown))
+        raise
     spec = str(pathlib.Path(args.spec[0]).resolve())
     info = lean_spec.front(pathlib.Path(spec).read_text("utf-8"))
     waiting, revise = lean_git.unmerged(repo), ""

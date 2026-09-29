@@ -25,6 +25,7 @@ import pathlib
 
 _DEFAULT = (("work", None),)
 _retired: frozenset[str] = frozenset()
+_only = ""   # the one account this run may spend, when its project names one
 
 
 def table() -> tuple[tuple[str, str | None], ...]:
@@ -50,7 +51,20 @@ def names() -> tuple[str, ...]:
 
 def available() -> tuple[str, ...]:
     """Configured accounts still eligible for this run."""
-    return tuple(name for name in names() if name not in _retired)
+    return tuple(name for name in names() if name not in _retired and name == (_only or name))
+
+
+def restrict(name: str) -> None:
+    """Spend `name` and no other account for the rest of this run ("" lifts it): the account a
+    project's profile names. The default login can be the owner's work account, and a personal
+    project must never fall back to it. A name this machine does not configure is refused
+    before anything is spent."""
+    global _only
+    if name and name not in names():
+        raise SystemExit(f"this project spends only the account {name!r}, which GRAPH_ACCOUNTS "
+                         f"does not configure here (it has {', '.join(names())}); add "
+                         f"{name}=<its CLAUDE_CONFIG_DIR> to GRAPH_ACCOUNTS")
+    _only = name
 
 
 @contextlib.contextmanager
