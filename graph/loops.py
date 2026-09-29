@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None, read_ps=loops_ps.read_ps, cwd_of=loops_p
         print(loops_list.report(ps_text, cwd_of, clock()))
         return 0
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))   # lean_spec sits beside this file
-    import project_view    # only a project view needs it: the plain list stays free of these modules
+    import project_view  # only a project view needs it: the plain list stays free of these modules
     code, text = project_view.view(args.which, args.only, ps_text, cwd_of, clock())
     print(text)
     return code
