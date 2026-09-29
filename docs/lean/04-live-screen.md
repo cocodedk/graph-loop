@@ -26,6 +26,8 @@ options of `graph/loops.py` that this spec adds:
 - `--path <N>` prints the folder of loop number N from the list, and nothing when there is no such loop
   or its project folder cannot be resolved (spec 02's `?`).
 - `--refresh <seconds>` (15 when absent) is only what the key line says: `every <seconds>s`.
+- `--once` leaves out the key line and the blank line before it, since a single look takes no keys. `-1`
+  passes it.
 
 The key line reads `keys: 1-9 switch loop · f filter (<current filter>) · q quit · every <N>s`, where
 the filter is `all`, `built`, `open` or `attention` and N is `LOOPS_REFRESH` (below), passed as
@@ -37,7 +39,9 @@ The script holds two things between refreshes: the selected project folder (from
 none, meaning the first running loop) and the filter (`all` at first). It waits for a key for the refresh
 time (`LOOPS_REFRESH` seconds, 15 by default) and reads it from standard input:
 
-- a digit `1` to `9`: selects the folder that `--path <digit>` prints; when it prints nothing the
+- a digit `1` to `9`: selects the folder that a fresh `--path <digit>` prints at the moment of the
+  keypress, not the one shown beside that number on the last screen (the numbers can have moved in
+  between; the screen printed next shows which project was selected); when it prints nothing the
   selection stays as it was;
 - `f`: the filter moves on, `all`, `built`, `open`, `attention`, and back to `all`; `all` passes no
   `--only`;
@@ -68,10 +72,12 @@ The driver's and the slicer's tests pass, and new tests prove:
 
 1. `--screen` prints the parts in the order above, for a given folder, for none given with two loops,
    and for none given with no loop; `--path` for a number that exists and one that does not.
-2. `-1` prints one screen and exits with status 0, passing the folder and no filter.
+2. `-1` prints one screen without the key line (`--once`) and exits with status 0, passing the folder
+   and no filter; `--once` on its own, with and without loops.
 3. With `LOOPS_CMD` faked and `LOOPS_REFRESH` set short, keys piped in: a digit switches the folder, a
-   digit with no loop keeps it, `f` cycles through the four filters and back, an unknown key only
-   refreshes, and `q` ends with `stopped watching.` and status 0.
+   digit with no loop keeps it, a digit selects the folder a fresh `--path` gives even when the last
+   screen showed another for that number, `f` cycles through the four filters and back, an unknown
+   key only refreshes, and `q` ends with `stopped watching.` and status 0.
 4. Each edge above: a tenth loop, `0`, a folder that is not a project, piped keys and end of input, a
    failing `loops.py` live and with `-1`, the key line with no loop and with a `LOOPS_REFRESH` other
    than 15, and a first loop whose folder cannot be resolved (skipped for the default view; `--path`
