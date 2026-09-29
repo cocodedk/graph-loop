@@ -1,6 +1,6 @@
 - No Python file may pass 200 lines (`graph/tests/test_file_lengths.py`, tests included). `graph/lean_run.py` stands at exactly 200: to add to it, move a function to a new module and keep its name importable from `lean_run`, because tests patch `lean_run.build`, `lean_run.judge`, `lean_run.grill` and `lean_run.masked`.
 - A new test file starts with the header of `graph/tests/test_lean.py` (the two `sys.path.insert` lines, `import tmp_root`) and ends with a count check: `EXPECTED_TESTS` and a `CountTest` (see `test_a_project_names_its_account.py`).
-- The gate runs the driver's and the slicer's tests and the scrub check; it cannot run `ruff`. CI lints with ruff 0.16.8, so keep lines to what `ruff check .` accepts and imports sorted and used.
+- The gate runs the driver's and the slicer's tests and the scrub check; it cannot run `ruff`, and CI's ruff 0.16.8 failed the lean builds of specs 02 and 03. Write to its rules: imports in one sorted block, `Callable` from `collections.abc`, one `with` holding every context instead of nested ones, `re.DOTALL` not `re.S`, and a shebang only on a file that is executable (`chmod +x`).
 - Nothing local travels: no home directory, account or user name, machine path or foreign commit hash in any tracked file, test fixtures included. `scripts/scrub-check.sh` enforces it.
 - Fake the outside world in tests (processes, the clock, git, files in a temp directory); never rely on a loop, a repository or a process that happens to exist on the machine.
 - PyYAML is the only runtime dependency: standard library for everything else.
