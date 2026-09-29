@@ -43,6 +43,7 @@ def step(workspace: str | None, age: int, now: float) -> tuple[str, int]:
     if row is None:
         return "starting", age
     since = max(0, int(now - when(row)))   # type: ignore[operator]
-    if row.get("kind") == "lean_call_started" and row.get("purpose") in STEPS:
-        return STEPS[row["purpose"]], since
+    purpose = row.get("purpose")
+    if row.get("kind") == "lean_call_started" and isinstance(purpose, str) and purpose in STEPS:
+        return STEPS[purpose], since
     return "working", since

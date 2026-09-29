@@ -46,6 +46,11 @@ class Step(unittest.TestCase):
         self.assertEqual(("working", 130), self.step(event("lean_call_started", purpose="plan")))
         self.assertEqual(("working", 130), self.step(event("lean_call_started")))
 
+    def test_a_purpose_that_is_not_text_is_working_not_a_crash(self):
+        for purpose in (["build"], {"a": 1}, 7, None):
+            with self.subTest(purpose=purpose):
+                self.assertEqual(("working", 130), self.step(event("lean_call_started", purpose=purpose)))
+
     def test_no_event_log_is_starting_for_as_long_as_the_process_has_run(self):
         self.assertEqual(("starting", AGE), self.step(log=False))
 
@@ -78,7 +83,7 @@ class Duration(unittest.TestCase):
         self.assertEqual("1h00m", loops_list.duration(3600))
 
 
-EXPECTED_TESTS = 11
+EXPECTED_TESTS = 12
 
 
 class CountTest(unittest.TestCase):

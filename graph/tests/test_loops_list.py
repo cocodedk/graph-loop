@@ -93,13 +93,13 @@ class Listing(unittest.TestCase):
         self.assertEqual((1, "cannot read the process list\n"), (code, out.getvalue()))
 
     def test_ps_that_cannot_run_or_exits_non_zero_is_a_ps_error(self):
-        with mock.patch.object(loops_ps.subprocess, "run", side_effect=FileNotFoundError("ps")):
-            with self.assertRaises(loops_ps.PsError):
-                loops_ps.read_ps()
+        with mock.patch.object(loops_ps.subprocess, "run", side_effect=FileNotFoundError("ps")), \
+                self.assertRaises(loops_ps.PsError):
+            loops_ps.read_ps()
         failed = subprocess.CompletedProcess([], 1, stdout="", stderr="boom")
-        with mock.patch.object(loops_ps.subprocess, "run", return_value=failed):
-            with self.assertRaises(loops_ps.PsError):
-                loops_ps.read_ps()
+        with mock.patch.object(loops_ps.subprocess, "run", return_value=failed), \
+                self.assertRaises(loops_ps.PsError):
+            loops_ps.read_ps()
 
     def test_ps_is_asked_for_pid_etimes_and_args(self):
         done = subprocess.CompletedProcess([], 0, stdout="listing", stderr="")
