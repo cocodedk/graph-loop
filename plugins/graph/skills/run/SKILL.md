@@ -49,6 +49,11 @@ Copy the closest file from `$GL/profiles/` into the repository as
 reads the first indented line of each. It refuses a profile that lacks one, so add
 any the copy does not have.
 
+A project that must spend one Claude account only, such as a personal project on a machine whose
+default login is a work account, adds `## account` with that account's name as `GRAPH_ACCOUNTS`
+names it, for example `personal`. The loop then spends that account and no other: when it runs out
+the run stops, and a name the machine does not configure stops the run before anything is spent.
+
 Before any spec, run the suite on `main` the way the loop will run it: from a clean
 checkout, with a scrubbed environment and an empty `HOME`. It must pass. A suite that
 only passes in your own shell fails every feature for reasons no builder can fix.
