@@ -11,9 +11,9 @@ CI runs `ruff check .` (pinned 0.16.8) on the pull request; a builder cannot run
 
 ## build_command
 
-    mkdir -p out && git ls-files -z graph slicer plugins scripts | xargs -0 tar czf out/graph-loop.tgz
+    mkdir -p out && git archive --format=tar.gz -o out/graph-loop.tgz HEAD
 
-There is nothing to compile: the build proves the branch checks out whole, as a source archive.
+There is nothing to compile: the build proves the branch checks out whole, as an archive of every tracked file.
 
 ## artifact
 
