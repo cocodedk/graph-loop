@@ -42,6 +42,18 @@ time (`LOOPS_REFRESH` seconds, 15 by default) and reads it from standard input:
 
 A selected folder stays selected when its loop ends, so the person keeps seeing its specs.
 
+## Edges
+
+- Only loops 1 to 9 can be reached by a key; a tenth loop is listed but not selectable (`# ponytail:`
+  one key, a prompt for a number later). The digit `0` counts as any other key.
+- A selected folder that is not a project prints spec 03's `not a project with docs/lean: <path>` line
+  where the project view would be, and the screen goes on refreshing.
+- The live screen clears the terminal before each print, as `watch.sh` does; `-1` does not clear.
+- If standard input ends or is not a terminal (no more keys), the script behaves as if `q` was pressed.
+- If `graph/loops.py` exits with a non-zero status (for example `cannot read the process list`), its
+  output is shown as it is and the live screen keeps refreshing; with `-1` the script exits with that
+  same status.
+
 ## Done when
 
 The driver's and the slicer's tests pass, and new tests prove:
@@ -52,8 +64,10 @@ The driver's and the slicer's tests pass, and new tests prove:
 3. With `LOOPS_CMD` faked and `LOOPS_REFRESH` set short, keys piped in: a digit switches the folder, a
    digit with no loop keeps it, `f` cycles through the four filters and back, an unknown key only
    refreshes, and `q` ends with `stopped watching.` and status 0.
-4. The script and its Python stay under the cap, and it starts nothing and writes nothing.
-5. Every earlier test still passes, unchanged. The builder adds new test files as the checks above
+4. Each edge above: a tenth loop, `0`, a folder that is not a project, end of input, and a failing
+   `loops.py` live and with `-1`.
+5. The script and its Python stay under the cap, and it starts nothing and writes nothing.
+6. Every earlier test still passes, unchanged. The builder adds new test files as the checks above
    need.
 
 ## Out of scope
