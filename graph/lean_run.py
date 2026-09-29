@@ -92,7 +92,7 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
         ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens,
                    effort=REVIEW_EFFORT, purpose="grill")
     ws.event("lean_call_started", purpose="grill", task="grill", effort=REVIEW_EFFORT)
-    out =review.codex(CODEX_BIN, prompt, cwd=repo, effort=REVIEW_EFFORT, attempt=paid)
+    out = review.codex(CODEX_BIN, prompt, cwd=repo, effort=REVIEW_EFFORT, attempt=paid)
     questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
     ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=questions[:2000])
     if questions:
