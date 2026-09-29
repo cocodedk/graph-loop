@@ -86,8 +86,9 @@ def resolve(path: str, cwd: str | None) -> str | None:
     return os.path.normpath(os.path.join(cwd, path)) if cwd else None
 
 
-def loops_in(ps_text: str, cwd_for: Callable[[int], str | None] = cwd_of) -> list[Loop]:
-    """The running lean loops in `ps -eo pid,etimes,args` output, lowest process id first."""
+def found_in(ps_text: str, cwd_for: Callable[[int], str | None] = cwd_of) -> list[tuple[Loop, str | None]]:
+    """Each running lean loop in `ps -eo pid,etimes,args` output with its resolved --repo, lowest
+    process id first."""
     found = []
     for line in ps_text.splitlines():
         parts = line.split(None, 2)
@@ -101,5 +102,10 @@ def loops_in(ps_text: str, cwd_for: Callable[[int], str | None] = cwd_of) -> lis
         repo = resolve(flags["--repo"], cwd)
         project = os.path.basename(repo) if repo else "?"
         spec = os.path.basename(flags["--spec"]).removesuffix(".md")
-        found.append(Loop(pid, int(parts[1]), project, spec, resolve(flags["--workspace"], cwd)))
-    return sorted(found)
+        found.append((Loop(pid, int(parts[1]), project, spec, resolve(flags["--workspace"], cwd)), repo))
+    return sorted(found, key=lambda row: row[0])
+
+
+def loops_in(ps_text: str, cwd_for: Callable[[int], str | None] = cwd_of) -> list[Loop]:
+    """The running lean loops in `ps -eo pid,etimes,args` output, lowest process id first."""
+    return [loop for loop, _ in found_in(ps_text, cwd_for)]
