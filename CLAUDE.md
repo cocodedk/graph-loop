@@ -91,3 +91,7 @@ This rule applies to agent plans. Automatic graph-loop enforcement is still pend
 - Never commit to `main` directly; open a pull request.
 - Never `--no-verify`. A failing hook means fix the cause.
 - Never force-push `main`.
+
+## The lean loop builds this repository too
+
+Its profile is [profile-graph-loop.md](profile-graph-loop.md); specs go in `docs/lean/`.
