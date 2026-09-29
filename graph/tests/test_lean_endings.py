@@ -77,7 +77,7 @@ class Stopped(Rig):
         landed = self.run_it(limited, suites=(), reviews=())
         self.assertEqual("", landed)
         self.assertEqual(1, len(self.prompts))           # no repair on an account that cannot answer
-        self.assertEqual(["lean_feature_started", "lean_stopped"], self.kinds())
+        self.assertEqual(["lean_feature_started", "lean_call_started", "lean_stopped"], self.kinds())
         self.assertIn("resets 2:10pm", self.mails[0][1])
 
     def test_a_reviewer_that_cannot_answer_spends_no_repair(self):

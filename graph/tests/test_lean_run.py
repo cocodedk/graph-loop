@@ -100,8 +100,8 @@ class GreenFeature(Rig):
         self.assertEqual(self.base, sha(self.repo, "refs/heads/main"))
         self.assertEqual(self.base, sha(self.origin, "refs/heads/main"))
         self.assertFalse((pathlib.Path(self.repo) / "ring.py").exists())   # the checkout untouched
-        self.assertEqual(["lean_feature_started", "lean_suite", "lean_review", "lean_published"],
-                         self.kinds())
+        self.assertEqual(["lean_feature_started", "lean_call_started", "lean_suite",
+                          "lean_call_started", "lean_review", "lean_published"], self.kinds())
         started = next(row for row in self.ws.events() if row["kind"] == "lean_feature_started")
         self.assertEqual("rest-ring", started["task"])
         self.assertFalse(pathlib.Path(started["tree"]).exists())
@@ -128,8 +128,9 @@ class Repair(Rig):
         self.assertTrue(landed)
         self.assertEqual(2, len(self.prompts))
         self.assertIn("FAILED: AmberTest > overdue", self.prompts[1])
-        self.assertEqual(["lean_feature_started", "lean_suite", "lean_repair", "lean_suite",
-                          "lean_review", "lean_published"], self.kinds())
+        self.assertEqual(["lean_feature_started", "lean_call_started", "lean_suite", "lean_repair",
+                          "lean_call_started", "lean_suite", "lean_call_started", "lean_review",
+                          "lean_published"], self.kinds())
 
     def test_a_refused_review_gets_one_repair_with_its_findings(self):
         refused = Outcome("ok", verdict="REJECT", text="no test covers the amber colour")

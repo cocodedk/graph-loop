@@ -21,6 +21,7 @@ import lean_spec
 import providers
 import review
 import tools
+from lean_body import pr_body
 from lean_spec import lessons, record, slug
 from providers import REVIEW_EFFORT  # the one review effort, for both loops
 from review_scope import VERDICT
@@ -63,6 +64,7 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome
     def paid(kind, account, cost, tokens, _text):
         ws.attempt(feature, account=account, kind=kind, cost=cost, tokens=tokens,
                    effort=REVIEW_EFFORT, purpose="review")
+    ws.event("lean_call_started", purpose="review", task=feature, effort=REVIEW_EFFORT)
     return review.codex(CODEX_BIN, prompt, cwd=cwd, effort=REVIEW_EFFORT, attempt=paid)
 
 
@@ -89,7 +91,8 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str) -> str:
     def paid(kind, account, cost, tokens, _text):
         ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens,
                    effort=REVIEW_EFFORT, purpose="grill")
-    out = review.codex(CODEX_BIN, prompt, cwd=repo, effort=REVIEW_EFFORT, attempt=paid)
+    ws.event("lean_call_started", purpose="grill", task="grill", effort=REVIEW_EFFORT)
+    out =review.codex(CODEX_BIN, prompt, cwd=repo, effort=REVIEW_EFFORT, attempt=paid)
     questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
     ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=questions[:2000])
     if questions:
@@ -128,14 +131,6 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
     return "", verdict
 
 
-def pr_body(spec_path: str, why: str, found: str) -> str:
-    """What a new pull request says: the suite, the reviewer's verdict and its findings."""
-    said = "accepted it" if not why else "still did not accept it after the last repair"
-    return (f"Built by graph-loop's lean loop from `{pathlib.Path(spec_path).name}`: the suite "
-            f"is green, and an independent reviewer {said}."
-            + (f"\n\nThe reviewer's findings:\n\n{found}" if found else ""))
-
-
 def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                 revise: str = "", pr: str = "") -> str:
     """One spec file, start to end. Its pull request's URL, or "" when it stopped.
@@ -151,6 +146,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
               f"CLAUDE.md and the profile at {profile_path}. Run the suite with "
               f"`bash {script}` and leave it green. Do not commit: the loop commits.\n\n"
               f"## Spec\n\n{spec}{lessons(pathlib.Path(spec_path).parent)}")
+    ws.event("lean_call_started", purpose="build", task=feature, effort=BUILD_EFFORT)
     built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
                   "in this checkout: fix that, and keep the suite green." if last else prompt, tree,
                   effort=BUILD_EFFORT)
@@ -163,6 +159,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             break
         ws.event("lean_repair", task=feature, why=why[-2000:])
         before = tree.diff(binary=True, against=tree.commit)
+        ws.event("lean_call_started", purpose="build", task=feature, effort=REPAIR_EFFORT)
         built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
                       "Fix that, and keep the suite green.", tree, resume=built.session,
                       effort=REPAIR_EFFORT)
