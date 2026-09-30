@@ -51,14 +51,17 @@ class AlertsMixin:
         self.mail_person(f"graph-loop needs you: {row.get('task') or 'the campaign'}",
                          row["kind"], json.dumps(row, sort_keys=True), about=row["kind"])
 
-    def mail_person(self, subject: str, why: str, flags: str = "", *, about: str = "") -> None:
+    def mail_person(self, subject: str, why: str, flags: str = "", *, about: str = "") -> bool:
         """Through the proven contact, the subject naming the project; a failed send is
-        logged, never raised. `about` names the event when it is not the subject."""
+        logged, never raised, and says so by returning False. `about` names the event when it is
+        not the subject."""
         try:
             alert_email.send(why, flags, recipient=self.require_contact(),
                              subject=f"[{project(self)}] {subject}")
         except (OSError, ValueError, SystemExit) as error:
             self.event("contact_send_failed", about=about or subject, error=str(error))
+            return False
+        return True
 
     def alert(self, task_id: str, what: str, *, limit: int | None = 300) -> str:
         """Log and send something a person has to read, newest last."""
