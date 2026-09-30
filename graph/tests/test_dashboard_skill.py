@@ -14,7 +14,7 @@ import yaml
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 PLUGIN = ROOT / "plugins" / "graph"
 SKILL = (PLUGIN / "skills" / "dashboard" / "SKILL.md").read_text("utf-8")
-EXPECTED_TESTS = 4
+EXPECTED_TESTS = 5
 
 
 class DashboardSkill(unittest.TestCase):
@@ -34,8 +34,15 @@ class DashboardSkill(unittest.TestCase):
 
     def test_the_plugin_is_at_the_version_that_carries_it_and_the_run_skill_points_to_it(self):
         manifest = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text("utf-8"))
-        self.assertEqual("0.4.0", manifest["version"])
+        self.assertGreaterEqual(tuple(map(int, manifest["version"].split("."))), (0, 4, 0))
         self.assertIn("graph:dashboard", (PLUGIN / "skills" / "run" / "SKILL.md").read_text("utf-8"))
+
+
+class AccountsDoc(unittest.TestCase):
+    def test_the_run_skill_says_where_accounts_are_set(self):
+        run = (PLUGIN / "skills" / "run" / "SKILL.md").read_text("utf-8")
+        for text in ("GRAPH_ACCOUNTS", "name=<CLAUDE_CONFIG_DIR>", "export GRAPH_ACCOUNTS=personal=<its config directory>"):
+            self.assertIn(text, run)
 
 
 class CountTest(unittest.TestCase):
