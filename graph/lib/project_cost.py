@@ -9,15 +9,13 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 
 
-def card_costs(project: str) -> dict[str, float]:
-    """Dollars by spec name from `<project>/scratchpad/lean/events*.jsonl`; {} when there is no log."""
+def _rows(project: str):
+    """Every event of the project's lean log, oldest first: the rotated parts, then the open one."""
     folder = os.path.join(project, "scratchpad", "lean")
-    files = sorted(glob.glob(os.path.join(folder, "events-*.jsonl"))) + [os.path.join(folder, "events.jsonl")]
-    runs: dict[tuple[str, int], float] = {}
-    run = 0
-    for path in files:
+    for path in sorted(glob.glob(os.path.join(folder, "events-*.jsonl"))) + [os.path.join(folder, "events.jsonl")]:
         try:
             with open(path, encoding="utf-8", errors="replace") as log:
                 lines = log.read().splitlines()
@@ -28,16 +26,34 @@ def card_costs(project: str) -> dict[str, float]:
                 row = json.loads(line)
             except ValueError:
                 continue
-            if not isinstance(row, dict):
-                continue
-            if row.get("kind") == "lean_feature_started":
-                run += 1
-            elif row.get("kind") == "attempt" and row.get("purpose") == "build" and isinstance(row.get("task"), str):
-                cost = row.get("cost")
-                if isinstance(cost, (int, float)) and not isinstance(cost, bool):
-                    key = (row["task"], run)
-                    runs[key] = max(runs.get(key, 0.0), float(cost))
+            if isinstance(row, dict):
+                yield row
+
+
+def card_costs(project: str) -> dict[str, float]:
+    """Dollars by spec name from `<project>/scratchpad/lean/events*.jsonl`; {} when there is no log."""
+    runs: dict[tuple[str, int], float] = {}
+    run = 0
+    for row in _rows(project):
+        if row.get("kind") == "lean_feature_started":
+            run += 1
+        elif row.get("kind") == "attempt" and row.get("purpose") == "build" and isinstance(row.get("task"), str):
+            cost = row.get("cost")
+            if isinstance(cost, (int, float)) and not isinstance(cost, bool):
+                key = (row["task"], run)
+                runs[key] = max(runs.get(key, 0.0), float(cost))
     costs: dict[str, float] = {}
     for (task, _run), cost in runs.items():
         costs[task] = costs.get(task, 0.0) + cost
     return costs
+
+
+def card_days(project: str) -> dict[str, str]:
+    """The day (`YYYY-MM-DD`, UTC, as the log stamps it) of each spec's last event: for a finished spec, the day
+    it was published or stopped. An event with no task or no dated `at` says nothing."""
+    days: dict[str, str] = {}
+    for row in _rows(project):
+        task, at = row.get("task"), row.get("at")
+        if isinstance(task, str) and isinstance(at, str) and re.match(r"\d{4}-\d{2}-\d{2}", at):
+            days[task] = at[:10]
+    return days

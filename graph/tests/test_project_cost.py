@@ -14,7 +14,7 @@ import project_view
 import tmp_root  # noqa: F401
 from test_project_marks import git, project, using
 
-EXPECTED_TESTS = 5
+EXPECTED_TESTS = 7
 
 
 def started(task, at="t1"):
@@ -51,6 +51,17 @@ class Costs(unittest.TestCase):
         self.assertEqual({}, project_cost.card_costs(str(project())))
 
 
+class Days(unittest.TestCase):
+    def test_a_spec_dates_to_the_day_of_its_last_event_across_files_and_undated_ones_give_none(self):
+        root = project()
+        write(root, "events-0001.jsonl", [{"kind": "lean_published", "task": "01-a", "at": "2026-09-29T23:59:59Z"},
+                                          {"kind": "lean_grilled", "at": "2026-09-30T01:00:00Z"}])   # no task
+        write(root, "events.jsonl", [{"kind": "lean_stopped", "task": "01-a", "at": "2026-09-30T06:14:54Z"},
+                                     {"kind": "lean_published", "task": "02-b", "at": "t1"}])          # not a date
+        self.assertEqual({"01-a": "2026-09-30"}, project_cost.card_days(str(root)))
+        self.assertEqual({}, project_cost.card_days(str(project())))
+
+
 class Shown(unittest.TestCase):
     def report(self, root):
         with using(git(["feat(01-a): x"])):
@@ -63,6 +74,15 @@ class Shown(unittest.TestCase):
         lines = self.report(root).splitlines()
         self.assertIn("✔ built     01-a  $1.50", lines)
         self.assertIn("· waiting   02-b", lines)                      # no cost yet: no figure
+
+    def test_the_date_follows_the_cost_when_the_log_has_one(self):
+        root = project(**{"01-a.md": "", "02-b.md": ""})
+        write(root, "events.jsonl", [started("01-a"), build("01-a", 1.5),
+                                     {"kind": "lean_published", "task": "01-a", "at": "2026-09-30T07:33:21Z"},
+                                     started("02-b"), build("02-b", 0.5)])                          # no dated event
+        lines = self.report(root).splitlines()
+        self.assertIn("✔ built     01-a  $1.50  2026-09-30", lines)
+        self.assertIn("· waiting   02-b  $0.50", lines)
 
     def test_costs_line_up_right_aligned(self):
         root = project(**{"01-a.md": "", "02-longer-name.md": ""})
