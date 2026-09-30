@@ -51,6 +51,7 @@ class Outcome:
     tokens: int | None = None
     verdict: str | None = None
     denials: int = 0
+    turns: int | None = None   # the call's own turns (`num_turns`), for the dashboard
     session: str = ""    # the call's own session id, so a rebuild round can resume it
     raw: str = ""
     confidence: float | None = None   # a decisions answer's own probability, not a boolean
@@ -108,7 +109,8 @@ def _spent(body: dict) -> dict:
     # A JSON boolean is an int in Python: `false` would read as zero spend, and
     # zero spend is the proof a live action may be repeated.
     money = cost if isinstance(cost, (int, float)) and not isinstance(cost, bool) else None
-    return {"cost": money, "tokens": tokens,
+    turns = body.get("num_turns")
+    return {"cost": money, "tokens": tokens, "turns": turns if isinstance(turns, int) and not isinstance(turns, bool) else None,
             # A missing list is unknown, not "no denials": -1 says so, and
             # `unstarted` refuses anything that is not exactly zero.
             "denials": len(denials) if isinstance(denials, list) else -1}

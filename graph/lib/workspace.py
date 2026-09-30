@@ -178,16 +178,16 @@ class Workspace(ClaimsMixin, FlagsMixin, AlertsMixin, LockMixin):
 
     def attempt(self, task_id: str, *, account: str, kind: str,
                 cost: float | None = None, tokens: int | None = None, effort: str = "",
-                failed_gate: bool = False, purpose: str = "", unstarted: bool = False) -> dict:
+                failed_gate: bool = False, purpose: str = "", unstarted: bool = False, turns: int | None = None) -> dict:
         """File one call. `kind` decides whether the task paid for it; `purpose`
         (e.g. "review") tells the call apart when the account alone cannot, and
         `unstarted` is the caller's proof that this one never reached the model
-        (`Outcome.unstarted`: a refusal, zero spend, no denials). Only the site
-        holding the outcome can say that, and a live card is handed back on it.
-        `effort` is what the call ran at, so the log can say what each level bought."""
+        (`Outcome.unstarted`: a refusal, zero spend, no denials); a live card is handed back on it.
+        `effort` is what the call ran at; `turns` (when known) is how many it took."""
         return self.event("attempt", task=task_id, account=account, outcome=kind,
                           counted=(kind == "ok"), cost=cost, tokens=tokens, effort=effort,
-                          failed_gate=bool(failed_gate), purpose=purpose, unstarted=bool(unstarted))
+                          failed_gate=bool(failed_gate), purpose=purpose, unstarted=bool(unstarted),
+                          **({} if turns is None else {"turns": turns}))
 
     def attempts(self, task_id: str) -> int:
         return sum(1 for row in self.events()

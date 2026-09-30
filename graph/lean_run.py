@@ -45,7 +45,7 @@ def build(ws, task: dict, prompt: str, tree, resume: str = "",
                            effort=effort, allowed_tools=tools.builder_tools(task),
                            disallowed_tools=tools.builder_denies(task), budget=task.get("budget", CARD_BUDGET))
     ws.attempt(feature, account=account, kind=out.kind, cost=out.cost, tokens=out.tokens,
-               effort=effort, purpose="build")
+               effort=effort, purpose="build", turns=out.turns)
     return out
 
 
