@@ -26,6 +26,18 @@ with room for its own framing), the diff inside it is replaced by:
 A single file whose section alone is more than the budget is not shown and is named in the list. The
 threads section of a revise round, the spec and the answer rule are never cut.
 
+## Answers to the grill
+
+- **When the parts that are never cut already exceed the limit** (the spec, the threads and the answer rule
+  alone, or with the stat block and the `Not shown` list after every diff section is left out): the stat
+  block and the `Not shown` list are shortened, in this order: the stat block keeps the files with the most
+  lines changed first, as many as fit, then one line `... and N more files` (N exact); the `Not shown` list
+  becomes the same kind of line, `N files not shown`. The spec, the threads and the answer rule are never
+  cut.
+- **When even those never-cut parts alone exceed the limit,** nothing more is shortened: the prompt is sent
+  as it is and Codex refuses it, exactly as today, and the run stops with the real error in its stop text
+  (spec 11). The test for this case only checks that `judge()` does not loop, raise or cut the spec.
+
 ## Edges
 
 - The diff is read as the text it is: its `diff --git` lines start each file's section; a diff with no such
