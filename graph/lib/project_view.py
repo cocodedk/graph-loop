@@ -24,8 +24,8 @@ WIDTH = max(len(mark) for mark in project_specs.MARKS)
 def report(project: str, loops: list[loops_ps.Loop], now: float, only: str | None) -> str:
     """The text to print for `project`, whose running `loops` are given."""
     running = {lean_spec.slug(f"{loop.spec}.md") for loop in loops}
-    commits = project_specs.subjects(project)
-    built = project_specs.built_from(commits)
+    found = project_specs.commits(project)
+    built = project_specs.built_from(found)
     rows = [(project_specs.mark(path, running, built), lean_spec.slug(path.name))
             for path in project_specs.spec_files(project)]
     counts = collections.Counter(mark for mark, _ in rows)
@@ -42,7 +42,7 @@ def report(project: str, loops: list[loops_ps.Loop], now: float, only: str | Non
     days = project_cost.card_days(project)
     shown = [f"{mark.ljust(WIDTH)}  {name.ljust(named) + '  ' + costs[name].rjust(dollars) + '  ' + days.get(name, '') if name in costs else name}".rstrip()
              for mark, name in rows if not only or ONLY[only](mark)]
-    merged = project_specs.recent(commits, {name for _, name in rows})
+    merged = project_specs.recent(found, {name for _, name in rows})
     tail = ["", "recently merged:", *(f"  {line}" for line in merged)] if merged else []
     return "\n".join([*head, "", *(shown or ["no specs match" if rows else "no specs"]), *tail])
 

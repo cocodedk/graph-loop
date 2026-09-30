@@ -1,5 +1,6 @@
 """A project's specs and their marks: which files count, which mark wins, and how built is read."""
 
+import os
 import pathlib
 import subprocess
 import sys
@@ -10,6 +11,7 @@ from unittest import mock
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import project_specs
+import project_view
 import tmp_root  # noqa: F401
 from project_specs import BUILDING, BUILT, PR_OPEN, STOPPED, WAITING
 
@@ -29,7 +31,7 @@ def git(subjects=(), refs=("origin/main", "main")):
     def run(command, **_):
         run.calls.append(command)
         if command[-1] in refs:
-            return subprocess.CompletedProcess(command, 0, "".join(f"{s}\n" for s in subjects), "")
+            return subprocess.CompletedProcess(command, 0, "".join(f"\x01{s}\x02\n" for s in subjects), "")
         return subprocess.CompletedProcess(command, 128, "", "fatal: bad revision")
     run.calls = []
     return run
@@ -95,7 +97,7 @@ class Built(unittest.TestCase):
         run = git(["feat(a): x", "fix: y", "feat(b)!: z"])
         with using(run):
             self.assertEqual({"a", "b"}, project_specs.built_names("/p"))
-        self.assertEqual([["git", "-C", "/p", "log", "--format=%s", "origin/main"]], run.calls)
+        self.assertEqual([["git", "-C", "/p", "log", "--format=%x01%s%x02%b", "origin/main"]], run.calls)
 
     def test_main_is_read_when_there_is_no_origin_main(self):
         run = git(["feat(a): x"], refs=("main",))
@@ -119,7 +121,35 @@ class Built(unittest.TestCase):
             self.assertEqual(set(), project_specs.built_names("/p"))
 
 
-EXPECTED_TESTS = 12
+class RealGit(unittest.TestCase):
+    """A throwaway repository: the merge subject may be the person's own, the squash body still names the spec."""
+
+    def setUp(self):
+        self.root = project(**{"01-a.md": front("pr_open"), "02-b.md": front("pr_open"), "03-c.md": "", "04-d.md": ""})
+        env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@e.test",
+               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@e.test", "GIT_CONFIG_GLOBAL": "/dev/null"}
+        for args in (("init", "-q", "-b", "main"),
+                     ("commit", "-q", "--allow-empty", "-m", "feat(01-a): x"),
+                     ("commit", "-q", "--allow-empty", "-m", "feat: custom title (#2)", "-m", "* feat(02-b): y"),
+                     ("commit", "-q", "--allow-empty", "-m", "docs: a note", "-m", "we may add feat(03-c) later")):
+            subprocess.run(("git", "-C", str(self.root), *args), env=env, capture_output=True, check=True)
+
+    def test_a_spec_is_built_by_its_subject_or_by_a_line_of_the_body_and_a_mention_does_not_count(self):
+        built = project_specs.built_names(str(self.root))
+        self.assertEqual({"01-a", "02-b"}, built)                          # 03-c is only mentioned; 04-d has no commit
+        marks = {name: project_specs.mark(self.root / "docs" / "lean" / f"{name}.md", set(), built)
+                 for name in ("01-a", "02-b", "03-c", "04-d")}
+        self.assertEqual([BUILT, BUILT, WAITING, WAITING], list(marks.values()))   # built beats a stale pr_open
+
+    def test_a_specs_merge_is_not_recently_merged_but_a_mention_is(self):
+        commits = project_specs.commits(str(self.root))
+        self.assertEqual(["docs: a note"], project_specs.recent(commits, {"01-a", "02-b", "03-c", "04-d"}))
+        report = project_view.report(str(self.root), [], 0, None)
+        self.assertIn("✔ built     02-b", report)
+        self.assertNotIn("custom title", report)
+
+
+EXPECTED_TESTS = 14
 
 
 class CountTest(unittest.TestCase):
