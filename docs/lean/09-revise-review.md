@@ -28,6 +28,16 @@ September 2026 that the loop build it.
 - **No flag and no skipped event.** A revise round is never skipped, so there is no option to turn the
   review off and no `lean_review_skipped` event.
 
+## Answers to the grill
+
+- **Rounds:** a revise run is one revise build plus up to two repair rounds, the same as a first build's
+  initial build plus up to two repairs. "Counting this round" in the repair-limit line means each repair
+  counts against the two; the revise build itself is not one of them.
+- **"A thread still open"** means the thread's defect is still unfixed in the round's diff, as the reviewer
+  judges it from the threads' text and the change. It is not GitHub's resolved mark: the reviewer runs
+  before the push, when GitHub still shows every thread unresolved, and the loop does not read or set that
+  mark.
+
 ## Edges
 
 - A crashed or unreadable review is not an accept, exactly as in a first build.
