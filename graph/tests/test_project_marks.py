@@ -145,7 +145,7 @@ class RealGit(unittest.TestCase):
         commits = project_specs.commits(str(self.root))
         self.assertEqual(["docs: a note"], project_specs.recent(commits, {"01-a", "02-b", "03-c", "04-d"}))
         report = project_view.report(str(self.root), [], 0, None)
-        self.assertIn("✔ built     02-b", report)
+        self.assertIn("✔ built            02-b", report)
         self.assertNotIn("custom title", report)
 
 

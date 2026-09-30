@@ -95,7 +95,7 @@ class Colours(unittest.TestCase):
     def test_each_mark_carries_its_colour_and_a_waiting_line_is_dim_whole(self):
         out = run(self.ps, str(self.root), "--color")[1]
         for name, mark, code in (("01-built", "✔ built", 32), ("02-run", "▶ building", 33), ("03-stop", "✖ stopped", 31),
-                                 ("04-ask", "? question", 35), ("05-pr", "● pr open", 36)):
+                                 ("04-ask", "? awaiting answer", 35), ("05-pr", "● pr open", 36)):
             self.assertTrue(line_of(out, name).startswith(esc(code, mark)), name)
         waiting = line_of(out, "06-wait")
         self.assertEqual(esc(2, strip(waiting)), waiting)
@@ -130,8 +130,8 @@ class Colours(unittest.TestCase):
         root = project(**{f"0{at}-{name}.md": "" for at, name in enumerate("abcdefghij", 1)})
         with using(git([f"feat(0{at}-{name}): x" for at, name in enumerate("abcdef", 1)])):
             lines = project_view.report(str(root), [], NOW, None, 6, True).splitlines()
-        self.assertIn(esc(32, "✔ built     … 6 more"), lines)
-        self.assertIn(esc(2, "· waiting   … 2 more"), lines)
+        self.assertIn(esc(32, "✔ built            … 6 more"), lines)
+        self.assertIn(esc(2, "· waiting          … 2 more"), lines)
 
     def test_the_step_takes_the_thresholds_in_the_list_and_red_from_15_minutes_in_the_view_when_testing_or_checking(self):
         for row, step in ((TESTING, "testing"), ({"kind": "lean_published"}, "checking the build"),

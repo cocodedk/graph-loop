@@ -1,5 +1,5 @@
 """A spec the grill sent back with questions is marked `lean_status: questions`, so nothing mistakes it for a
-spec that is merely waiting: the dashboard shows `? question` and its attention filter lists it."""
+spec that is merely waiting: the dashboard shows `? awaiting answer` and its attention filter lists it."""
 
 import pathlib
 import sys
@@ -69,15 +69,15 @@ class Shown(unittest.TestCase):
     def test_the_dashboard_marks_it_and_the_attention_filter_lists_it(self):
         root = self.project({"01-a": "questions", "02-b": "pr_open", "03-c": None, "04-d": "stopped"})
         text = project_view.report(root, [], 0, None)
-        self.assertIn("? question  01-a", text)
-        self.assertIn("1 question", text.splitlines()[0])
+        self.assertIn("? awaiting answer  01-a", text)
+        self.assertIn("1 awaiting answer", text.splitlines()[0])
         attention = project_view.report(root, [], 0, "attention")
-        self.assertEqual(["? question  01-a", "● pr open   02-b", "✖ stopped   04-d"],
+        self.assertEqual(["? awaiting answer  01-a", "● pr open          02-b", "✖ stopped          04-d"],
                          [line for line in attention.splitlines() if line and line[0] in "?●✖"])
 
     def test_built_and_building_still_come_first_and_the_mark_fits_the_column(self):
         self.assertEqual(project_view.WIDTH, max(len(mark) for mark in project_specs.MARKS))
-        self.assertEqual(10, len(project_specs.QUESTION))
+        self.assertEqual(17, len(project_specs.QUESTION))
 
 
 class CountTest(unittest.TestCase):

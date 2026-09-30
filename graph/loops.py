@@ -22,6 +22,7 @@ import time
 
 sys.dont_write_bytecode = True   # it only reads: importing its modules must not leave .pyc files
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "lib"))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))   # lean_spec sits beside this file
 
 import loops_list
 import loops_ps
@@ -47,7 +48,6 @@ def main(argv: list[str] | None = None, read_ps=loops_ps.read_ps, cwd_of=loops_p
     if args.which is None and not args.screen and args.path is None:
         print(loops_list.report(ps_text, cwd_of, clock(), args.color))
         return 0
-    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))   # lean_spec sits beside this file
     if args.path is not None or args.screen:
         import screen_view  # only the live screen needs it
         if args.path is not None:
@@ -57,7 +57,7 @@ def main(argv: list[str] | None = None, read_ps=loops_ps.read_ps, cwd_of=loops_p
             return 0
         print(screen_view.screen(args.which, args.only, args.refresh, args.once, ps_text, cwd_of, clock(), args.rows, args.color))
         return 0
-    import project_view  # only a project view needs it: the plain list stays free of these modules
+    import project_view  # only a project view needs it
     code, text = project_view.view(args.which, args.only, ps_text, cwd_of, clock(), None, args.color)
     print(text)
     return code

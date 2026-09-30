@@ -14,7 +14,7 @@ import loops_step
 import project_cost
 import project_fit
 import project_specs
-from project_specs import BUILDING, BUILT, PR_OPEN, QUESTION, STOPPED, WAITING
+from project_specs import BUILT, MARK_STYLE, PR_OPEN, QUESTION, STOPPED
 from screen_color import costly, paint
 
 ONLY = {"built": lambda mark: mark == BUILT,
@@ -23,7 +23,6 @@ ONLY = {"built": lambda mark: mark == BUILT,
 UNREADABLE = "git history unreadable: nothing is marked built"
 WIDTH = max(len(mark) for mark in project_specs.MARKS)
 SLOW_STEPS = ("testing", "checking the build")   # the log is quiet while these run: 15 minutes is red
-MARK_STYLE = {BUILT: "green", BUILDING: "yellow", STOPPED: "red", QUESTION: "magenta", PR_OPEN: "cyan", WAITING: "dim"}
 
 
 def report(project: str, loops: list[loops_ps.Loop], now: float, only: str | None,

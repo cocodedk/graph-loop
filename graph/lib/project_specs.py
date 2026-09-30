@@ -10,8 +10,9 @@ import lean_spec
 import yaml  # type: ignore[import-untyped]  # no stubs in this environment
 
 BUILT, BUILDING, STOPPED, PR_OPEN, WAITING = "✔ built", "▶ building", "✖ stopped", "● pr open", "· waiting"
-QUESTION = "? question"   # the grill sent it back: a person has to answer
+QUESTION = "? awaiting answer"   # the grill sent it back: a person has to answer
 MARKS = (BUILT, BUILDING, STOPPED, QUESTION, PR_OPEN, WAITING)   # the order the first line counts them in
+MARK_STYLE = {BUILT: "green", BUILDING: "yellow", STOPPED: "red", QUESTION: "magenta", PR_OPEN: "cyan", WAITING: "dim"}
 REFS = ("origin/main", "main")
 
 
