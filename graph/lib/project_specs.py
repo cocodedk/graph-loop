@@ -7,12 +7,14 @@ import re
 import subprocess
 
 import lean_spec
+import project_cost
 import yaml  # type: ignore[import-untyped]  # no stubs in this environment
 
 BUILT, BUILDING, STOPPED, PR_OPEN, WAITING = "✔ built", "▶ building", "✖ stopped", "● pr open", "· waiting"
 QUESTION = "? awaiting answer"   # the grill sent it back: a person has to answer
 MARKS = (BUILT, BUILDING, STOPPED, QUESTION, PR_OPEN, WAITING)   # the order the first line counts them in
 MARK_STYLE = {BUILT: "green", BUILDING: "yellow", STOPPED: "red", QUESTION: "magenta", PR_OPEN: "cyan", WAITING: "dim"}
+LOGGED = {"lean_feature_started": None, "lean_stopped": "stopped", "lean_published": "pr_open"}   # event -> status
 REFS = ("origin/main", "main")
 
 
@@ -63,13 +65,28 @@ def recent(found: list[tuple[str, str]] | None, specs: set[str], count: int = 8)
             if not any(name[:1].isdigit() or name in specs for name in _scopes((subject, body)))][:count]
 
 
+def logged_status(path: pathlib.Path) -> str | None:
+    """What the project's event log says of the spec: the newest event that names it decides. A grill with
+    questions waits for an answer, a stop and a publish say so, a newer start or a clear grill says nothing."""
+    name, status = lean_spec.slug(path.name), None
+    for row in project_cost._rows(str(path.absolute().parents[2])):
+        kind = row.get("kind")
+        if kind == "lean_grilled":
+            if isinstance(row.get("specs"), list) and name in row["specs"]:
+                status = "questions" if row.get("questions") else None
+        elif row.get("task") == name and isinstance(kind, str) and kind in LOGGED:
+            status = LOGGED[kind]
+    return status
+
+
 def status_of(path: pathlib.Path) -> object:
-    """The spec's `lean_status`; None when the file or its front matter cannot be read."""
+    """The spec's `lean_status`, else what the event log says; None when neither names one."""
     try:
         matter = lean_spec.front(path.read_text("utf-8"))
     except (OSError, ValueError, yaml.YAMLError):
         return None
-    return matter.get("lean_status") if isinstance(matter, dict) else None
+    status = matter.get("lean_status") if isinstance(matter, dict) else None
+    return logged_status(path) if status is None else status
 
 
 def mark(path: pathlib.Path, running: set[str], built: set[str] | None) -> str:
