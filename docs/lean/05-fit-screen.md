@@ -52,6 +52,15 @@ The first line of the project view (its counts), the `loop:` lines and their ord
 - **Room for some waiting specs:** with `F` lines left after the fixed parts, the specs of rule 2 and
   the built line, all `W` waiting specs print when `W <= F`; otherwise the first `max(0, F - 1)` print and
   the `… M more` line takes the last of the room (`M` is the number left out).
+- **Exactly `N - 1` lines used by the fixed parts and the specs of rule 2:** the two count lines still
+  print, so the screen is one or two lines taller than `N - 1`; they are never omitted.
+- **The messages** `no specs`, `no specs match` and `git history unreadable: nothing is marked built` are
+  fixed lines: they always print as today and nothing gives way to them, because no spec lines are left
+  to shrink beside `no specs` and `no specs match`, and the unreadable line is one of the fixed lines
+  above the specs.
+- **Order:** the screen is the fixed lines, then the specs of rule 2 in file order, then the built line,
+  then the waiting specs in file order, then the waiting count line, then (only when everything else
+  fits) `recently merged`. The attention specs and the waiting ones are not mixed.
 
 ## Done when
 
