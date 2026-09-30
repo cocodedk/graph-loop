@@ -157,7 +157,7 @@ class Size(unittest.TestCase):
     def test_the_entry_and_its_modules_are_under_the_cap(self):
         graph = pathlib.Path(__file__).resolve().parents[1]
         files = [graph / "loops.py", *sorted((graph / "lib").glob("loops_*.py"))]
-        self.assertEqual(5, len(files))
+        self.assertEqual(7, len(files))
         for path in files:
             with self.subTest(path=path.name):
                 self.assertLessEqual(len(path.read_text("utf-8").splitlines()), 200)

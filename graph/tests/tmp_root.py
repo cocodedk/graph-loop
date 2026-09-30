@@ -31,6 +31,10 @@ os.environ["GRAPH_ROUTER"] = "off"
 
 ROOT = tempfile.mkdtemp(prefix="graph-tests-")
 tempfile.tempdir = ROOT
+# A test never reads or writes the person's projects file, nor leaves one for another test: the state
+# folder is a plain file, so nothing can be made under it. A test of the file names its own folder.
+(pathlib.Path(ROOT) / "no-state").write_text("")
+os.environ["XDG_STATE_HOME"] = str(pathlib.Path(ROOT) / "no-state")
 os.environ["TMPDIR"] = ROOT          # the drivers and scripts the tests spawn follow it too
 atexit.register(shutil.rmtree, ROOT, ignore_errors=True)
 

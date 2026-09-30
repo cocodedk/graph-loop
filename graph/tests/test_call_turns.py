@@ -61,8 +61,8 @@ class Shown(unittest.TestCase):
         self.assertEqual({"01-a": 86}, project_cost.card_turns(str(root)))
         with using(git(["feat(01-a): x"])):
             lines = project_view.report(str(root), [], 0, None).splitlines()
-        self.assertIn("✔ built     01-a  $2.50  2026-09-30  86t", lines)
-        self.assertIn("· waiting   02-b  $0.50", lines)
+        self.assertIn("✔ built            01-a  $2.50  2026-09-30  86t", lines)
+        self.assertIn("· waiting          02-b  $0.50", lines)
 
 
 def call(task, purpose, **fields):
@@ -84,8 +84,8 @@ class Lines(unittest.TestCase):
         self.assertEqual({"01-a": "opus-5-5"}, project_cost.card_models(str(root)))
         with using(git(["feat(01-a): x"])):
             lines = project_view.report(str(root), [], 0, None).splitlines()
-        self.assertIn("✔ built     01-a  $2.50  2026-09-30  86t  opus-5-5", lines)
-        self.assertIn("· waiting   02-b  $0.50", lines)
+        self.assertIn("✔ built            01-a  $2.50  2026-09-30  86t  opus-5-5", lines)
+        self.assertIn("· waiting          02-b  $0.50", lines)
 
     def test_a_running_specs_loop_line_shows_its_turns_so_far(self):
         root = project(**{"01-a.md": "", "02-b.md": ""})

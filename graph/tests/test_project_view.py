@@ -48,8 +48,8 @@ class View(unittest.TestCase):
 
     def test_the_first_line_leaves_out_zero_counts_and_lines_are_aligned(self):
         self.assertEqual(f"{self.root.name}  5 specs: 1 built · 1 stopped · 1 pr open · 2 waiting\n\n"
-                         "✔ built     00-a\n· waiting   01-b\n✖ stopped   02-c\n● pr open   03-d\n"
-                         "· waiting   04-e", self.report())
+                         "✔ built            00-a\n· waiting          01-b\n✖ stopped          02-c\n"
+                         "● pr open          03-d\n· waiting          04-e", self.report())
 
     def test_a_running_loop_is_a_loop_line_and_the_building_mark(self):
         ps = process(7, 900, self.root, "/s/01-b.md") + process(9, 5, "/other", "/s/x.md")
@@ -59,7 +59,7 @@ class View(unittest.TestCase):
         self.assertEqual(f"{self.root.name}  5 specs: 1 built · 1 building · 1 stopped · 1 pr open · 1 waiting",
                          lines[0])
         self.assertEqual("  loop: 01-b starting 15m00s", lines[1])
-        self.assertEqual("▶ building  01-b", lines[4])
+        self.assertEqual("▶ building         01-b", lines[4])
 
     def test_a_building_loop_line_carries_its_progress_and_other_steps_do_not(self):
         ps = process(7, 900, self.root, "/s/01-b.md")
@@ -73,7 +73,7 @@ class View(unittest.TestCase):
 
     def test_a_loop_that_is_both_building_and_built_shows_as_building(self):
         (loop,) = loops_ps.loops_in(process(1, 5, self.root, "/s/00-a.md"), lambda pid: None)
-        self.assertIn("▶ building  00-a", self.report(running=[loop]).splitlines())
+        self.assertIn("▶ building         00-a", self.report(running=[loop]).splitlines())
 
     def test_two_loops_on_one_project_come_by_process_id(self):
         ps = process(30, 60, self.root, "/s/04-e.md") + process(4, 120, f"{self.root}/", "/s/00-a.md")
@@ -84,12 +84,13 @@ class View(unittest.TestCase):
         self.root = project(**{"05 f (g).md": ""})
         out = self.show(ps=process(1, 5, self.root, "/s/05 f (g).md"))[1]
         self.assertIn("  loop: 05-f-g starting 5s", out)
-        self.assertIn("▶ building  05-f-g", out)
+        self.assertIn("▶ building         05-f-g", out)
 
     def test_each_filter(self):
-        want = {"built": ["✔ built     00-a"],
-                "open": ["· waiting   01-b", "✖ stopped   02-c", "● pr open   03-d", "· waiting   04-e"],
-                "attention": ["✖ stopped   02-c", "● pr open   03-d"]}
+        want = {"built": ["✔ built            00-a"],
+                "open": ["· waiting          01-b", "✖ stopped          02-c", "● pr open          03-d",
+                         "· waiting          04-e"],
+                "attention": ["✖ stopped          02-c", "● pr open          03-d"]}
         for only, lines in want.items():
             with self.subTest(only=only):
                 shown = self.report(only).splitlines()
@@ -114,8 +115,8 @@ class View(unittest.TestCase):
     def test_unreadable_git_falls_back_to_the_front_matter_and_says_so(self):
         lines = self.report(run=git(refs=())).splitlines()
         self.assertEqual(UNREADABLE, lines[1])
-        self.assertEqual(["· waiting   00-a", "· waiting   01-b", "✖ stopped   02-c", "● pr open   03-d",
-                          "· waiting   04-e"], lines[3:])
+        self.assertEqual(["· waiting          00-a", "· waiting          01-b", "✖ stopped          02-c",
+                          "● pr open          03-d", "· waiting          04-e"], lines[3:])
         self.assertEqual(0, self.show(run=git(refs=()))[0])
 
     def test_the_unreadable_git_line_follows_the_loop_lines(self):
@@ -127,7 +128,7 @@ class View(unittest.TestCase):
         ps = process(30, 60, "/elsewhere", "/s/x.md") + process(40, 60, self.root, "/s/00-a.md")
         code, out = self.show(2, ps=ps)
         self.assertEqual(0, code)
-        self.assertIn("▶ building  00-a", out)
+        self.assertIn("▶ building         00-a", out)
 
     def test_a_number_outside_the_list(self):
         for number in (0, 3):
@@ -160,7 +161,7 @@ class View(unittest.TestCase):
         for command in (["init", "-q", "-b", "main"],
                         ["-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "feat(01-b): y"]):
             real(["git", "-C", str(self.root), *command], env=env, check=True, capture_output=True)
-        self.assertIn("✔ built     01-b", self.show(run=real)[1])
+        self.assertIn("✔ built            01-b", self.show(run=real)[1])
 
 
 class Size(unittest.TestCase):

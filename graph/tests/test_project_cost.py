@@ -72,8 +72,8 @@ class Shown(unittest.TestCase):
         self.assertNotIn("$", self.report(root))
         write(root, "events.jsonl", [started("01-a"), build("01-a", 1.5)])
         lines = self.report(root).splitlines()
-        self.assertIn("✔ built     01-a  $1.50", lines)
-        self.assertIn("· waiting   02-b", lines)                      # no cost yet: no figure
+        self.assertIn("✔ built            01-a  $1.50", lines)
+        self.assertIn("· waiting          02-b", lines)                     # no cost yet: no figure
 
     def test_the_date_follows_the_cost_when_the_log_has_one(self):
         root = project(**{"01-a.md": "", "02-b.md": ""})
@@ -81,8 +81,8 @@ class Shown(unittest.TestCase):
                                      {"kind": "lean_published", "task": "01-a", "at": "2026-09-30T07:33:21Z"},
                                      started("02-b"), build("02-b", 0.5)])                          # no dated event
         lines = self.report(root).splitlines()
-        self.assertIn("✔ built     01-a  $1.50  2026-09-30", lines)
-        self.assertIn("· waiting   02-b  $0.50", lines)
+        self.assertIn("✔ built            01-a  $1.50  2026-09-30", lines)
+        self.assertIn("· waiting          02-b  $0.50", lines)
 
     def test_costs_line_up_right_aligned(self):
         root = project(**{"01-a.md": "", "02-longer-name.md": ""})

@@ -35,6 +35,7 @@ import accounts
 import lean_git
 import lean_run
 import lean_spec
+import projects_log
 from workspace import Workspace
 from worktree import Worktree
 
@@ -99,8 +100,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if len(args.spec) != 1:
         parser.error("one spec per run: the next is built once this one's pull request is merged")
+    projects_log.record(args.repo)             # so the dashboard still lists it once the loop has exited
     ws = Workspace(args.workspace)
-    ws.require_contact()                       # no proven channel, no run
+    ws.require_contact()                     # no proven channel, no run
     repo = str(pathlib.Path(args.repo).resolve())
     try:
         path = profile_path(repo, args.profile)

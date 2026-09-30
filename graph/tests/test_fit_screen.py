@@ -21,15 +21,15 @@ UNREADABLE = "git history unreadable: nothing is marked built"
 
 
 def built_more(count):
-    return f"✔ built     … {count} more"
+    return f"✔ built            … {count} more"
 
 
 def waiting_more(count):
-    return f"· waiting   … {count} more"
+    return f"· waiting          … {count} more"
 
 
 def spec(mark, name):
-    return f"{mark.ljust(10)}  {name}"
+    return f"{mark.ljust(17)}  {name}"
 
 
 def make(built=0, waiting=0, attention=(), **more):
