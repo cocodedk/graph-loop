@@ -41,6 +41,18 @@ to `--screen`. It passes nothing when `tput` prints nothing, and `-1` never pass
 
 The first line of the project view (its counts), the `loop:` lines and their order do not change.
 
+## Answers to the grill
+
+- **The fixed parts overflow** (the loop list, the project's first line and loop lines, and the key line
+  are already more than `N - 1` lines, or the specs of rule 2 push it over): nothing that needs a look and
+  no fixed line is ever cut, so the screen is taller than `N - 1`. Then every optional line is
+  dropped except the two count lines: `recently merged` goes, no waiting spec prints, and the
+  `✔ built     … N more` and `· waiting   … M more` lines still print, when there is anything built or
+  waiting, however tall that makes the screen.
+- **Room for some waiting specs:** with `F` lines left after the fixed parts, the specs of rule 2 and
+  the built line, all `W` waiting specs print when `W <= F`; otherwise the first `max(0, F - 1)` print and
+  the `… M more` line takes the last of the room (`M` is the number left out).
+
 ## Done when
 
 The driver's and the slicer's tests pass, and new tests prove:
@@ -51,7 +63,8 @@ The driver's and the slicer's tests pass, and new tests prove:
    file order up to the room with a right `· waiting   … M more` line; when they all fit there is no
    such line, and when nothing is built there is no built line.
 3. `recently merged` is dropped when the specs and it do not both fit, and kept when they do.
-4. When the specs of rule 2 alone are taller than the screen, all of them print.
+4. When the specs of rule 2 alone are taller than the screen, all of them print, and when the fixed
+   parts overflow, only the two count lines remain of the optional ones (the answers above).
 5. With `--only`, the shrinking counts only the specs the filter passes.
 6. Without `--rows`, and with `--once`, the output is byte for byte what it is today.
 7. `graph/loops.sh` passes `--rows` (the height `tput lines` gives, faked in the test) to the command
