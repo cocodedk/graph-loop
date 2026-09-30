@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import fcntl   # ponytail: POSIX only like the /proc reading of loops_ps, a lock file on Windows
+import fcntl  # ponytail: POSIX only like the /proc reading of loops_ps, a lock file on Windows
 import os
 
 from loops_projects import path

@@ -15,7 +15,7 @@ def rows(found: list[tuple[loops_ps.Loop, str | None]], recorded: list[str]) -> 
     running loop (`found`, by --repo), in folder-name and spec order. The specs are read only when a folder is recorded."""
     if not recorded:
         return []
-    import waiting_view   # needs the specs' modules: a list with nothing recorded stays free of them
+    import waiting_view  # needs the specs' modules: a list with nothing recorded stays free of them
     running = {os.path.realpath(repo) for _, repo in found if repo}
     folders = sorted({os.path.realpath(folder) for folder in recorded} - running,
                      key=lambda folder: (os.path.basename(folder), folder))

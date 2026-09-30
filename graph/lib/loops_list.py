@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import loops_projects
 import loops_ps
 import loops_step
-import loops_projects
 import loops_waiting
 from screen_color import paint, quiet
 
