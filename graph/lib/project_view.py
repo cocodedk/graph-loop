@@ -33,7 +33,9 @@ def report(project: str, loops: list[loops_ps.Loop], now: float, only: str | Non
     head = [f"{os.path.basename(project)}  {len(rows)} specs" + (f": {tally}" if tally else "")]
     for loop in loops:
         step, spent = loops_step.step(loop.workspace, loop.age, now)
-        head.append(f"  loop: {lean_spec.slug(f'{loop.spec}.md')} {step} {loops_list.duration(spent)}")
+        using = loops_step.using(loop.workspace)
+        head.append(f"  loop: {lean_spec.slug(f'{loop.spec}.md')} {step} {loops_list.duration(spent)}"
+                    + (f"  {using}" if using else ""))
     if built is None:
         head.append(UNREADABLE)
     costs = {name: f"${cost:.2f}" for name, cost in project_cost.card_costs(project).items()}

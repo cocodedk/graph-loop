@@ -47,3 +47,14 @@ def step(workspace: str | None, age: int, now: float) -> tuple[str, int]:
     if row.get("kind") == "lean_call_started" and isinstance(purpose, str) and purpose in STEPS:
         return STEPS[purpose], since
     return "working", since
+
+
+def using(workspace: str | None) -> str:
+    """The model and effort of the call a loop is making, `sonnet-5-5 high`: read from the last event when it
+    is a call that started (older events carry the effort alone); "" otherwise."""
+    row = last_event(workspace)
+    if row is None or row.get("kind") != "lean_call_started":
+        return ""
+    model, effort = row.get("model"), row.get("effort")
+    words = [model.removeprefix("claude-") if isinstance(model, str) else "", effort if isinstance(effort, str) else ""]
+    return " ".join(word for word in words if word)
