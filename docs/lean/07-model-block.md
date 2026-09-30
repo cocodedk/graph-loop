@@ -1,3 +1,9 @@
+---
+lean_status: questions
+lean_rounds: 1
+lean_asked: Should GRAPH_REVIEWERS replace the block’s default reviewer list, as it does today, or append
+  to it, as the spec also requires?
+---
 # 07: one block names every lean model and effort, and the grill and review run on gpt-6.1-sol
 
 ## What the owner wants
@@ -29,9 +35,10 @@ plain data at the top of the file.
 - `providers.MODEL`, `providers.REVIEW_MODEL` and `providers.REVIEW_EFFORT`, and `lean_run`'s
   `BUILD_EFFORT` and `REPAIR_EFFORT`, take their values from the block instead of typing them, so no
   line of code outside the block names a lean model or effort.
-- `models.reviewers()` (the codex reviewer list) is the review's model from the block, followed by
-  whatever `GRAPH_REVIEWERS` adds as today; the environment overrides `GRAPH_BUILDERS`,
-  `GRAPH_REVIEWERS` and `GRAPH_CLAUDE_REVIEWERS` keep working exactly as they do.
+- `models.reviewers()` (the codex reviewer list) is the review's model from the block alone
+  (`["gpt-6.1-sol"]`), and `GRAPH_REVIEWERS` **replaces** that list when it is set, exactly as it does
+  today: it never appends. The environment overrides `GRAPH_BUILDERS`, `GRAPH_REVIEWERS` and
+  `GRAPH_CLAUDE_REVIEWERS` keep working exactly as they do.
 - The `lean_call_started` events of the build, the repair, the grill and the review carry the block's
   model and effort, so the dashboard shows `gpt-6.1-sol xhigh` on a grilling or reviewing line.
 - The campaign router's rung ladders and the other belts (planners, claude reviewers) do not move.
