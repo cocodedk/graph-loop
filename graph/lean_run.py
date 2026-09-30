@@ -16,6 +16,7 @@ import pathlib
 import accounts
 import gate_paths
 import gates
+import lean_diff
 import lean_git
 import lean_spec
 import providers
@@ -57,7 +58,8 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome
     prompt = (f"You review one change to this repository, read-only. It should implement the "
               f"spec below, with tests. Refuse only for: something the spec's 'Done when' or "
               f"acceptance tests name that does not hold, a failure a user would meet in ordinary "
-              f"use, a security hole, or behaviour added without tests. List anything rarer as a "
+              f"use, a security hole, behaviour added without tests, or a file the spec does not call "
+              f"for that nothing uses (name it). List anything rarer as a "
               f"finding, and accept. In this review an ACCEPT may carry findings, whatever the "
               f"answer rule below says.\n\n"
               f"## Spec\n\n{spec}\n\n## The diff against main\n\n{diff}\n\n{VERDICT}")
@@ -108,6 +110,8 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
     diff = tree.diff(against=tree.commit)
     if not diff.strip():
         return "the builder changed nothing", None
+    if stray := lean_diff.leftovers(diff):
+        return "the change carries leftover files, remove them: " + ", ".join(stray), None
     passed, tail = masked(ws, command, tree.path)
     ws.event("lean_suite", task=feature, round=round_, passed=passed, tail=tail[-2000:])
     if not passed:
