@@ -17,6 +17,16 @@ from __future__ import annotations
 
 import os
 
+# The place to change the model or the effort of a lean call: one line each. Read when a
+# call is made, so a change here reaches the call, its event and the dashboard.
+# The owner, 2026-09-30: gpt-6.1-sol is cheaper and better than gpt-6-sol for the grill and the review.
+LEAN = {
+    "builder": {"model": "claude-sonnet-5-5", "effort": "high"},   # the first build
+    "repair": {"model": "claude-sonnet-5-5", "effort": "high"},    # each repair round
+    "grill": {"model": "gpt-6.1-sol", "effort": "xhigh"},
+    "review": {"model": "gpt-6.1-sol", "effort": "xhigh"},
+}
+
 # The Claude builders first, Astra behind them (issue #67: the belt "may hold" codex
 # rungs; the owner: "bigger models can plan and weaker models can execute").
 _BUILDERS = ("claude-sonnet-5", "claude-opus-5-5", "claude-opus-5", "gpt-6-astra")
@@ -30,7 +40,7 @@ _PLANNERS = ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5")
 # The owner, 2026-09-25: the reviewer is gpt-6-sol at high; it answered
 # `codex exec -m gpt-6-sol -c model_reasoning_effort=high` the same day, and at
 # xhigh on 2026-09-26, when the owner raised the review to xhigh.
-_REVIEWERS = ("gpt-6-sol",)
+# The codex reviewer list is the LEAN block's review model alone (see reviewers()).
 # What the claude rungs of the review belt use when no codex answers. Its own
 # list, and the STRONG model first: these rungs used to reuse `builders()`, so
 # the moment the builder list was reordered to put the fast model first (the owner,
@@ -53,8 +63,9 @@ def builders() -> tuple[str, ...]:
     return _listed("GRAPH_BUILDERS", _BUILDERS)
 
 
-def reviewers() -> tuple[str, ...]:
-    return _listed("GRAPH_REVIEWERS", _REVIEWERS)
+def reviewers(call: str = "review") -> tuple[str, ...]:
+    """The codex reviewers: the block's model for `call` ("review" or "grill"); GRAPH_REVIEWERS replaces it."""
+    return _listed("GRAPH_REVIEWERS", (LEAN[call]["model"],))
 
 
 def claude_reviewers() -> tuple[str, ...]:

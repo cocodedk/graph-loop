@@ -12,6 +12,7 @@ import unittest
 import unittest.mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
+import models
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 from providers import codex
 from test_providers import fake, result
@@ -55,7 +56,7 @@ class CodexTest(unittest.TestCase):
             os.environ["OUT"] = handle.name
             out = codex(binary, "review this")
             argv = pathlib.Path(handle.name).read_text()
-        self.assertIn("--model gpt-6-sol", argv)
+        self.assertIn(f"--model {models.LEAN['review']['model']}", argv)
         self.assertIn('model_reasoning_effort="xhigh"', argv)
         self.assertEqual("ACCEPT", out.verdict)
 

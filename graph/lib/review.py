@@ -4,7 +4,7 @@ Split out of `providers` at the 200-line cap; `providers` stays the front door.
 What a reply MEANS split out of here at the same cap and lives in
 `review_read`, which this module re-exports, so `review._read_review` still
 names the parser wherever it was already called.
-The reviewer is codex (gpt-6-sol, `models.reviewers()`). A review of a change runs at xhigh,
+The reviewer is codex (gpt-6.1-sol, `models.reviewers()`). A review of a change runs at xhigh,
 `providers.REVIEW_EFFORT`; the slicer's plan review passes medium. Never `max`, which cost
 twelve minutes a review and found what high finds.
 """
@@ -24,7 +24,7 @@ from review_read import (  # noqa: F401 — this module is the front door
 
 
 def codex(binary: str, prompt: str, *, cwd: str = "", effort: str = "",
-          timeout: int = 1800, attempt=None, belt: list | None = None) -> Outcome:
+          timeout: int = 1800, attempt=None, belt: list | None = None, job: str = "review") -> Outcome:
     """A review, from the first reviewer that answers.
 
     `effort` is the rung `model_router.choose` picked for the task (see
@@ -33,7 +33,8 @@ def codex(binary: str, prompt: str, *, cwd: str = "", effort: str = "",
 
     `belt` is the order to try, the router's own pick first so the call that
     answers is the one it named; `None` walks every configured reviewer, for
-    a caller with no routing decision of its own. A model at capacity refuses
+    a caller with no routing decision of its own; `job` is "grill" for the grill, whose
+    codex model is the block's own. A model at capacity refuses
     before reading anything, so the next one may answer the same question;
     one model name compiled in here is why three reviews came back empty on
     2026-08-31 and their changes went in unreviewed.
@@ -44,7 +45,7 @@ def codex(binary: str, prompt: str, *, cwd: str = "", effort: str = "",
     """
     out = Outcome("harness", text="the review belt is empty: no reviewer is configured")
     spent = resources.Exhausted()
-    for resource in (resources.belt("review") if belt is None else belt):
+    for resource in (resources.belt(job) if belt is None else belt):
         if spent.skip(resource):
             continue
         out = (_one_review(binary, prompt, resource.model, cwd, effort, timeout)

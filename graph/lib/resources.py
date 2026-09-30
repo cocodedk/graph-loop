@@ -47,16 +47,17 @@ class Resource:
 
 def belt(job: str) -> list[Resource]:
     """Every resource this job may spend, in the order to try them."""
-    if job == "review":
-        # codex first (every reviewer model in models.py's order — gpt-6-sol
-        # alone since 2026-09-25), then claude on every account. A review reads
+    if job in ("review", "grill"):
+        # codex first (every reviewer model in models.py's order — the LEAN block's
+        # gpt-6.1-sol alone since 2026-09-30; the grill's own model for a grill), then
+        # claude on every account. A review reads
         # and writes nothing, so the last reviewer can be a different agent —
         # and one must be: when this account's codex offered a single model, a
         # capacity refusal left the loop with no reviewer and changes went in
         # unreviewed. The claude rungs have their OWN list: they read
         # `models.builders()` until 2026-09-18, so on a machine without codex
         # every change was reviewed by the model that wrote it.
-        return ([Resource("codex", None, model) for model in models.reviewers()]
+        return ([Resource("codex", None, model) for model in models.reviewers(job)]
                 + [Resource("claude", account, model)
                    for account in accounts.available()
                    for model in models.claude_reviewers()])
