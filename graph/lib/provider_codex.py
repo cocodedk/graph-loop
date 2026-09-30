@@ -64,5 +64,13 @@ def codex_text(binary: str, prompt: str, *, model: str, effort: str,
         # not an answer (a lesson about the harness: key on the exit code, never on
         # matched text). The words only say which kind of refusal it was.
         return Outcome(_classify_text(blob) or "crash",
-                       text=(done.stdout or blob).strip()[:500], raw=blob)
+                       text=_crash_text((done.stdout or blob).strip()), raw=blob)
     return Outcome("ok", text=done.stdout or "", raw=blob)
+
+
+def _crash_text(printed: str) -> str:
+    """The last 500 characters a crashed call printed, led by its last `Error` line when that
+    line is further back: the start-up banner is first in the output and the error is last."""
+    tail = printed[-500:]
+    error = next((line for line in reversed(printed.splitlines()) if line.startswith("Error")), "")
+    return f"{error}\n\n{tail}" if error and error not in tail else tail

@@ -27,6 +27,7 @@ import tools
 from lean_body import builder_prompt, grill_prompt, pr_body
 from lean_budget import CARD_BUDGET
 from lean_judge import CODEX_BIN, judge
+from lean_reason import cut
 from lean_spec import lessons, record, slug
 from providers import REVIEW_EFFORT  # noqa: F401 — tests read it here
 from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
@@ -136,7 +137,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
         if spent >= CARD_BUDGET:                   # planned wrongly: no repair, stop and say so
             why = f"{lean_budget.stopped_words(spent)}\n\n{why}"
             break
-        ws.event("lean_repair", task=feature, why=why[-2000:])
+        ws.event("lean_repair", task=feature, why=cut(why))
         before = tree.diff(binary=True, against=tree.commit)
         use = lean_calls.started(ws, "repair", feature)
         resumed = bool(built.session)
@@ -149,9 +150,8 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             why = f"the repair changed nothing. The builder said:\n{built.text[:1500]}\n\n{why}"
             break
         why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], round_, revise)
-    # Findings are the reviewer's text unless the parser reads that text as its answer (a
-    # reply with none keeps its answer as its text). Green, and accepted or still refused
-    # for named findings after the last repair: published with them. Else it stops below.
+    # Findings are the reviewer's text unless the parser reads that text as its answer. Green, and
+    # accepted or still refused for named findings after the last repair: published. Else it stops.
     found = "" if verdict is None or review._read_review(verdict.text)[0] else verdict.text.strip()
     if not why or (verdict is not None and verdict.verdict == "REJECT" and found):
         try:
@@ -173,7 +173,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     kept = tree.keep(why)
     if not revise:                   # a revision that stopped leaves its pull request open
         record(spec_path, lean_status="stopped", lean_worktree=kept, lean_rounds=None, lean_asked=None)
-    ws.event("lean_stopped", task=feature, why=why[-2000:], tree=kept)
+    ws.event("lean_stopped", task=feature, why=cut(why), tree=kept)
     mail(ws, f"graph-loop needs you: {feature}",
          f"{feature} stopped.\n\nWhy:\n{why}\n\nIts work is kept at {kept}."
          + (lean_budget.review_note(spec_path) if built.kind == "budget" or spent >= CARD_BUDGET else ""))
