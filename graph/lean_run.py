@@ -21,7 +21,7 @@ import lean_spec
 import providers
 import review
 import tools
-from lean_body import pr_body
+from lean_body import builder_prompt, pr_body
 from lean_spec import lessons, record, slug
 from providers import REVIEW_EFFORT  # the one review effort, for both loops
 from review_scope import VERDICT
@@ -141,12 +141,10 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     tree, last = lean_spec.start(repo, feature, spec, revise)
     ws.event("lean_feature_started", task=feature, spec=str(spec_path), base=tree.commit,
              tree=tree.path, resumed=bool(last))
-    task = {"id": feature, "gate": profile["suite_command"]}
+    own = lean_spec.card_gate(spec)
+    task = {"id": feature, "gate": own or profile["suite_command"]}
     script = tools.write_gate_script(task)   # the builder may run it: `bash <script>`
-    prompt = (f"Implement what this spec asks, including its tests. Follow the repository's "
-              f"CLAUDE.md and the profile at {profile_path}. Run the suite with "
-              f"`bash {script}` and leave it green. Do not commit: the loop commits.\n\n"
-              f"## Spec\n\n{spec}{lessons(pathlib.Path(spec_path).parent)}")
+    prompt = builder_prompt(spec, script, profile_path, lessons(pathlib.Path(spec_path).parent), bool(own))
     ws.event("lean_call_started", purpose="build", task=feature, effort=BUILD_EFFORT)
     built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
                   "in this checkout: fix that, and keep the suite green." if last else prompt, tree,
