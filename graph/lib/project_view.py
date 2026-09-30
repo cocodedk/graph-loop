@@ -41,9 +41,15 @@ def report(project: str, loops: list[loops_ps.Loop], now: float, only: str | Non
     costs = {name: f"${cost:.2f}" for name, cost in project_cost.card_costs(project).items()}
     named = max((len(name) for _, name in rows), default=0)
     dollars = max((len(cost) for cost in costs.values()), default=0)
-    days = project_cost.card_days(project)
-    shown = [f"{mark.ljust(WIDTH)}  {name.ljust(named) + '  ' + costs[name].rjust(dollars) + '  ' + days.get(name, '') if name in costs else name}".rstrip()
-             for mark, name in rows if not only or ONLY[only](mark)]
+    days, turns = project_cost.card_days(project), project_cost.card_turns(project)
+
+    def line(mark: str, name: str) -> str:
+        if name not in costs:
+            return f"{mark.ljust(WIDTH)}  {name}"
+        extra = f"  {days[name]}" if name in days else ""
+        extra += f"  {turns[name]}t" if name in turns else ""
+        return f"{mark.ljust(WIDTH)}  {name.ljust(named)}  {costs[name].rjust(dollars)}{extra}"
+    shown = [line(mark, name) for mark, name in rows if not only or ONLY[only](mark)]
     merged = project_specs.recent(found, {name for _, name in rows})
     tail = ["", "recently merged:", *(f"  {line}" for line in merged)] if merged else []
     return "\n".join([*head, "", *(shown or ["no specs match" if rows else "no specs"]), *tail])

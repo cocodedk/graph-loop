@@ -57,3 +57,14 @@ def card_days(project: str) -> dict[str, str]:
         if isinstance(task, str) and isinstance(at, str) and re.match(r"\d{4}-\d{2}-\d{2}", at):
             days[task] = at[:10]
     return days
+
+
+def card_turns(project: str) -> dict[str, int]:
+    """The turns each spec's builder calls took, summed: a call reports its own turns, not its session's."""
+    turns: dict[str, int] = {}
+    for row in _rows(project):
+        count = row.get("turns")
+        if (row.get("kind") == "attempt" and row.get("purpose") == "build" and isinstance(row.get("task"), str)
+                and isinstance(count, int) and not isinstance(count, bool)):
+            turns[row["task"]] = turns.get(row["task"], 0) + count
+    return turns
