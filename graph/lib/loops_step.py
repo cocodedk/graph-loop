@@ -8,6 +8,7 @@ import os
 import time
 
 STEPS = {"grill": "grilling", "build": "building", "review": "reviewing"}
+QUIET = {"lean_published": "checking the build", "lean_tree_left": "checking the build"}   # the log is silent while these run
 
 
 def when(row: object) -> float | None:
@@ -46,7 +47,9 @@ def step(workspace: str | None, age: int, now: float) -> tuple[str, int]:
     purpose = row.get("purpose")
     if row.get("kind") == "lean_call_started" and isinstance(purpose, str) and purpose in STEPS:
         return STEPS[purpose], since
-    return "working", since
+    if row.get("kind") == "attempt" and row.get("purpose") == "build":
+        return "testing", since                     # the suite runs after every build call
+    return QUIET.get(str(row.get("kind")), "working"), since
 
 
 def using(workspace: str | None) -> str:

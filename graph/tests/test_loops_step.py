@@ -42,6 +42,16 @@ class Step(unittest.TestCase):
         self.assertEqual(("working", 130), self.step(
             event("lean_call_started", "2026-09-28T19:30:00Z", purpose="build"), event("lean_suite")))
 
+    def test_the_quiet_stretches_after_a_build_are_named(self):
+        for last, name in ((event("attempt", purpose="build"), "testing"),
+                           (event("lean_published"), "checking the build"),
+                           (event("lean_tree_left"), "checking the build"),
+                           (event("attempt", purpose="grill"), "working"),
+                           (event("attempt", purpose="review"), "working"),
+                           (event("lean_repair"), "working")):
+            with self.subTest(last=last):
+                self.assertEqual((name, 130), self.step(last))
+
     def test_an_unknown_purpose_is_working(self):
         self.assertEqual(("working", 130), self.step(event("lean_call_started", purpose="plan")))
         self.assertEqual(("working", 130), self.step(event("lean_call_started")))
@@ -83,7 +93,7 @@ class Duration(unittest.TestCase):
         self.assertEqual("1h00m", loops_list.duration(3600))
 
 
-EXPECTED_TESTS = 12
+EXPECTED_TESTS = 13
 
 
 class CountTest(unittest.TestCase):
