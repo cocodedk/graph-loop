@@ -159,3 +159,21 @@ away. When something looks wrong:
 
 A run that produced nothing is usually a backlog being debugged, and that is the cheapest
 place to find out.
+
+## A fault in graph-loop itself
+
+If graph-loop misbehaves (a wrong verdict, a lost or stuck run, a misleading screen, a skill that
+says something the code does not do), file an issue at https://github.com/cocodedk/graph-loop/issues
+with `gh issue create --repo cocodedk/graph-loop`. Search first (`gh issue list --repo
+cocodedk/graph-loop --search "<words>"`) and comment on a match instead of filing again. Give it one
+label, the grade of how bad it is:
+
+- `P0`: the loop loses or corrupts work, leaks something private, or spends without limit.
+- `P1`: a gate or a review can be skipped, or a wrong result is accepted as right.
+- `P2`: wrong or misleading output, or a step wastes time or money, and there is a way round it.
+- `P3`: a rough edge: wording, layout, a small inconvenience.
+
+Write what happened, why it matters and what you saw, with the numbers. The repository is public:
+leave out names, paths, accounts and identifiers from the project you were working on. File only what
+you can show, not a guess. Show the person the text first and file it when they agree, unless they
+have told you to file on your own.

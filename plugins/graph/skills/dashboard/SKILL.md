@@ -47,3 +47,12 @@ Its keys: a digit switches to that loop, `f` cycles the filter, `q` quits. It re
 ## 5. Stay read-only
 
 Never start, stop or edit a loop, a spec or a workspace from this skill. To run a loop, use the `run` skill.
+
+## A fault in graph-loop itself
+
+If a screen or command here shows something wrong or misleading, file an issue at
+https://github.com/cocodedk/graph-loop/issues (`gh issue create --repo cocodedk/graph-loop`), search
+first, and give it one label: `P0` loses or corrupts work or leaks something private, `P1` a gate or
+review can be skipped, `P2` wrong output with a way round, `P3` a rough edge. The repository is public,
+so leave out names, paths and accounts from the project you were working on, and show the person the
+text before filing unless they told you to file on your own.
