@@ -73,7 +73,7 @@ class Lines(unittest.TestCase):
     def log(self, root):
         write(root, "events.jsonl", [
             started("01-a"), call("01-a", "build", model="claude-sonnet-5-5"), {**build("01-a", 2.5), "turns": 86},
-            call("01-a", "review", model="gpt-6-sol"),                                # a review's model is not the builder's
+            call("01-a", "review", model="gpt-6.1-sol"),                                # a review's model is not the builder's
             call("01-a", "build", model="claude-opus-5-5"),                            # the last build call wins
             {"kind": "lean_published", "task": "01-a", "at": "2026-09-30T07:33:21Z"},
             started("02-b"), call("02-b", "build"), build("02-b", 0.5)])               # an older event: no model

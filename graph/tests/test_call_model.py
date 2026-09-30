@@ -47,7 +47,7 @@ class Recorded(Rig):
 class Read(unittest.TestCase):
     def test_the_model_and_effort_of_the_running_call_or_the_effort_alone_or_nothing(self):
         self.assertEqual("sonnet-5-5 high", loops_step.using(workspace(call(model="claude-sonnet-5-5", effort="high"))))
-        self.assertEqual("gpt-6-sol xhigh", loops_step.using(workspace(call(model="gpt-6-sol", effort="xhigh"))))
+        self.assertEqual("gpt-6.1-sol xhigh", loops_step.using(workspace(call(model="gpt-6.1-sol", effort="xhigh"))))
         self.assertEqual("high", loops_step.using(workspace(call(effort="high"))))                   # an older event
         self.assertEqual("", loops_step.using(workspace({"kind": "lean_suite", "at": "2026-09-28T19:39:00Z"})))
         self.assertEqual("", loops_step.using(workspace()))

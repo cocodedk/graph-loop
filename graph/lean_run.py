@@ -17,6 +17,7 @@ import accounts
 import gate_paths
 import gates
 import lean_budget
+import lean_calls
 import lean_diff
 import lean_git
 import lean_spec
@@ -26,15 +27,15 @@ import tools
 from lean_body import builder_prompt, grill_prompt, pr_body
 from lean_budget import CARD_BUDGET
 from lean_spec import lessons, record, slug
-from providers import REVIEW_EFFORT  # the one review effort, for both loops
+from providers import REVIEW_EFFORT  # noqa: F401 — tests read it here
 from review_scope import VERDICT
 from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
 
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
 REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
-BUILD_EFFORT = "high"   # 2026-09-28 benchmark: Sonnet 5.5 at medium was still refused after two repairs
-REPAIR_EFFORT = "high"   # a repair round is handed why the last one fell short (2026-09-26 trial)
+BUILD_EFFORT = lean_calls.block("builder")["effort"]   # the block's, at import; each call reads it again
+REPAIR_EFFORT = lean_calls.block("repair")["effort"]
 
 
 def build(ws, task: dict, prompt: str, tree, resume: str = "",
@@ -42,7 +43,7 @@ def build(ws, task: dict, prompt: str, tree, resume: str = "",
     """One builder call in the worktree, at `effort`, with the builder tool set for this suite."""
     feature, account = task["id"], accounts.available()[0]
     out = providers.claude(CLAUDE_BIN, prompt, account=account, cwd=tree.path, resume=resume,
-                           effort=effort, allowed_tools=tools.builder_tools(task),
+                           effort=effort, model=task.get("model", ""), allowed_tools=tools.builder_tools(task),
                            disallowed_tools=tools.builder_denies(task), budget=task.get("budget", CARD_BUDGET))
     ws.attempt(feature, account=account, kind=out.kind, cost=out.cost, tokens=out.tokens,
                effort=effort, purpose="build", turns=out.turns)
@@ -67,9 +68,9 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome
 
     def paid(kind, account, cost, tokens, _text):
         ws.attempt(feature, account=account, kind=kind, cost=cost, tokens=tokens,
-                   effort=REVIEW_EFFORT, purpose="review")
-    ws.event("lean_call_started", purpose="review", task=feature, effort=REVIEW_EFFORT, model=providers.REVIEW_MODEL)
-    return review.codex(CODEX_BIN, prompt, cwd=cwd, effort=REVIEW_EFFORT, attempt=paid)
+                   effort=use["effort"], purpose="review")
+    use = lean_calls.started(ws, "review", feature)
+    return review.codex(CODEX_BIN, prompt, cwd=cwd, effort=use["effort"], attempt=paid)
 
 
 def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str = "", final: bool = False) -> str:
@@ -80,9 +81,9 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str 
 
     def paid(kind, account, cost, tokens, _text):
         ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens,
-                   effort=REVIEW_EFFORT, purpose="grill")
-    ws.event("lean_call_started", purpose="grill", task="grill", effort=REVIEW_EFFORT, model=providers.REVIEW_MODEL)
-    out = review.codex(CODEX_BIN, prompt, cwd=repo, effort=REVIEW_EFFORT, attempt=paid)
+                   effort=use["effort"], purpose="grill")
+    use = lean_calls.started(ws, "grill", "grill")
+    out = review.codex(CODEX_BIN, prompt, cwd=repo, effort=use["effort"], attempt=paid, job="grill")
     questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
     ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=questions[:2000])
     if questions and final and out.verdict == "REJECT":   # the round limit: the run goes on
@@ -141,10 +142,10 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     script = tools.write_gate_script(task)   # the builder may run it: `bash <script>`
     prompt = builder_prompt(spec, script, profile_path, lessons(pathlib.Path(spec_path).parent), bool(own),
                             open_questions)
-    ws.event("lean_call_started", purpose="build", task=feature, effort=BUILD_EFFORT, model=providers.MODEL)
-    built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
-                  "in this checkout: fix that, and keep the suite green." if last else prompt, tree,
-                  effort=BUILD_EFFORT)
+    use = lean_calls.started(ws, "builder", feature)
+    built = build(ws, {**task, "model": use["model"]}, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\n"
+                  "The work so far is in this checkout: fix that, and keep the suite green." if last else prompt,
+                  tree, effort=use["effort"])
     spent = lean_budget.after(ws, task, built, 0.0, False)
     why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], 1, bool(revise))
     for round_ in range(2, 2 + REPAIRS):
@@ -157,12 +158,12 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             break
         ws.event("lean_repair", task=feature, why=why[-2000:])
         before = tree.diff(binary=True, against=tree.commit)
-        ws.event("lean_call_started", purpose="build", task=feature, effort=REPAIR_EFFORT, model=providers.MODEL)
+        use = lean_calls.started(ws, "repair", feature)
         resumed = bool(built.session)
-        built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
+        built = build(ws, {**task, "model": use["model"]}, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
                       "Fix that, and keep the suite green." + (" Keep your list of choices complete." if open_questions
                                                                 else ""), tree, resume=built.session,
-                      effort=REPAIR_EFFORT)
+                      effort=use["effort"])
         spent = lean_budget.after(ws, task, built, spent, resumed)
         if built.ok and tree.diff(binary=True, against=tree.commit) == before:
             why = f"the repair changed nothing. The builder said:\n{built.text[:1500]}\n\n{why}"
