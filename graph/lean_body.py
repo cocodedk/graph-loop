@@ -4,18 +4,23 @@ from __future__ import annotations
 
 import pathlib
 
+import lean_spec
 from review_scope import VERDICT
 
 
-def pr_body(spec_path: str, why: str, found: str) -> str:
+def pr_body(spec_path: str, why: str, found: str, open_questions: str = "", choices: str = "") -> str:
     """What a new pull request says: the suite, the reviewer's verdict and its findings."""
     said = "accepted it" if not why else "still did not accept it after the last repair"
     return (f"Built by graph-loop's lean loop from `{pathlib.Path(spec_path).name}`: the suite "
             f"is green, and an independent reviewer {said}."
-            + (f"\n\nThe reviewer's findings:\n\n{found}" if found else ""))
+            + (f"\n\nThe reviewer's findings:\n\n{found}" if found else "")
+            + (f"\n\n## Built on the builder's choices\n\nThe grill left these questions open after "
+               f"{lean_spec.GRILL_ROUNDS} rounds:\n\n```\n{open_questions}\n```\n\nThe builder decided "
+               f"them; its list:\n\n{choices.strip()[:3000]}" if open_questions else ""))
 
 
-def builder_prompt(spec: str, script: str, profile_path: str, lessons: str, own_gate: bool) -> str:
+def builder_prompt(spec: str, script: str, profile_path: str, lessons: str, own_gate: bool,
+                   open_questions: str = "") -> str:
     """What the builder is told. A card with its own fast gate runs only that: the loop runs the full
     suite after the build and hands back any failure. Any builder is barred from background jobs,
     because each wait is a paid turn (one card spent about $75 polling a 25-minute suite)."""
@@ -25,14 +30,17 @@ def builder_prompt(spec: str, script: str, profile_path: str, lessons: str, own_
     return (f"Implement what this spec asks, including its tests. Follow the repository's "
             f"CLAUDE.md and the profile at {profile_path}. {run}. And never start or wait on a "
             f"background job: every wait is a paid turn. Do not commit: the loop commits.\n\n"
-            f"## Spec\n\n{spec}{lessons}")
+            f"## Spec\n\n{spec}{lessons}" + (
+                f"\n\n## Questions the grill left open\n\nNobody has answered these:\n\n```\n{open_questions}\n```\n\n"
+                f"Decide each one sensibly. End your final answer with a complete list, one line each: "
+                f"question, your choice and why." if open_questions else ""))
 
 
 def grill_prompt(profile_path: str, lessons: str, specs: str, earlier: str = "") -> str:
     """What the grill is told. From the second round on it also gets its earlier questions and may ask only
     what the spec still leaves unanswered or the edits broke: each answer adds detail, and asking about
     that new detail is how a spec gets refused round after round."""
-    again = (f"\n\n## Earlier round(s) asked these questions\n\n{earlier}\n\nThe person has edited the "
+    again = (f"\n\n## Earlier round(s) asked these questions\n\n```\n{earlier}\n```\n\nThe person has edited the "
              f"spec since. Now ask only about an earlier question the spec still leaves unanswered, or "
              f"about something the edits made contradict itself or the code; never about new detail the "
              f"edits introduced: the builder settles that.") if earlier else ""
