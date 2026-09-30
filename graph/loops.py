@@ -3,7 +3,7 @@
 
     loops.py
     loops.py <number or project folder> [--only built|open|attention]
-    loops.py --screen [<project folder>] [--only ...] [--refresh <seconds>] [--once]
+    loops.py --screen [<project folder>] [--only ...] [--refresh <seconds>] [--once] [--rows <N>]
     loops.py --path <N>
 
 Prints the list, or one project's specs each with a mark, once; `--screen` prints both and the key
@@ -35,6 +35,7 @@ def main(argv: list[str] | None = None, read_ps=loops_ps.read_ps, cwd_of=loops_p
     parser.add_argument("--path", type=int, metavar="N", help="the project folder of loop N, or nothing")
     parser.add_argument("--refresh", default="15", help="the seconds the key line says")
     parser.add_argument("--once", action="store_true", help="with --screen: leave out the key line")
+    parser.add_argument("--rows", type=int, help="with --screen: the terminal's height; the screen fits it")
     args = parser.parse_args(argv)
     try:
         ps_text = read_ps()
@@ -52,7 +53,7 @@ def main(argv: list[str] | None = None, read_ps=loops_ps.read_ps, cwd_of=loops_p
             if path:
                 print(path)
             return 0
-        print(screen_view.screen(args.which, args.only, args.refresh, args.once, ps_text, cwd_of, clock()))
+        print(screen_view.screen(args.which, args.only, args.refresh, args.once, ps_text, cwd_of, clock(), args.rows))
         return 0
     import project_view  # only a project view needs it: the plain list stays free of these modules
     code, text = project_view.view(args.which, args.only, ps_text, cwd_of, clock())

@@ -12,6 +12,7 @@ import loops_list
 import loops_ps
 import loops_step
 import project_cost
+import project_fit
 import project_specs
 from project_specs import BUILT, PR_OPEN, QUESTION, STOPPED
 
@@ -22,7 +23,8 @@ UNREADABLE = "git history unreadable: nothing is marked built"
 WIDTH = max(len(mark) for mark in project_specs.MARKS)
 
 
-def report(project: str, loops: list[loops_ps.Loop], now: float, only: str | None) -> str:
+def report(project: str, loops: list[loops_ps.Loop], now: float, only: str | None,
+           budget: int | None = None) -> str:
     """The text to print for `project`, whose running `loops` are given."""
     running = {lean_spec.slug(f"{loop.spec}.md") for loop in loops}
     found = project_specs.commits(project)
@@ -53,15 +55,19 @@ def report(project: str, loops: list[loops_ps.Loop], now: float, only: str | Non
         extra += f"  {turns[name]}t" if name in turns else ""
         extra += f"  {models[name]}" if name in models else ""
         return f"{mark.ljust(WIDTH)}  {name.ljust(named)}  {costs[name].rjust(dollars)}{extra}"
-    shown = [line(mark, name) for mark, name in rows if not only or ONLY[only](mark)]
+    wanted = [(mark, name) for mark, name in rows if not only or ONLY[only](mark)]
     merged = project_specs.recent(found, {name for _, name in rows})
     tail = ["", "recently merged:", *(f"  {line}" for line in merged)] if merged else []
-    return "\n".join([*head, "", *(shown or ["no specs match" if rows else "no specs"]), *tail])
+    shown, keep = [line(mark, name) for mark, name in wanted], True
+    if budget is not None:
+        shown, keep = project_fit.fit(wanted, line, len(head) + 1, budget, len(tail))
+    return "\n".join([*head, "", *(shown or ["no specs match" if rows else "no specs"]), *(tail if keep else [])])
 
 
 def view(which: str, only: str | None, ps_text: str, cwd_for: Callable[[int], str | None],
-         now: float) -> tuple[int, str]:
-    """The exit status and text for a loop number or a project folder."""
+         now: float, budget: int | None = None) -> tuple[int, str]:
+    """The exit status and text for a loop number or a project folder; `budget` is the most lines the
+    text may take (see project_fit)."""
     found = loops_ps.found_in(ps_text, cwd_for)
     shown = which
     if which.isascii() and which.isdigit():
@@ -74,4 +80,4 @@ def view(which: str, only: str | None, ps_text: str, cwd_for: Callable[[int], st
         return 2, f"not a project with docs/lean: {shown}"
     here = os.path.realpath(project)
     loops = [loop for loop, repo in found if repo and os.path.realpath(repo) == here]
-    return 0, report(project, loops, now, only)
+    return 0, report(project, loops, now, only, budget)
