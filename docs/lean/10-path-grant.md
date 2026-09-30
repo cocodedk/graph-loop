@@ -29,7 +29,9 @@ on 30 September 2026 that the loop build it.
 - The same path written twice in a gate is granted once; a path and its bare name are two grants.
 - A `VAR=value` prefix, a command substitution and a heredoc body are read exactly as the program reader
   reads them today.
-- A gate the reader cannot parse still yields nothing, and the builder gets the fixed base alone.
+- A gate the reader cannot parse still yields no program, so this change adds no path grant, and the builder
+  gets exactly what it gets today: the fixed base and, when there is one, the grant of the gate script
+  itself (`gate_script`). Nothing about that case moves.
 - Every Python file stays at or under 200 lines.
 
 ## Done when
