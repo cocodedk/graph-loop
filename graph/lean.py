@@ -40,7 +40,7 @@ from workspace import Workspace
 from worktree import Worktree
 
 FIELDS = ("suite_command", "build_command", "artifact")
-OPTIONAL = ("account",)   # the one account the project spends, by the name GRAPH_ACCOUNTS gives it
+OPTIONAL = ("account", "lint_command")   # `account`: the one login the project spends, by the name GRAPH_ACCOUNTS gives it
 
 
 def profile_path(repo: str, given: str = "") -> str:
@@ -55,7 +55,7 @@ def profile_path(repo: str, given: str = "") -> str:
 
 
 def read_profile(path: str) -> dict:
-    """The first indented line under each of the three headings, and under `## account` if any."""
+    """The first indented line under each of the three headings, and under `## account` and `## lint_command` if any."""
     values: dict = {}
     heading = ""
     for line in pathlib.Path(path).read_text("utf-8").splitlines():
