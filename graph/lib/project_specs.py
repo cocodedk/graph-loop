@@ -9,7 +9,8 @@ import lean_spec
 import yaml  # type: ignore[import-untyped]  # no stubs in this environment
 
 BUILT, BUILDING, STOPPED, PR_OPEN, WAITING = "✔ built", "▶ building", "✖ stopped", "● pr open", "· waiting"
-MARKS = (BUILT, BUILDING, STOPPED, PR_OPEN, WAITING)   # the order the first line counts them in
+QUESTION = "? question"   # the grill sent it back: a person has to answer
+MARKS = (BUILT, BUILDING, STOPPED, QUESTION, PR_OPEN, WAITING)   # the order the first line counts them in
 REFS = ("origin/main", "main")
 
 
@@ -44,11 +45,11 @@ def status_of(path: pathlib.Path) -> object:
 
 
 def mark(path: pathlib.Path, running: set[str], built: set[str] | None) -> str:
-    """The first mark that holds: building, built, stopped, pr open, waiting."""
+    """The first mark that holds: building, built, stopped, question, pr open, waiting."""
     name = lean_spec.slug(path.name)
     if name in running:
         return BUILDING
     if built and name in built:
         return BUILT
     status = status_of(path)
-    return STOPPED if status == "stopped" else PR_OPEN if status == "pr_open" else WAITING
+    return {"stopped": STOPPED, "questions": QUESTION, "pr_open": PR_OPEN}.get(str(status), WAITING)
