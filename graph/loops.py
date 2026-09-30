@@ -5,6 +5,7 @@
     loops.py <number or project folder> [--only built|open|attention]
     loops.py --screen [<project folder>] [--only ...] [--refresh <seconds>] [--once] [--rows <N>]
     loops.py --path <N>
+    (any of the three prints with --color: the same text with ANSI codes; docs/lean/06-colours.md)
 
 Prints the list, or one project's specs each with a mark, once; `--screen` prints both and the key
 line, `--path` the folder of loop N. It only reads: no file is written and nothing is started.
@@ -36,6 +37,7 @@ def main(argv: list[str] | None = None, read_ps=loops_ps.read_ps, cwd_of=loops_p
     parser.add_argument("--refresh", default="15", help="the seconds the key line says")
     parser.add_argument("--once", action="store_true", help="with --screen: leave out the key line")
     parser.add_argument("--rows", type=int, help="with --screen: the terminal's height; the screen fits it")
+    parser.add_argument("--color", action="store_true", help="add ANSI colour codes; without them the text is the same")
     args = parser.parse_args(argv)
     try:
         ps_text = read_ps()
@@ -43,7 +45,7 @@ def main(argv: list[str] | None = None, read_ps=loops_ps.read_ps, cwd_of=loops_p
         print("cannot read the process list")
         return 1
     if args.which is None and not args.screen and args.path is None:
-        print(loops_list.report(ps_text, cwd_of, clock()))
+        print(loops_list.report(ps_text, cwd_of, clock(), args.color))
         return 0
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))   # lean_spec sits beside this file
     if args.path is not None or args.screen:
@@ -53,10 +55,10 @@ def main(argv: list[str] | None = None, read_ps=loops_ps.read_ps, cwd_of=loops_p
             if path:
                 print(path)
             return 0
-        print(screen_view.screen(args.which, args.only, args.refresh, args.once, ps_text, cwd_of, clock(), args.rows))
+        print(screen_view.screen(args.which, args.only, args.refresh, args.once, ps_text, cwd_of, clock(), args.rows, args.color))
         return 0
     import project_view  # only a project view needs it: the plain list stays free of these modules
-    code, text = project_view.view(args.which, args.only, ps_text, cwd_of, clock())
+    code, text = project_view.view(args.which, args.only, ps_text, cwd_of, clock(), None, args.color)
     print(text)
     return code
 
