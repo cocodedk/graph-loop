@@ -160,8 +160,9 @@ class Size(unittest.TestCase):
     def test_every_file_of_the_view_is_under_the_cap(self):
         graph = pathlib.Path(__file__).resolve().parents[1]
         files = [graph / "loops.py", graph / "lib" / "project_specs.py", graph / "lib" / "project_view.py",
-                 graph / "lib" / "loops_ps.py", *pathlib.Path(__file__).parent.glob("test_project_*.py")]
-        self.assertEqual(6, len(files))
+                 graph / "lib" / "project_cost.py", graph / "lib" / "loops_ps.py",
+                 *pathlib.Path(__file__).parent.glob("test_project_*.py")]
+        self.assertEqual(8, len(files))
         for path in files:
             with self.subTest(path=path.name):
                 self.assertLessEqual(len(path.read_text("utf-8").splitlines()), 200)
