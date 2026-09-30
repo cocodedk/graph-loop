@@ -69,7 +69,7 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome
     return review.codex(CODEX_BIN, prompt, cwd=cwd, effort=REVIEW_EFFORT, attempt=paid)
 
 
-def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str = "") -> str:
+def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str = "", final: bool = False) -> str:
     """Before anything is built: the questions only a person can answer, or ""."""
     specs = "\n\n".join(f"## {pathlib.Path(path).name}\n\n{pathlib.Path(path).read_text('utf-8')}"
                         for path in spec_paths)
@@ -82,7 +82,11 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str 
     out = review.codex(CODEX_BIN, prompt, cwd=repo, effort=REVIEW_EFFORT, attempt=paid)
     questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
     ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=questions[:2000])
-    if questions:
+    if questions and final and out.verdict == "REJECT":   # the round limit: the run goes on
+        mail(ws, "graph-loop is building with open questions", f"{questions}\n\nThe round limit is reached: "
+             "building goes on with these unresolved. The builder decides each, and its choices go in the pull "
+             "request description. No answer is needed to continue.")
+    elif questions:
         subject = ("graph-loop has questions before building" if out.verdict
                    else "graph-loop could not read the specs before building")
         mail(ws, subject, f"{questions}\n\nAnswer them in the specs, then run again. Nothing was built.")
@@ -119,7 +123,7 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
 
 
 def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
-                revise: str = "", pr: str = "") -> str:
+                revise: str = "", pr: str = "", open_questions: str = "") -> str:
     """One spec file, start to end. Its pull request's URL, or "" when it stopped.
     `revise` is the open pull request's review findings: fix them on its branch."""
     feature = slug(spec_path)
@@ -130,7 +134,8 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     own = lean_spec.card_gate(spec)
     task = {"id": feature, "gate": own or profile["suite_command"]}
     script = tools.write_gate_script(task)   # the builder may run it: `bash <script>`
-    prompt = builder_prompt(spec, script, profile_path, lessons(pathlib.Path(spec_path).parent), bool(own))
+    prompt = builder_prompt(spec, script, profile_path, lessons(pathlib.Path(spec_path).parent), bool(own),
+                            open_questions)
     ws.event("lean_call_started", purpose="build", task=feature, effort=BUILD_EFFORT)
     built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
                   "in this checkout: fix that, and keep the suite green." if last else prompt, tree,
@@ -146,7 +151,8 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
         before = tree.diff(binary=True, against=tree.commit)
         ws.event("lean_call_started", purpose="build", task=feature, effort=REPAIR_EFFORT)
         built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
-                      "Fix that, and keep the suite green.", tree, resume=built.session,
+                      "Fix that, and keep the suite green." + (" Keep your list of choices complete." if open_questions
+                                                                else ""), tree, resume=built.session,
                       effort=REPAIR_EFFORT)
         if built.ok and tree.diff(binary=True, against=tree.commit) == before:
             why = f"the repair changed nothing. The builder said:\n{built.text[:1500]}\n\n{why}"
@@ -162,12 +168,12 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             title = f"feat({feature}): {feature}"
             work = lean_git.commit(repo, tree.path, tree.commit, title)
             url = lean_git.update(repo, work, feature, pr) if revise else lean_git.publish(
-                repo, work, feature, title, pr_body(spec_path, why, found))
+                repo, work, feature, title, pr_body(spec_path, why, found, open_questions, built.text))
         except RuntimeError as error:
             why = f"it passed, but could not open its pull request: {error}\n\n{why}".strip()
         else:
             ws.event("lean_published", task=feature, commit=work, pr=url)
-            record(spec_path, lean_status="pr_open", lean_pr=url)
+            record(spec_path, lean_status="pr_open", lean_pr=url, lean_rounds=None, lean_asked=None)
             try:
                 tree.remove()
             except OSError as error:   # files a suite's container left as root: tidy later
@@ -175,7 +181,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             return url
     kept = tree.keep(why)
     if not revise:                   # a revision that stopped leaves its pull request open
-        record(spec_path, lean_status="stopped", lean_worktree=kept)
+        record(spec_path, lean_status="stopped", lean_worktree=kept, lean_rounds=None, lean_asked=None)
     ws.event("lean_stopped", task=feature, why=why[-2000:], tree=kept)
     mail(ws, f"graph-loop needs you: {feature}",
          f"{feature} stopped.\n\nWhy:\n{why}\n\nIts work is kept at {kept}.")

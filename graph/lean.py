@@ -133,12 +133,20 @@ def main(argv: list[str] | None = None) -> int:
     # Questions first, nothing on a guess: once, before a spec's first build. A spec
     # carrying on after a stop was grilled then. The status does not prove the text is
     # unchanged: a spec whose requirements change starts afresh without its lean_ fields.
+    open_questions = ""
     if not revise and info.get("lean_status") != "stopped":
-        asked = lean_run.grill(ws, repo, [spec], path, earlier=str(info.get("lean_asked") or ""))
+        count = lean_spec.rounds(info)
+        asked = lean_run.grill(ws, repo, [spec], path, earlier=str(info.get("lean_asked") or ""),
+                               final=count + 1 >= lean_spec.GRILL_ROUNDS)
         if asked:                                  # kept, so nothing takes it for a spec that only waits
-            lean_spec.record(spec, lean_status="questions", lean_asked=asked[:1500])
-            return 2
-    url = lean_run.run_feature(ws, repo, spec, profile, path, revise, str(info.get("lean_pr", "")))
+            real = lean_spec.refused(ws.events())  # a failure to answer is no round, and lets nothing through
+            count += real
+            lean_spec.record(spec, lean_status="questions", lean_rounds=count, lean_asked=asked[:1500])
+            if not (real and count >= lean_spec.GRILL_ROUNDS):
+                return 2
+            open_questions = asked                 # the round limit: this run goes on with them
+    url = lean_run.run_feature(ws, repo, spec, profile, path, revise, str(info.get("lean_pr", "")),
+                               open_questions=open_questions)
     if not url:
         return 1
     return 0 if finish(ws, repo, profile, lean_run.slug(spec), url) else 1

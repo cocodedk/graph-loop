@@ -27,8 +27,8 @@ def record(spec_path: str, **fields: str) -> None:
     """Write `fields` into the spec file's front matter, every other byte left alone."""
     path = pathlib.Path(spec_path)
     text = path.read_text("utf-8")
-    if not cardfile.FRONT.match(text):      # a spec with no front matter gets one
-        text = f"---\n{yaml.safe_dump(fields, sort_keys=False)}---\n{text}"
+    if not cardfile.FRONT.match(text):      # a spec with no front matter gets one (a None field removes: none to write)
+        text = f"---\n{yaml.safe_dump({k: v for k, v in fields.items() if v is not None}, sort_keys=False)}---\n{text}"
     for field, value in fields.items():
         text = cardfile.patch(text, field, value)
     path.write_text(text, "utf-8")
@@ -74,3 +74,18 @@ def card_gate(spec: str) -> str:
     """The card's own fast gate, `gate:` in its front matter: one line of text, or "" for none."""
     gate = front(spec).get("gate")
     return gate.strip() if isinstance(gate, str) and gate.strip() and "\n" not in gate.strip() else ""
+
+
+GRILL_ROUNDS = 4   # the fourth real refusal goes on: late questions were mostly detail a builder can settle
+
+
+def rounds(info: dict) -> int:
+    """How many real refusals the grill has given this spec (`lean_rounds`); 0 when none is recorded."""
+    count = info.get("lean_rounds")
+    return count if isinstance(count, int) and not isinstance(count, bool) and count > 0 else 0
+
+
+def refused(events: list[dict]) -> bool:
+    """Whether the grill's last answer was a real refusal (a REJECT verdict), not a failure to answer."""
+    grilled = [row for row in events if row.get("kind") == "lean_grilled"]
+    return bool(grilled) and grilled[-1].get("verdict") == "REJECT"
