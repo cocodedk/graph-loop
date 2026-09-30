@@ -13,8 +13,14 @@ separate answer.
 
 from __future__ import annotations
 
-from gate_programs import programs
+import re
+
+from gate_programs import programs, spellings
 from gate_script import gate_script_path
+
+# A path is granted as written only when it is plain: no space, quote, `$` or
+# other syntax for a permission rule to misread.
+SAFE_PATH = re.compile(r"[A-Za-z0-9_./+-]+")
 
 # Reading and version control: what every card needs whatever it is written in.
 # Nothing language-specific belongs here — see `code_shell` below.
@@ -80,8 +86,15 @@ def code_shell(task: dict) -> str:
     them.
     """
     gate = str(task.get("gate") or "")
-    named = ",".join(f"Bash({one} *)" for one in programs(gate)
-                     if one not in NEVER_WILDCARD)
+    # Claude Code matches a command as written, so a gate that runs
+    # `/venv/bin/python` also grants that spelling: the bare name alone would
+    # deny the builder's own command. Only a plain path is granted, and the
+    # floor is judged on the bare name whatever path it came in by.
+    named = ",".join(f"Bash({spelling} *)" for one in programs(gate)
+                     if one not in NEVER_WILDCARD
+                     for spelling in [one, *(word for word in spellings(gate)
+                                             if "/" in word and word.rsplit("/", 1)[-1] == one
+                                             and SAFE_PATH.fullmatch(word))])
     # The gate itself, as one fixed path (`gate_script`). A per-program grant
     # authorises a command whose first word is that program, and a gate is a
     # script — `set -e -o pipefail`, an assignment from `mktemp`, then the work

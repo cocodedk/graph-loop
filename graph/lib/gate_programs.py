@@ -64,10 +64,21 @@ def programs(gate: str) -> list[str]:
     tool, which is a story somebody can read — a guessed grant is not.
     """
     found: list[str] = []
+    for word in spellings(gate):
+        name = word.rsplit("/", 1)[-1]
+        if name not in found:
+            found.append(name)
+    return found
+
+
+def spellings(gate: str) -> list[str]:
+    """The same programs as the gate wrote them, path and all (`/venv/bin/python`,
+    `./run.sh`), each spelling once, in the order `programs` reads them."""
+    found: list[str] = []
     for text in _layers(gate):
-        for name in _commanded(text):
-            if name not in found:
-                found.append(name)
+        for word in _commanded(text):
+            if word not in found:
+                found.append(word)
     return found
 
 
@@ -111,7 +122,7 @@ def _lines(text: str) -> list[str]:
 
 
 def _commanded(text: str) -> list[str]:
-    """The program of every command in one layer of text."""
+    """The program of every command in one layer of text, as it was spelled."""
     found: list[str] = []
     for line in _lines(text):
         try:
@@ -129,6 +140,6 @@ def _commanded(text: str) -> list[str]:
                 continue            # an assignment prefix; the next word runs
             starting = False
             name = word.rsplit("/", 1)[-1]      # ./run.sh and /usr/bin/javac
-            if NAME.fullmatch(name) and name not in BUILTIN and name not in found:
-                found.append(name)
+            if NAME.fullmatch(name) and name not in BUILTIN and word not in found:
+                found.append(word)
     return found
