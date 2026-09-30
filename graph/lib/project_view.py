@@ -11,11 +11,11 @@ import loops_list
 import loops_ps
 import loops_step
 import project_specs
-from project_specs import BUILT, PR_OPEN, STOPPED
+from project_specs import BUILT, PR_OPEN, QUESTION, STOPPED
 
 ONLY = {"built": lambda mark: mark == BUILT,
         "open": lambda mark: mark != BUILT,
-        "attention": lambda mark: mark in (STOPPED, PR_OPEN)}
+        "attention": lambda mark: mark in (STOPPED, QUESTION, PR_OPEN)}
 UNREADABLE = "git history unreadable: nothing is marked built"
 WIDTH = max(len(mark) for mark in project_specs.MARKS)
 

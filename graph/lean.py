@@ -135,6 +135,7 @@ def main(argv: list[str] | None = None) -> int:
     # unchanged: a spec whose requirements change starts afresh without its lean_ fields.
     if not revise and info.get("lean_status") != "stopped" \
             and lean_run.grill(ws, repo, [spec], path):
+        lean_spec.record(spec, lean_status="questions")   # so nothing takes it for a spec that only waits
         return 2
     url = lean_run.run_feature(ws, repo, spec, profile, path, revise, str(info.get("lean_pr", "")))
     if not url:
