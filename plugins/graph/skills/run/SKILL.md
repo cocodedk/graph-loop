@@ -54,6 +54,11 @@ default login is a work account, adds `## account` with that account's name as `
 names it, for example `personal`. The loop then spends that account and no other: when it runs out
 the run stops, and a name the machine does not configure stops the run before anything is spent.
 
+`GRAPH_ACCOUNTS` belongs to the machine, not the repository: `name=<CLAUDE_CONFIG_DIR>` pairs separated by
+commas, exported where the loop is started (a shell profile, or the top of the script that starts it), for
+example `export GRAPH_ACCOUNTS=personal=<its config directory>`. Without the pair a profile's `## account`
+stops the run at once, naming the account and this variable. Ask the person which login each name means.
+
 Before any spec, run the suite on `main` the way the loop will run it: from a clean
 checkout, with a scrubbed environment and an empty `HOME`. It must pass. A suite that
 only passes in your own shell fails every feature for reasons no builder can fix.
