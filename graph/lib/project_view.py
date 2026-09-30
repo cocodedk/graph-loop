@@ -10,6 +10,7 @@ import lean_spec
 import loops_list
 import loops_ps
 import loops_step
+import project_cost
 import project_specs
 from project_specs import BUILT, PR_OPEN, QUESTION, STOPPED
 
@@ -34,7 +35,11 @@ def report(project: str, loops: list[loops_ps.Loop], now: float, only: str | Non
         head.append(f"  loop: {lean_spec.slug(f'{loop.spec}.md')} {step} {loops_list.duration(spent)}")
     if built is None:
         head.append(UNREADABLE)
-    shown = [f"{mark.ljust(WIDTH)}  {name}" for mark, name in rows if not only or ONLY[only](mark)]
+    costs = {name: f"${cost:.2f}" for name, cost in project_cost.card_costs(project).items()}
+    named = max((len(name) for _, name in rows), default=0)
+    dollars = max((len(cost) for cost in costs.values()), default=0)
+    shown = [f"{mark.ljust(WIDTH)}  {name.ljust(named) + '  ' + costs[name].rjust(dollars) if name in costs else name}"
+             for mark, name in rows if not only or ONLY[only](mark)]
     return "\n".join([*head, "", *(shown or ["no specs match" if rows else "no specs"])])
 
 
