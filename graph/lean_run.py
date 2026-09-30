@@ -2,10 +2,10 @@
 
 A worktree off origin/main; one builder writes the feature and its tests; the suite runs masked
 (`gates.run_gate`); one reviewer reads the diff. A red suite or a refused review gets a repair with
-the failure text, up to `REPAIRS`, while repairs change something; a model that gave no real answer
-gets none. Green, with a verdict: pushed as `lean/<feature>` with a pull request carrying the
-findings. Otherwise the person is emailed why and the feature stops, its worktree kept; the spec's
-front matter records how it ended.
+the failure text, up to `REPAIRS`, while repairs change something and the card's budget lasts
+(`lean_budget`); a model that gave no real answer gets none. Green, with a verdict: pushed as
+`lean/<feature>` with a pull request carrying the findings. Otherwise the person is emailed why and
+the feature stops, its worktree kept; the spec's front matter records how it ended.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ import pathlib
 import accounts
 import gate_paths
 import gates
+import lean_budget
 import lean_diff
 import lean_git
 import lean_spec
@@ -23,6 +24,7 @@ import providers
 import review
 import tools
 from lean_body import builder_prompt, grill_prompt, pr_body
+from lean_budget import CARD_BUDGET
 from lean_spec import lessons, record, slug
 from providers import REVIEW_EFFORT  # the one review effort, for both loops
 from review_scope import VERDICT
@@ -33,7 +35,6 @@ CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
 REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
 BUILD_EFFORT = "high"   # 2026-09-28 benchmark: Sonnet 5.5 at medium was still refused after two repairs
 REPAIR_EFFORT = "high"   # a repair round is handed why the last one fell short (2026-09-26 trial)
-BUILD_BUDGET = 40   # dollars a builder call may spend: ordinary calls cost up to 25, two runaways 100 and 116
 
 
 def build(ws, task: dict, prompt: str, tree, resume: str = "",
@@ -42,7 +43,7 @@ def build(ws, task: dict, prompt: str, tree, resume: str = "",
     feature, account = task["id"], accounts.available()[0]
     out = providers.claude(CLAUDE_BIN, prompt, account=account, cwd=tree.path, resume=resume,
                            effort=effort, allowed_tools=tools.builder_tools(task),
-                           disallowed_tools=tools.builder_denies(task), budget=BUILD_BUDGET)
+                           disallowed_tools=tools.builder_denies(task), budget=task.get("budget", CARD_BUDGET))
     ws.attempt(feature, account=account, kind=out.kind, cost=out.cost, tokens=out.tokens,
                effort=effort, purpose="build")
     return out
@@ -136,7 +137,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     ws.event("lean_feature_started", task=feature, spec=str(spec_path), base=tree.commit,
              tree=tree.path, resumed=bool(last))
     own = lean_spec.card_gate(spec)
-    task = {"id": feature, "gate": own or profile["suite_command"]}
+    task = {"id": feature, "gate": own or profile["suite_command"], "budget": CARD_BUDGET}
     script = tools.write_gate_script(task)   # the builder may run it: `bash <script>`
     prompt = builder_prompt(spec, script, profile_path, lessons(pathlib.Path(spec_path).parent), bool(own),
                             open_questions)
@@ -144,20 +145,26 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
                   "in this checkout: fix that, and keep the suite green." if last else prompt, tree,
                   effort=BUILD_EFFORT)
+    spent = lean_budget.spent(0.0, built, False)
     why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], 1, bool(revise))
     for round_ in range(2, 2 + REPAIRS):
-        # Only a real answer is worth a repair (`Outcome.consumes_attempt`): a limit, a busy or
-        # signed-out account or a crash stops the run, rounds kept. So does a repair that changed
-        # nothing, a builder that cannot (a refused command) or will not: the next would do the same.
+        # Only a real answer is worth a repair (`Outcome.consumes_attempt`); a limit, a crash, a repair that
+        # changed nothing or a card that spent its budget stops the run, its rounds kept.
         if not why or not built.ok or (verdict is not None and not verdict.ok):
             break
+        if spent >= CARD_BUDGET:                   # planned wrongly: no repair, stop and say so
+            why = f"{lean_budget.stopped_words(spent)}\n\n{why}"
+            break
+        task["budget"] = lean_budget.left(spent)
         ws.event("lean_repair", task=feature, why=why[-2000:])
         before = tree.diff(binary=True, against=tree.commit)
         ws.event("lean_call_started", purpose="build", task=feature, effort=REPAIR_EFFORT)
+        resumed = bool(built.session)
         built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
                       "Fix that, and keep the suite green." + (" Keep your list of choices complete." if open_questions
                                                                 else ""), tree, resume=built.session,
                       effort=REPAIR_EFFORT)
+        spent = lean_budget.spent(spent, built, resumed)
         if built.ok and tree.diff(binary=True, against=tree.commit) == before:
             why = f"the repair changed nothing. The builder said:\n{built.text[:1500]}\n\n{why}"
             break
@@ -188,5 +195,6 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
         record(spec_path, lean_status="stopped", lean_worktree=kept, lean_rounds=None, lean_asked=None)
     ws.event("lean_stopped", task=feature, why=why[-2000:], tree=kept)
     mail(ws, f"graph-loop needs you: {feature}",
-         f"{feature} stopped.\n\nWhy:\n{why}\n\nIts work is kept at {kept}.")
+         f"{feature} stopped.\n\nWhy:\n{why}\n\nIts work is kept at {kept}."
+         + (lean_budget.review_note(spec_path) if built.kind == "budget" or spent >= CARD_BUDGET else ""))
     return ""
