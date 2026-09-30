@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 import subprocess
 
 import lean_spec
@@ -21,37 +22,44 @@ def spec_files(project: str) -> list[pathlib.Path]:
                   key=lambda path: path.name)
 
 
-def subjects(project: str) -> list[str] | None:
-    """The commit subjects on origin/main, else main, newest first; None when git gives neither."""
+def commits(project: str) -> list[tuple[str, str]] | None:
+    """The commits on origin/main, else main, newest first, as (subject, body); None when git gives neither.
+    The whole message is read: the person merging can type their own subject, and the squash body still
+    holds `* feat(<spec>): ...`."""
     for ref in REFS:
         try:
-            done = subprocess.run(["git", "-C", project, "log", "--format=%s", ref],
+            done = subprocess.run(["git", "-C", project, "log", "--format=%x01%s%x02%b", ref],
                                   capture_output=True, text=True, errors="replace", check=False)
         except OSError:
             return None
         if done.returncode == 0:
-            return done.stdout.splitlines()
+            return [(subject, body) for subject, _, body in
+                    (chunk.partition("\x02") for chunk in done.stdout.split("\x01")[1:])]
     return None
 
 
-def built_from(commits: list[str] | None) -> set[str] | None:
-    """The names with a `feat(<name>)` commit, which is what the loop's squash merge leaves."""
-    if commits is None:
-        return None
-    return {line[5:line.index(")")] for line in commits if line.startswith("feat(") and ")" in line}
+def _scopes(commit: tuple[str, str]) -> list[str]:
+    """The spec names a commit says it built: every line of its message that starts `feat(<name>)`,
+    optionally after `* `. A mention in mid-sentence is not one."""
+    return [found.group(1) for line in (commit[0], *commit[1].splitlines())
+            if (found := re.match(r"(?:\* )?feat\(([^)]+)\)", line))]
+
+
+def built_from(found: list[tuple[str, str]] | None) -> set[str] | None:
+    """The names with a `feat(<name>)` line in a commit message, which is what the loop's squash merge leaves."""
+    return None if found is None else {name for commit in found for name in _scopes(commit)}
 
 
 def built_names(project: str) -> set[str] | None:
-    """The names with a `feat(<name>)` commit on origin/main, else main; None when git gives neither."""
-    return built_from(subjects(project))
+    """The names built according to origin/main, else main; None when git gives neither."""
+    return built_from(commits(project))
 
 
-def recent(commits: list[str] | None, specs: set[str], count: int = 8) -> list[str]:
-    """The latest commits that are not a spec's own `feat(<spec>)` commit (a numbered scope, or a spec's
-    name): what was merged by hand."""
-    return [line for line in commits or []
-            if not (line.startswith("feat(") and ")" in line
-                    and (line[5].isdigit() or line[5:line.index(")")] in specs))][:count]
+def recent(found: list[tuple[str, str]] | None, specs: set[str], count: int = 8) -> list[str]:
+    """The subjects of the latest commits that are not a spec's own merge (a `feat(<spec>)` line with a numbered
+    scope or a spec's name, in the subject or the body): what was merged by hand."""
+    return [subject for subject, body in found or []
+            if not any(name[:1].isdigit() or name in specs for name in _scopes((subject, body)))][:count]
 
 
 def status_of(path: pathlib.Path) -> object:
