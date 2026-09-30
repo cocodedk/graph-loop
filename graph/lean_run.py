@@ -20,6 +20,7 @@ import lean_budget
 import lean_calls
 import lean_diff
 import lean_git
+import lean_lint
 import lean_spec
 import providers
 import review
@@ -101,6 +102,8 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
     ws.event("lean_suite", task=feature, round=round_, passed=passed, tail=tail[-2000:])
     if not passed:
         return f"the suite is red ({command}):\n{tail}", None
+    if red := lean_lint.run(ws, masked, command, tree.path, feature, round_):
+        return red, None
     verdict = judge(ws, feature, spec, diff, tree.path, **({"threads": threads} if threads else {}))
     ws.event("lean_review", task=feature, round=round_, outcome=verdict.kind,
              verdict=verdict.verdict, findings=verdict.text[:1000])
@@ -121,14 +124,15 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     own = lean_spec.card_gate(spec)
     task = {"id": feature, "gate": own or profile["suite_command"], "budget": CARD_BUDGET}
     script = tools.write_gate_script(task)   # the builder may run it: `bash <script>`
+    suite = lean_lint.Commands(profile["suite_command"], profile.get("lint_command", ""))
     prompt = builder_prompt(spec, script, profile_path, lessons(pathlib.Path(spec_path).parent), bool(own),
-                            open_questions)
+                            open_questions, suite.lint)
     use = lean_calls.started(ws, "builder", feature)
     built = build(ws, {**task, "model": use["model"]}, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\n"
                   "The work so far is in this checkout: fix that, and keep the suite green." if last else prompt,
                   tree, effort=use["effort"])
     spent = lean_budget.after(ws, task, built, 0.0, False)
-    why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], 1, revise)
+    why, verdict = check(ws, feature, spec, tree, built, suite, 1, revise)
     for round_ in range(2, 2 + REPAIRS):
         # Only a real answer is worth a repair (`Outcome.consumes_attempt`); a limit, a crash, a repair that
         # changed nothing or a card that spent its budget stops the run, its rounds kept.
@@ -149,7 +153,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
         if built.ok and tree.diff(binary=True, against=tree.commit) == before:
             why = f"the repair changed nothing. The builder said:\n{built.text[:1500]}\n\n{why}"
             break
-        why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], round_, revise)
+        why, verdict = check(ws, feature, spec, tree, built, suite, round_, revise)
     # Findings are the reviewer's text unless the parser reads that text as its answer. Green, and
     # accepted or still refused for named findings after the last repair: published. Else it stops.
     found = "" if verdict is None or review._read_review(verdict.text)[0] else verdict.text.strip()

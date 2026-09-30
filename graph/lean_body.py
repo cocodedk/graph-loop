@@ -20,7 +20,7 @@ def pr_body(spec_path: str, why: str, found: str, open_questions: str = "", choi
 
 
 def builder_prompt(spec: str, script: str, profile_path: str, lessons: str, own_gate: bool,
-                   open_questions: str = "") -> str:
+                   open_questions: str = "", lint: str = "") -> str:
     """What the builder is told. A card with its own fast gate runs only that: the loop runs the full
     suite after the build and hands back any failure. Any builder is barred from background jobs,
     because each wait is a paid turn (one card spent about $75 polling a 25-minute suite)."""
@@ -29,8 +29,10 @@ def builder_prompt(spec: str, script: str, profile_path: str, lessons: str, own_
            else f"Run the suite with `bash {script}` and leave it green")
     return (f"Implement what this spec asks, including its tests. Follow the repository's "
             f"CLAUDE.md and the profile at {profile_path}. {run}. And never start or wait on a "
-            f"background job: every wait is a paid turn. Do not commit: the loop commits.\n\n"
-            f"## Spec\n\n{spec}{lessons}" + (
+            f"background job: every wait is a paid turn. Do not commit: the loop commits."
+            + (f" The loop also runs `{lint}` after the suite and needs it green: run it yourself when "
+               f"your permissions allow." if lint else "")
+            + f"\n\n## Spec\n\n{spec}{lessons}" + (
                 f"\n\n## Questions the grill left open\n\nNobody has answered these:\n\n```\n{open_questions}\n```\n\n"
                 f"Decide each one sensibly. End your final answer with a complete list, one line each: "
                 f"question, your choice and why." if open_questions else ""))
