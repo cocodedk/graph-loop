@@ -17,13 +17,14 @@ import project_cost
 import project_view
 import providers
 import tmp_root  # noqa: F401
+from loops_ps import Loop
 from providers import Outcome, claude
 from test_project_cost import build, project, started, write
 from test_project_marks import git, using
 from test_providers import fake
 from workspace import Workspace
 
-EXPECTED_TESTS = 3
+EXPECTED_TESTS = 5
 
 
 def answer(**fields):
@@ -62,6 +63,41 @@ class Shown(unittest.TestCase):
             lines = project_view.report(str(root), [], 0, None).splitlines()
         self.assertIn("✔ built     01-a  $2.50  2026-09-30  86t", lines)
         self.assertIn("· waiting   02-b  $0.50", lines)
+
+
+def call(task, purpose, **fields):
+    return {"kind": "lean_call_started", "task": task, "purpose": purpose, **fields}
+
+
+class Lines(unittest.TestCase):
+    def log(self, root):
+        write(root, "events.jsonl", [
+            started("01-a"), call("01-a", "build", model="claude-sonnet-5-5"), {**build("01-a", 2.5), "turns": 86},
+            call("01-a", "review", model="gpt-6-sol"),                                # a review's model is not the builder's
+            call("01-a", "build", model="claude-opus-5-5"),                            # the last build call wins
+            {"kind": "lean_published", "task": "01-a", "at": "2026-09-30T07:33:21Z"},
+            started("02-b"), call("02-b", "build"), build("02-b", 0.5)])               # an older event: no model
+
+    def test_a_spec_line_shows_the_model_of_its_last_build_after_the_turns(self):
+        root = project(**{"01-a.md": "", "02-b.md": ""})
+        self.log(root)
+        self.assertEqual({"01-a": "opus-5-5"}, project_cost.card_models(str(root)))
+        with using(git(["feat(01-a): x"])):
+            lines = project_view.report(str(root), [], 0, None).splitlines()
+        self.assertIn("✔ built     01-a  $2.50  2026-09-30  86t  opus-5-5", lines)
+        self.assertIn("· waiting   02-b  $0.50", lines)
+
+    def test_a_running_specs_loop_line_shows_its_turns_so_far(self):
+        root = project(**{"01-a.md": "", "02-b.md": ""})
+        self.log(root)
+        loop = Loop(1, 100, "p", "01-a", str(root / "scratchpad" / "lean"))
+        with using(git([])):
+            report = project_view.report(str(root), [loop], 1_900_000_000, None)
+        self.assertIn("86t", next(line for line in report.splitlines() if line.startswith("  loop:")))
+        other = Loop(1, 100, "p", "02-b", str(root / "scratchpad" / "lean"))
+        with using(git([])):
+            report = project_view.report(str(root), [other], 1_900_000_000, None)
+        self.assertNotIn("t\n", next(line for line in report.splitlines() if line.startswith("  loop:")) + "\n")
 
 
 class CountTest(unittest.TestCase):

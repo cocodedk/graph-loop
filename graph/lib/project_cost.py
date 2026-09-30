@@ -68,3 +68,15 @@ def card_turns(project: str) -> dict[str, int]:
                 and isinstance(count, int) and not isinstance(count, bool)):
             turns[row["task"]] = turns.get(row["task"], 0) + count
     return turns
+
+
+def card_models(project: str) -> dict[str, str]:
+    """The model of each spec's last build call (`sonnet-5-5`), from the `lean_call_started` events that record
+    it; a spec built before the model was recorded has none."""
+    models: dict[str, str] = {}
+    for row in _rows(project):
+        task, model = row.get("task"), row.get("model")
+        if row.get("kind") == "lean_call_started" and row.get("purpose") == "build" and isinstance(task, str) \
+                and isinstance(model, str) and model:
+            models[task] = model.removeprefix("claude-")
+    return models

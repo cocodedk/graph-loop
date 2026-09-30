@@ -31,23 +31,25 @@ def report(project: str, loops: list[loops_ps.Loop], now: float, only: str | Non
     counts = collections.Counter(mark for mark, _ in rows)
     tally = " · ".join(f"{counts[mark]} {mark[2:]}" for mark in project_specs.MARKS if counts[mark])
     head = [f"{os.path.basename(project)}  {len(rows)} specs" + (f": {tally}" if tally else "")]
+    turns, models = project_cost.card_turns(project), project_cost.card_models(project)
     for loop in loops:
         step, spent = loops_step.step(loop.workspace, loop.age, now)
-        using = loops_step.using(loop.workspace)
-        head.append(f"  loop: {lean_spec.slug(f'{loop.spec}.md')} {step} {loops_list.duration(spent)}"
-                    + (f"  {using}" if using else ""))
+        name = lean_spec.slug(f"{loop.spec}.md")
+        using = " ".join(word for word in (loops_step.using(loop.workspace), f"{turns[name]}t" if name in turns else "") if word)
+        head.append(f"  loop: {name} {step} {loops_list.duration(spent)}" + (f"  {using}" if using else ""))
     if built is None:
         head.append(UNREADABLE)
     costs = {name: f"${cost:.2f}" for name, cost in project_cost.card_costs(project).items()}
     named = max((len(name) for _, name in rows), default=0)
     dollars = max((len(cost) for cost in costs.values()), default=0)
-    days, turns = project_cost.card_days(project), project_cost.card_turns(project)
+    days = project_cost.card_days(project)
 
     def line(mark: str, name: str) -> str:
         if name not in costs:
             return f"{mark.ljust(WIDTH)}  {name}"
         extra = f"  {days[name]}" if name in days else ""
         extra += f"  {turns[name]}t" if name in turns else ""
+        extra += f"  {models[name]}" if name in models else ""
         return f"{mark.ljust(WIDTH)}  {name.ljust(named)}  {costs[name].rjust(dollars)}{extra}"
     shown = [line(mark, name) for mark, name in rows if not only or ONLY[only](mark)]
     merged = project_specs.recent(found, {name for _, name in rows})
