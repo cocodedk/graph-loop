@@ -26,13 +26,12 @@ import review
 import tools
 from lean_body import builder_prompt, grill_prompt, pr_body
 from lean_budget import CARD_BUDGET
+from lean_judge import CODEX_BIN, judge
 from lean_spec import lessons, record, slug
 from providers import REVIEW_EFFORT  # noqa: F401 — tests read it here
-from review_scope import VERDICT
 from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
 
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
-CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
 REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
 BUILD_EFFORT = lean_calls.block("builder")["effort"]   # the block's, at import; each call reads it again
 REPAIR_EFFORT = lean_calls.block("repair")["effort"]
@@ -54,23 +53,6 @@ def masked(ws, command: str, cwd: str) -> tuple[bool, str]:
     """A profile command (suite or build), in the gate box: its verdict and its tail."""
     result = gates.run_gate(command, cwd, **gate_paths.options(ws.root))
     return result.passed, result.why
-
-
-def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome:
-    prompt = (f"You review one change to this repository, read-only. It should implement the "
-              f"spec below, with tests. Refuse only for: something the spec's 'Done when' or "
-              f"acceptance tests name that does not hold, any defect you can name (wrong for some "
-              f"real input or use), a security hole, behaviour added without tests, or a file the spec "
-              f"does not call for that nothing uses (name it). Accept, listing findings, only for "
-              f"style, a stated limit or a suggestion. In this review an ACCEPT may carry findings, "
-              f"whatever the answer rule below says.\n\n"
-              f"## Spec\n\n{spec}\n\n## The diff against main\n\n{diff}\n\n{VERDICT}")
-
-    def paid(kind, account, cost, tokens, _text):
-        ws.attempt(feature, account=account, kind=kind, cost=cost, tokens=tokens,
-                   effort=use["effort"], purpose="review")
-    use = lean_calls.started(ws, "review", feature)
-    return review.codex(CODEX_BIN, prompt, cwd=cwd, effort=use["effort"], attempt=paid)
 
 
 def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str = "", final: bool = False) -> str:
@@ -103,10 +85,10 @@ def mail(ws, subject: str, body: str) -> None:
 
 
 def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
-          revising: bool = False) -> tuple[str, providers.Outcome | None]:
+          threads: str = "") -> tuple[str, providers.Outcome | None]:
     """Why this round is not done ("" when it is), and the reviewer's answer when it
-    was asked. A revision answers review threads on its open pull request: the suite
-    judges it here, and the reviewer who raised the threads reads it there."""
+    was asked. A revise round (`threads`, the review threads it answers) is reviewed
+    like a first build, on the change it made against the branch it started from."""
     if not built.ok:
         return f"the builder did not finish ({built.kind}): {built.text[:500]}", None
     diff = tree.diff(against=tree.commit)
@@ -118,9 +100,7 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
     ws.event("lean_suite", task=feature, round=round_, passed=passed, tail=tail[-2000:])
     if not passed:
         return f"the suite is red ({command}):\n{tail}", None
-    if revising:
-        return "", None
-    verdict = judge(ws, feature, spec, diff, tree.path)
+    verdict = judge(ws, feature, spec, diff, tree.path, **({"threads": threads} if threads else {}))
     ws.event("lean_review", task=feature, round=round_, outcome=verdict.kind,
              verdict=verdict.verdict, findings=verdict.text[:1000])
     if verdict.verdict != "ACCEPT":
@@ -147,7 +127,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                   "The work so far is in this checkout: fix that, and keep the suite green." if last else prompt,
                   tree, effort=use["effort"])
     spent = lean_budget.after(ws, task, built, 0.0, False)
-    why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], 1, bool(revise))
+    why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], 1, revise)
     for round_ in range(2, 2 + REPAIRS):
         # Only a real answer is worth a repair (`Outcome.consumes_attempt`); a limit, a crash, a repair that
         # changed nothing or a card that spent its budget stops the run, its rounds kept.
@@ -168,8 +148,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
         if built.ok and tree.diff(binary=True, against=tree.commit) == before:
             why = f"the repair changed nothing. The builder said:\n{built.text[:1500]}\n\n{why}"
             break
-        why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], round_,
-                             bool(revise))
+        why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], round_, revise)
     # Findings are the reviewer's text unless the parser reads that text as its answer (a
     # reply with none keeps its answer as its text). Green, and accepted or still refused
     # for named findings after the last repair: published with them. Else it stops below.
@@ -178,8 +157,9 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
         try:
             title = f"feat({feature}): {feature}"
             work = lean_git.commit(repo, tree.path, tree.commit, title)
-            url = lean_git.update(repo, work, feature, pr) if revise else lean_git.publish(
-                repo, work, feature, title, pr_body(spec_path, why, found, open_questions, built.text))
+            url = lean_git.update(repo, work, feature, pr, found if why else "") if revise else (
+                lean_git.publish(repo, work, feature, title,
+                                 pr_body(spec_path, why, found, open_questions, built.text)))
         except RuntimeError as error:
             why = f"it passed, but could not open its pull request: {error}\n\n{why}".strip()
         else:

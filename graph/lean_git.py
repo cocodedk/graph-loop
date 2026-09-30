@@ -70,12 +70,21 @@ def pull_request(repo: str, branch: str, title: str, body: str) -> str:
     return done.stdout.strip().splitlines()[-1]
 
 
-def update(repo: str, work: str, feature: str, url: str) -> str:
+def update(repo: str, work: str, feature: str, url: str, found: str = "") -> str:
     """Push commit `work` (made on the branch's tip) onto lean/<feature>, the same
-    pull request. A plain push: git refuses it unless it is a fast-forward."""
+    pull request. A plain push: git refuses it unless it is a fast-forward. `found`
+    is a refusing reviewer's findings: appended below the description's existing text."""
     branch = f"lean/{feature}"
     git(repo, "update-ref", f"refs/heads/{branch}", work)
     git(repo, "push", "--quiet", "origin", f"{work}:refs/heads/{branch}")
+    if found:
+        old = subprocess.run(("gh", "pr", "view", url, "--json", "body", "--jq", ".body"), cwd=repo,
+                             capture_output=True, text=True, check=False)
+        body = f"{old.stdout.rstrip()}\n\nThe reviewer's findings on the last revise round:\n\n{found}"
+        done = old if old.returncode else subprocess.run(("gh", "pr", "edit", url, "--body", body), cwd=repo,
+                                                         capture_output=True, text=True, check=False)
+        if done.returncode:
+            raise RuntimeError(f"pushed, but the description was not updated: {(done.stderr or done.stdout).strip()[:300]}")
     return url
 
 
