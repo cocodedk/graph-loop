@@ -32,6 +32,7 @@ CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
 REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
 BUILD_EFFORT = "high"   # 2026-09-28 benchmark: Sonnet 5.5 at medium was still refused after two repairs
 REPAIR_EFFORT = "high"   # a repair round is handed why the last one fell short (2026-09-26 trial)
+BUILD_BUDGET = 40   # dollars a builder call may spend: ordinary calls cost up to 25, two runaways 100 and 116
 
 
 def build(ws, task: dict, prompt: str, tree, resume: str = "",
@@ -40,7 +41,7 @@ def build(ws, task: dict, prompt: str, tree, resume: str = "",
     feature, account = task["id"], accounts.available()[0]
     out = providers.claude(CLAUDE_BIN, prompt, account=account, cwd=tree.path, resume=resume,
                            effort=effort, allowed_tools=tools.builder_tools(task),
-                           disallowed_tools=tools.builder_denies(task))
+                           disallowed_tools=tools.builder_denies(task), budget=BUILD_BUDGET)
     ws.attempt(feature, account=account, kind=out.kind, cost=out.cost, tokens=out.tokens,
                effort=effort, purpose="build")
     return out

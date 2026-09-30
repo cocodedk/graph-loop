@@ -77,9 +77,21 @@ def _classify_failure(body: dict, returncode: int, text: str) -> str | None:
     status = body.get("api_error_status")
     if isinstance(status, int) and 500 <= status < 600:
         return "capacity"
+    if body.get("subtype") == "error_max_budget_usd":
+        return "budget"
     if returncode or body.get("is_error"):
         return _classify_text(text) or "crash"
     return None
+
+
+def budget_words(body: dict, budget: float | None) -> str:
+    """What a spend-cap stop says. The CLI's own words only say it stopped: this says what to do."""
+    spent = body.get("total_cost_usd")
+    cap = f"${budget:g}" if isinstance(budget, (int, float)) else "its limit"
+    cost = f"${spent:.2f}" if isinstance(spent, (int, float)) and not isinstance(spent, bool) else "an unknown amount"
+    return (f"the builder reached its spend cap of {cap} (it had spent {cost}); its work so far "
+            "is kept. Split the spec into smaller ones, or raise BUILD_BUDGET in graph/lean_run.py, then "
+            "run it again. The cap is checked per turn, so one long turn can pass it.")
 
 
 def closed_object(pairs: list[tuple[str, object]]) -> dict:
