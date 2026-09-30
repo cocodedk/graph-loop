@@ -63,7 +63,7 @@ class Large(unittest.TestCase):
         self.assertIn("## Spec\n\nthe spec\n\n", self.prompt)
         for name in self.parts:
             self.assertRegex(self.prompt, rf"(?m)^{name} \| \+\d+ -0$")
-        (shown, rest) = self.prompt.split("## Not shown\n\n")
+        (_shown, rest) = self.prompt.split("## Not shown\n\n")
         self.assertIn(f"d.txt ({len(self.parts['d.txt'])} characters)\n", rest)
         self.assertNotIn("c.txt (", rest)
         self.assertIn("too large to include", rest)
