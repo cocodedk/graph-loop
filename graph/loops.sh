@@ -15,8 +15,9 @@ only=""
 
 # The commands read no keys: standard input belongs to the person, so a key pressed while one runs
 # waits in the input until the next read.
+rows=""   # the terminal's height, read before each live refresh; a single look never passes it
 screen() {
-  "${CMD[@]}" --screen ${folder:+"$folder"} ${only:+--only "$only"} --refresh "$REFRESH" $ONCE 2>&1 </dev/null
+  "${CMD[@]}" --screen ${folder:+"$folder"} ${only:+--only "$only"} --refresh "$REFRESH" ${rows:+--rows "$rows"} $ONCE 2>&1 </dev/null
 }
 
 if [ -n "$ONCE" ]; then
@@ -27,7 +28,14 @@ fi
 stop() { echo "stopped watching."; exit 0; }
 trap 'echo; stop' INT
 while true; do
-  text="$(screen)"   # build the whole screen first, so the person never sees an empty one
+  # here, not inside $(screen): tput finds the height from the terminal only while its error output still is one;
+  # with no terminal, or one tput does not know (TERM unset), it is not asked, so it prints no error
+  rows=""
+  if command -v tput >/dev/null; then
+    if [ -t 2 ]; then tput longname >/dev/null 2>&1 && rows="$(tput lines)"; else rows="$(tput lines 2>/dev/null)"; fi
+  fi
+  case "$rows" in *[!0-9]*) rows="" ;; esac
+  text="$(screen)"  # build the whole screen first, so the person never sees an empty one
   clear 2>/dev/null || true
   printf '%s\n' "$text"
   IFS= read -rsn1 -t "$REFRESH" key

@@ -2,6 +2,7 @@
 
 import os
 import pathlib
+import signal
 import subprocess
 import tempfile
 import time
@@ -28,11 +29,24 @@ echo "SCREEN $*"
 """
 
 
+# A stand-in for `tput lines`: each call prints the next height of the file `rows` (the last one
+# repeats), and nothing when the file is empty; any other question is answered with silence.
+TPUT = """#!/bin/sh
+[ "$1" = lines ] && [ -s "$FAKE_DIR/rows" ] || exit 0
+head -n 1 "$FAKE_DIR/rows"
+if [ "$(wc -l < "$FAKE_DIR/rows")" -gt 1 ]; then
+  tail -n +2 "$FAKE_DIR/rows" > "$FAKE_DIR/rows.next" && mv "$FAKE_DIR/rows.next" "$FAKE_DIR/rows"
+fi
+exit 0
+"""
+
+
 class Rig(unittest.TestCase):
     def setUp(self):
         self.dir = pathlib.Path(tempfile.mkdtemp())
         self.here = pathlib.Path(tempfile.mkdtemp())     # where the script runs: it must stay empty
         for name, body in (("fake", FAKE), ("clear", f"#!/bin/sh\necho '{CLEAR}'\n"),
+                           ("tput", TPUT),
                            ("ps", "#!/bin/sh\ncat \"$FAKE_DIR/ps.out\"\n")):
             (self.dir / name).write_text(body)
             (self.dir / name).chmod(0o755)
@@ -43,10 +57,12 @@ class Rig(unittest.TestCase):
     def calls(self):
         return (self.dir / "calls").read_text().splitlines()
 
-    def env(self, refresh, status="", fake=True, ps="", gate=""):
-        """The environment of a run; a fake `clear` prints CLEAR, a fake `ps` lists `ps`."""
+    def env(self, refresh, status="", fake=True, ps="", gate="", rows=""):
+        """The environment of a run; a fake `clear` prints CLEAR, a fake `ps` lists `ps`, a fake
+        `tput lines` prints the words of `rows` one per call (nothing when empty)."""
         env = {**os.environ, "PATH": f"{self.dir}{os.pathsep}{os.environ['PATH']}", "FAKE_DIR": str(self.dir),
                "FAKE_STATUS": status, "FAKE_GATE": gate, "LOOPS_REFRESH": refresh}
+        (self.dir / "rows").write_text("".join(f"{height}\n" for height in rows.split()))
         env.pop("LOOPS_CMD", None)
         if fake:
             env["LOOPS_CMD"] = str(self.dir / "fake")
@@ -63,8 +79,11 @@ class Rig(unittest.TestCase):
 
     def live(self, *args, gate=""):
         """A running loops.sh whose standard input stays open, so the test can press keys; 30s refresh."""
+        # A suite started as a background job inherits an ignored SIGINT, and bash cannot trap what it
+        # inherits ignored: the script would stop on the end of input, without Ctrl-C's newline.
         return subprocess.Popen(["bash", str(GRAPH / "loops.sh"), *args], env=self.env("30", gate=gate),
-                                cwd=self.here, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+                                cwd=self.here, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
+                                preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL))  # noqa: PLW1509  # ponytail: only signal.signal runs, no threads here; start_new_session does not reset an ignored SIGINT
 
     def wait_for(self, name):
         for _ in range(400):
