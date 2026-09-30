@@ -7,6 +7,7 @@ import os
 from collections.abc import Callable
 
 import lean_spec
+import loops_alive
 import loops_list
 import loops_ps
 import loops_step
@@ -36,7 +37,8 @@ def report(project: str, loops: list[loops_ps.Loop], now: float, only: str | Non
         step, spent = loops_step.step(loop.workspace, loop.age, now)
         name = lean_spec.slug(f"{loop.spec}.md")
         using = " ".join(word for word in (loops_step.using(loop.workspace), f"{turns[name]}t" if name in turns else "") if word)
-        head.append(f"  loop: {name} {step} {loops_list.duration(spent)}" + (f"  {using}" if using else ""))
+        alive = loops_alive.progress(loop.pid, now) if step == "building" else ""
+        head.append(f"  loop: {name} {step} {loops_list.duration(spent)}" + "".join(f"  {part}" for part in (using, alive) if part))
     if built is None:
         head.append(UNREADABLE)
     costs = {name: f"${cost:.2f}" for name, cost in project_cost.card_costs(project).items()}

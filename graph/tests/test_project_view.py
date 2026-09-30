@@ -61,6 +61,13 @@ class View(unittest.TestCase):
         self.assertEqual("  loop: 01-b starting 15m00s", lines[1])
         self.assertEqual("▶ building  01-b", lines[4])
 
+    def test_a_building_loop_line_carries_its_progress_and_other_steps_do_not(self):
+        ps = process(7, 900, self.root, "/s/01-b.md")
+        with mock.patch("loops_alive.progress", return_value="last step 12s ago · 186 steps"), \
+                mock.patch("loops_step.step", side_effect=[("building", 60), ("reviewing", 60)]):
+            self.assertIn("building 1m00s  last step 12s ago · 186 steps", self.show(ps=ps)[1])
+            self.assertNotIn("last step", self.show(ps=ps)[1])
+
     def test_no_running_loop_has_no_loop_line(self):
         self.assertEqual("", self.report().splitlines()[1])
 
@@ -168,7 +175,7 @@ class Size(unittest.TestCase):
                 self.assertLessEqual(len(path.read_text("utf-8").splitlines()), 200)
 
 
-EXPECTED_TESTS = 18
+EXPECTED_TESTS = 19
 
 
 class CountTest(unittest.TestCase):
