@@ -24,10 +24,12 @@ def report(ps_text: str, cwd_for: Callable[[int], str | None], now: float) -> st
     rows = []
     for at, loop in enumerate(loops_ps.loops_in(ps_text, cwd_for), 1):
         name, spent = loops_step.step(loop.workspace, loop.age, now)
-        rows.append([str(at), loop.project, loop.spec, name, duration(spent),
+        rows.append([str(at), loop.project, loop.spec, name, duration(spent), loops_step.using(loop.workspace),
                      f"loop up {duration(loop.age)}"])
     if not rows:
         return NONE_RUNNING
-    widths = [max(len(row[col]) for row in rows) + 2 for col in range(5)]
-    return "\n".join("".join(cell.ljust(width) for cell, width in zip(row, widths)) + row[5]
-                     for row in rows)
+    if not any(row[5] for row in rows):                  # nothing to say about the call: no column
+        for row in rows:
+            del row[5]
+    widths = [max(len(row[col]) for row in rows) + 2 for col in range(len(rows[0]) - 1)]
+    return "\n".join("".join(cell.ljust(width) for cell, width in zip(row, widths)) + row[-1] for row in rows)
