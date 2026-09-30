@@ -130,7 +130,7 @@ class Listing(unittest.TestCase):
         graph = pathlib.Path(loops.__file__).resolve().parent
         copy = pathlib.Path(tempfile.mkdtemp()) / "graph"
         (copy / "lib").mkdir(parents=True)
-        for path in (graph / "loops.py", *(graph / "lib").glob("loops_*.py")):
+        for path in (graph / "loops.py", *(graph / "lib").glob("loops_*.py"), graph / "lib" / "screen_color.py"):
             (copy / path.relative_to(graph)).write_text(path.read_text("utf-8"))
         fake = pathlib.Path(tempfile.mkdtemp()) / "ps"    # a ps that lists no process
         fake.write_text("#!/bin/sh\nprintf '    PID ELAPSED COMMAND\\n'\n")

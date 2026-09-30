@@ -7,6 +7,7 @@ import os
 import re
 
 from loops_list import duration
+from screen_color import paint, quiet
 
 
 def children(pid: int, proc: str) -> list[int]:
@@ -41,9 +42,9 @@ def config_of(pid: int, proc: str) -> str:
     return os.path.join(os.path.expanduser("~"), ".claude")
 
 
-def progress(pid: int, now: float, proc: str = "/proc") -> str:
+def progress(pid: int, now: float, proc: str = "/proc", color: bool = False) -> str:
     """`last step 12s ago · 186 steps` from the newest session file of a process below `pid`, "" when
-    there is none. ponytail: Linux /proc only, and a working directory whose encoded name is over 200
+    there is none; with `color` the `last step … ago` is yellow from 5 minutes, red from 15. ponytail: Linux /proc only, and a working directory whose encoded name is over 200
     characters is hashed by Claude, so its file is missed."""
     best: tuple[float, str] | None = None
     try:
@@ -65,4 +66,5 @@ def progress(pid: int, now: float, proc: str = "/proc") -> str:
         return ""
     with open(best[1], encoding="utf-8", errors="replace") as session:
         steps = sum('"type":"assistant"' in line for line in session)
-    return f"last step {duration(max(0, int(now - best[0])))} ago · {steps} steps"
+    quiet_for = max(0, int(now - best[0]))
+    return f"{paint(f'last step {duration(quiet_for)} ago', quiet(quiet_for), color)} · {steps} steps"

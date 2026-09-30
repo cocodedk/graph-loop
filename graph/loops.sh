@@ -12,12 +12,15 @@ ONCE=""
 [ "${1:-}" = "-1" ] && { ONCE="--once"; shift; }
 folder="${1:-}"
 only=""
+# Colour only on a terminal (asked here: inside $(screen) standard output is a pipe) and while NO_COLOR is unset or empty.
+COLOR=""
+[ -t 1 ] && [ -z "${NO_COLOR:-}" ] && COLOR="--color"
 
 # The commands read no keys: standard input belongs to the person, so a key pressed while one runs
 # waits in the input until the next read.
 rows=""   # the terminal's height, read before each live refresh; a single look never passes it
 screen() {
-  "${CMD[@]}" --screen ${folder:+"$folder"} ${only:+--only "$only"} --refresh "$REFRESH" ${rows:+--rows "$rows"} $ONCE 2>&1 </dev/null
+  "${CMD[@]}" --screen ${folder:+"$folder"} ${only:+--only "$only"} --refresh "$REFRESH" ${rows:+--rows "$rows"} $COLOR $ONCE 2>&1 </dev/null
 }
 
 if [ -n "$ONCE" ]; then
