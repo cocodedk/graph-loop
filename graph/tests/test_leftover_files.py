@@ -14,7 +14,7 @@ import tmp_root  # noqa: F401
 from providers import Outcome
 from test_lean_run import ACCEPT, Rig
 
-EXPECTED_TESTS = 3
+EXPECTED_TESTS = 4
 
 
 def new(path):
@@ -35,6 +35,17 @@ class Finds(unittest.TestCase):
                           "pkg/__pycache__/m.cpython-314.pyc", "web/node_modules/left-pad/index.js"],
                          lean_diff.leftovers(diff))
         self.assertEqual([], lean_diff.leftovers(""))
+
+
+class Odd(unittest.TestCase):
+    def test_quoted_paths_paths_with_b_slash_and_empty_new_files_are_read(self):
+        quoted = 'diff --git "a/caf\\303\\251.py.orig" "b/caf\\303\\251.py.orig"\nnew file mode 100644\n'
+        spaced = new("my b/notes.orig")
+        empty = "diff --git a/empty.bak b/empty.bak\nnew file mode 100644\nindex 0000000..e69de29\n"
+        self.assertEqual(1, len(lean_diff.leftovers(quoted)))
+        self.assertEqual(["my b/notes.orig"], lean_diff.leftovers(spaced))
+        self.assertEqual(["empty.bak"], lean_diff.leftovers(empty))
+        self.assertEqual([], lean_diff.leftovers(new("my b/notes.py")))
 
 
 class Sent(Rig):
