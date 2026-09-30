@@ -83,7 +83,7 @@ class Rig(unittest.TestCase):
         # inherits ignored: the script would stop on the end of input, without Ctrl-C's newline.
         return subprocess.Popen(["bash", str(GRAPH / "loops.sh"), *args], env=self.env("30", gate=gate),
                                 cwd=self.here, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
-                                preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL))
+                                preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL))  # noqa: PLW1509  # ponytail: only signal.signal runs, no threads here; start_new_session does not reset an ignored SIGINT
 
     def wait_for(self, name):
         for _ in range(400):
