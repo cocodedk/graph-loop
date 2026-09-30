@@ -68,3 +68,9 @@ def lessons(folder) -> str:
 def slug(path: str) -> str:
     """The feature's name, from its spec file's name."""
     return re.sub(r"[^A-Za-z0-9._-]+", "-", pathlib.Path(path).stem).strip("-") or "feature"
+
+
+def card_gate(spec: str) -> str:
+    """The card's own fast gate, `gate:` in its front matter: one line of text, or "" for none."""
+    gate = front(spec).get("gate")
+    return gate.strip() if isinstance(gate, str) and gate.strip() and "\n" not in gate.strip() else ""
