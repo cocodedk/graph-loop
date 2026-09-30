@@ -32,6 +32,7 @@ from provider_words import (  # noqa: F401 — MARKS re-exported for callers tha
     LIMIT_MARKS,
     _classify_failure,
     _classify_text,
+    budget_words,
     closed_object,
 )
 from tools import READ_ONLY_FLAGS, guard_settings
@@ -121,7 +122,7 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
            disallowed_tools: str = "", guard: str = "", guard_files: str = "",
            no_tools: bool = False, read_only: bool = False, effort: str = "", resume: str = "",
            timeout: int = BUILD_TIMEOUT, cwd: str | None = None,
-           model: str = "") -> Outcome:
+           model: str = "", budget: float | None = None) -> Outcome:
     """One builder call, in the task's own directory.
 
     Which configuration an account uses is `lib/accounts.py`'s to say, not this
@@ -137,6 +138,8 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
             "-p", "--output-format", "json",
             "--model", model or MODEL, "--effort", effort or EFFORT,
             "--disallowedTools", ",".join(denies)]
+    if budget:   # a cap on this call's spend; the CLI checks it per turn
+        argv += ["--max-budget-usd", f"{budget:g}"]
     if resume:
         # A rebuild round continues the SAME work: the builder keeps what it read
         # and gets the findings on top, instead of paying to read it all again.
@@ -174,8 +177,8 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
         # answer, and raising here left a live task todo for the next turn.
         return Outcome("malformed", text=str(body)[:500], raw=blob)
     if failure := _classify_failure(body, done.returncode, blob):
-        return Outcome(failure,
-                       text=str(body.get("result") or "")[:500], raw=blob,
+        return Outcome(failure, raw=blob,
+                       text=budget_words(body, budget) if failure == "budget" else str(body.get("result") or "")[:500],
                        session=str(body.get("session_id") or ""), **_spent(body))
     if not isinstance(body.get("usage", {}), dict) or not isinstance(body.get("permission_denials", []), list):
         return Outcome("malformed", text="the answer's own fields are not the shape they claim", raw=blob)
