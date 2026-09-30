@@ -90,8 +90,8 @@ def budget_words(body: dict, budget: float | None) -> str:
     cap = f"${budget:g}" if isinstance(budget, (int, float)) else "its limit"
     cost = f"${spent:.2f}" if isinstance(spent, (int, float)) and not isinstance(spent, bool) else "an unknown amount"
     return (f"the builder reached its spend cap of {cap} (it had spent {cost}); its work so far "
-            "is kept. Split the spec into smaller ones, or raise BUILD_BUDGET in graph/lean_run.py, then "
-            "run it again. The cap is checked per turn, so one long turn can pass it.")
+            "is kept. Reslice or simplify the card, or raise CARD_BUDGET in graph/lean_budget.py if the card "
+            "is right, then run it again. The cap is checked per turn, so one long turn can pass it.")
 
 
 def closed_object(pairs: list[tuple[str, object]]) -> dict:

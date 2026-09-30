@@ -45,7 +45,7 @@ class Cap(unittest.TestCase):
     def test_a_cap_answer_is_its_own_kind_and_says_what_to_do(self):
         out, _ = self.answer(OVER, budget=40)
         self.assertEqual(("budget", 41.7, "s9"), (out.kind, out.cost, out.session))
-        for words in ("$40", "$41.70", "work so far is kept", "Split the spec", "BUILD_BUDGET"):
+        for words in ("$40", "$41.70", "work so far is kept", "Reslice or simplify", "CARD_BUDGET"):
             self.assertIn(words, out.text)
         self.assertFalse(out.ok)
 
@@ -73,8 +73,8 @@ class Stop(Rig):
     def test_the_lean_builder_is_given_the_cap(self):
         with mock.patch.object(providers, "claude", return_value=Outcome("ok")) as call:
             lean_run.build(self.ws, {"id": "x", "gate": "true"}, "build it", mock.Mock(path="/tmp"))
-        self.assertEqual(lean_run.BUILD_BUDGET, call.call_args.kwargs["budget"])
-        self.assertEqual(40, lean_run.BUILD_BUDGET)
+        self.assertEqual(lean_run.CARD_BUDGET, call.call_args.kwargs["budget"])
+        self.assertEqual(8, lean_run.CARD_BUDGET)
 
 
 class CountTest(unittest.TestCase):
