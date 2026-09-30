@@ -21,8 +21,8 @@ def spec_files(project: str) -> list[pathlib.Path]:
                   key=lambda path: path.name)
 
 
-def built_names(project: str) -> set[str] | None:
-    """The names with a `feat(<name>)` commit on origin/main, else main; None when git gives neither."""
+def subjects(project: str) -> list[str] | None:
+    """The commit subjects on origin/main, else main, newest first; None when git gives neither."""
     for ref in REFS:
         try:
             done = subprocess.run(["git", "-C", project, "log", "--format=%s", ref],
@@ -30,9 +30,28 @@ def built_names(project: str) -> set[str] | None:
         except OSError:
             return None
         if done.returncode == 0:
-            return {line[5:line.index(")")] for line in done.stdout.splitlines()
-                    if line.startswith("feat(") and ")" in line}
+            return done.stdout.splitlines()
     return None
+
+
+def built_from(commits: list[str] | None) -> set[str] | None:
+    """The names with a `feat(<name>)` commit, which is what the loop's squash merge leaves."""
+    if commits is None:
+        return None
+    return {line[5:line.index(")")] for line in commits if line.startswith("feat(") and ")" in line}
+
+
+def built_names(project: str) -> set[str] | None:
+    """The names with a `feat(<name>)` commit on origin/main, else main; None when git gives neither."""
+    return built_from(subjects(project))
+
+
+def recent(commits: list[str] | None, specs: set[str], count: int = 8) -> list[str]:
+    """The latest commits that are not a spec's own `feat(<spec>)` commit (a numbered scope, or a spec's
+    name): what was merged by hand."""
+    return [line for line in commits or []
+            if not (line.startswith("feat(") and ")" in line
+                    and (line[5].isdigit() or line[5:line.index(")")] in specs))][:count]
 
 
 def status_of(path: pathlib.Path) -> object:
