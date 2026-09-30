@@ -133,10 +133,11 @@ def main(argv: list[str] | None = None) -> int:
     # Questions first, nothing on a guess: once, before a spec's first build. A spec
     # carrying on after a stop was grilled then. The status does not prove the text is
     # unchanged: a spec whose requirements change starts afresh without its lean_ fields.
-    if not revise and info.get("lean_status") != "stopped" \
-            and lean_run.grill(ws, repo, [spec], path):
-        lean_spec.record(spec, lean_status="questions")   # so nothing takes it for a spec that only waits
-        return 2
+    if not revise and info.get("lean_status") != "stopped":
+        asked = lean_run.grill(ws, repo, [spec], path, earlier=str(info.get("lean_asked") or ""))
+        if asked:                                  # kept, so nothing takes it for a spec that only waits
+            lean_spec.record(spec, lean_status="questions", lean_asked=asked[:1500])
+            return 2
     url = lean_run.run_feature(ws, repo, spec, profile, path, revise, str(info.get("lean_pr", "")))
     if not url:
         return 1
