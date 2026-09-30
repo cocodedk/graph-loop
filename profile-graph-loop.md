@@ -6,8 +6,15 @@ The lean loop reads the first indented line under each heading below.
 
     bash scripts/scrub-check.sh && (cd slicer/tests && python3 -m unittest discover -q) && (cd graph/tests && python3 -m unittest discover -q)
 
-The scrub check, then the slicer's tests, then the driver's: the same three CI runs, minus the linter.
-CI runs `ruff check .` (pinned 0.16.8) on the pull request; a builder cannot run it in the gate.
+The scrub check, then the slicer's tests, then the driver's: the same three CI runs, minus the linter,
+which `## lint_command` below runs after this passes.
+
+## lint_command
+
+    uvx ruff@0.16.8 check .
+
+The linter CI runs on the pull request (pinned 0.16.8), run by the loop after the suite passes: a red
+lint is handed to the builder as a repair round, so lint errors no longer reach CI.
 
 ## build_command
 
