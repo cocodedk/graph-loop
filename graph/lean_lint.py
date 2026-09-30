@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Self
 
 
 class Commands(str):
@@ -10,7 +11,7 @@ class Commands(str):
 
     lint: str
 
-    def __new__(cls, suite: str, lint: str = "") -> Commands:
+    def __new__(cls, suite: str, lint: str = "") -> Self:
         command = super().__new__(cls, suite)
         command.lint = lint
         return command
