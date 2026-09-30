@@ -69,7 +69,7 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str 
     use = lean_calls.started(ws, "grill", "grill")
     out = review.codex(CODEX_BIN, prompt, cwd=repo, effort=use["effort"], attempt=paid, job="grill")
     questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
-    ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=questions[:2000])
+    ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=questions[:2000], specs=[slug(p) for p in spec_paths])
     if questions and final and out.verdict == "REJECT":   # the round limit: the run goes on
         mail(ws, "graph-loop is building with open questions", f"{questions}\n\nThe round limit is reached: "
              "building goes on with these unresolved. The builder decides each, and its choices go in the pull "
