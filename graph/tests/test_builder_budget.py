@@ -22,7 +22,7 @@ from providers import Outcome, claude
 from test_lean_run import Rig
 from test_providers import fake
 
-EXPECTED_TESTS = 4
+EXPECTED_TESTS = 5
 OVER = {"is_error": True, "subtype": "error_max_budget_usd", "total_cost_usd": 41.7, "session_id": "s9",
         "errors": ["Reached maximum budget ($40)"], "usage": {"input_tokens": 9, "output_tokens": 9},
         "permission_denials": []}
@@ -48,6 +48,13 @@ class Cap(unittest.TestCase):
         for words in ("$40", "$41.70", "work so far is kept", "Split the spec", "BUILD_BUDGET"):
             self.assertIn(words, out.text)
         self.assertFalse(out.ok)
+
+    def test_a_cap_answer_with_nothing_to_quote_still_says_it(self):
+        bare = {"is_error": True, "subtype": "error_max_budget_usd", "usage": OVER["usage"], "permission_denials": []}
+        out, _ = self.answer(bare)                         # no cap given, no cost in the answer
+        self.assertEqual("budget", out.kind)
+        for words in ("spend cap", "unknown amount", "work so far is kept"):
+            self.assertIn(words, out.text)
 
 
 class Stop(Rig):
