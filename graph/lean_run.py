@@ -57,11 +57,11 @@ def masked(ws, command: str, cwd: str) -> tuple[bool, str]:
 def judge(ws, feature: str, spec: str, diff: str, cwd: str) -> providers.Outcome:
     prompt = (f"You review one change to this repository, read-only. It should implement the "
               f"spec below, with tests. Refuse only for: something the spec's 'Done when' or "
-              f"acceptance tests name that does not hold, a failure a user would meet in ordinary "
-              f"use, a security hole, behaviour added without tests, or a file the spec does not call "
-              f"for that nothing uses (name it). List anything rarer as a "
-              f"finding, and accept. In this review an ACCEPT may carry findings, whatever the "
-              f"answer rule below says.\n\n"
+              f"acceptance tests name that does not hold, any defect you can name (wrong for some "
+              f"real input or use), a security hole, behaviour added without tests, or a file the spec "
+              f"does not call for that nothing uses (name it). Accept, listing findings, only for "
+              f"style, a stated limit or a suggestion. In this review an ACCEPT may carry findings, "
+              f"whatever the answer rule below says.\n\n"
               f"## Spec\n\n{spec}\n\n## The diff against main\n\n{diff}\n\n{VERDICT}")
 
     def paid(kind, account, cost, tokens, _text):
