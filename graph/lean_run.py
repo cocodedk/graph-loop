@@ -145,7 +145,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     built = build(ws, task, f"{prompt}\n\n## Your last attempt failed\n\n{last}\n\nThe work so far is "
                   "in this checkout: fix that, and keep the suite green." if last else prompt, tree,
                   effort=BUILD_EFFORT)
-    spent = lean_budget.spent(0.0, built, False)
+    spent = lean_budget.after(ws, task, built, 0.0, False)
     why, verdict = check(ws, feature, spec, tree, built, profile["suite_command"], 1, bool(revise))
     for round_ in range(2, 2 + REPAIRS):
         # Only a real answer is worth a repair (`Outcome.consumes_attempt`); a limit, a crash, a repair that
@@ -155,7 +155,6 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
         if spent >= CARD_BUDGET:                   # planned wrongly: no repair, stop and say so
             why = f"{lean_budget.stopped_words(spent)}\n\n{why}"
             break
-        task["budget"] = lean_budget.left(spent)
         ws.event("lean_repair", task=feature, why=why[-2000:])
         before = tree.diff(binary=True, against=tree.commit)
         ws.event("lean_call_started", purpose="build", task=feature, effort=REPAIR_EFFORT)
@@ -164,7 +163,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                       "Fix that, and keep the suite green." + (" Keep your list of choices complete." if open_questions
                                                                 else ""), tree, resume=built.session,
                       effort=REPAIR_EFFORT)
-        spent = lean_budget.spent(spent, built, resumed)
+        spent = lean_budget.after(ws, task, built, spent, resumed)
         if built.ok and tree.diff(binary=True, against=tree.commit) == before:
             why = f"the repair changed nothing. The builder said:\n{built.text[:1500]}\n\n{why}"
             break

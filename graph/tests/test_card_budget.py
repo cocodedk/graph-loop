@@ -43,7 +43,7 @@ class Budget(Rig):
         caps = self.calls([8.5])
         self.assertEqual([8], caps)
         self.assertEqual(1, len(self.prompts))
-        (_kw, body), = self.mails
+        _kw, body = self.mails[-1]                      # the bell rang first, then the stop
         for text in ("budget of $8", "Reslice or simplify", "zz-next", "zz-after"):
             self.assertIn(text, body)
         self.assertNotIn("lessons", body)

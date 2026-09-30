@@ -11,7 +11,8 @@ import pathlib
 import project_specs
 from providers import Outcome
 
-CARD_BUDGET = 8   # dollars: past $3.99 a card is suspect, past this it is stopped (a real card cost $163)
+BELL = 3.99       # dollars: past this a card is suspect, so the owner is told at once
+CARD_BUDGET = 8   # dollars: past this it is stopped (a real card cost $163)
 
 
 def spent(before: float, out: Outcome, resumed: bool) -> float:
@@ -25,6 +26,21 @@ def spent(before: float, out: Outcome, resumed: bool) -> float:
 def left(spent_so_far: float) -> float:
     """What a next call may spend."""
     return round(CARD_BUDGET - spent_so_far, 2)
+
+
+def after(ws, task: dict, out: Outcome, before: float, resumed: bool) -> float:
+    """The card's spend after a builder call; sets the cap for the next call, and rings the bell once when the
+    card passes `BELL`: a mail, and the build carries on."""
+    total = spent(before, out, resumed)
+    task["budget"] = left(total)
+    if total >= BELL and not task.get("bell"):
+        task["bell"] = True
+        ws.event("lean_bell", task=task["id"], spent=round(total, 2), budget=CARD_BUDGET)
+        ws.mail_person(f"graph-loop: {task['id']} passed ${BELL}",
+                       f"{task['id']} has cost ${total:.2f} so far. Its budget is ${CARD_BUDGET}: it is stopped "
+                       "there, and it and the cards after it are then resliced or simplified.\n\nA card this "
+                       "expensive is suspect: look at its spec and its worktree now. The build carries on.")
+    return total
 
 
 def stopped_words(spent_so_far: float) -> str:
