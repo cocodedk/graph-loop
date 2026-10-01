@@ -95,7 +95,8 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
         return f"The builder did not finish ({built.kind}). Run the spec again; first read what it said: {built.text[:500]}", None
     diff = tree.diff(against=tree.commit)
     if not diff.strip():
-        return "Nothing changed. Make the change the spec asks for, then run the suite.", None
+        said = f" The last message was:\n{built.text.strip()[:1500]}" if built.text.strip() else ""
+        return f"Nothing changed. Make the change the spec asks for, then run the suite.{said}", None
     if stray := lean_diff.leftovers(diff):
         return "Remove these leftover files from the change: " + ", ".join(stray), None
     passed, tail = masked(ws, command, tree.path)

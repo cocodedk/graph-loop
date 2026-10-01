@@ -20,7 +20,7 @@ import tmp_root  # noqa: F401
 from providers import Outcome
 from test_lean_run import PROFILE, Rig
 
-EXPECTED_TESTS = 6
+EXPECTED_TESTS = 7
 
 
 class Prompts(Rig):
@@ -33,6 +33,13 @@ class Prompts(Rig):
         why, _ = lean_run.check(self.ws, "rest-ring", "spec", mock.Mock(diff=lambda **_: " "), Outcome("ok"),
                                 "run-the-suite", 1)
         self.assertEqual("Nothing changed. Make the change the spec asks for, then run the suite.", why)
+
+    def test_an_empty_change_carries_what_the_builder_said(self):
+        said = Outcome("ok", text="Nothing to do: ring.py already shows the amber ring.")
+        why, _ = lean_run.check(self.ws, "rest-ring", "spec", mock.Mock(diff=lambda **_: " "), said,
+                                "run-the-suite", 1)
+        self.assertEqual("Nothing changed. Make the change the spec asks for, then run the suite. "
+                         "The last message was:\nNothing to do: ring.py already shows the amber ring.", why)
 
     def test_a_card_over_its_budget_is_told_to_reslice_or_speed_up_its_gate(self):
         self.assertEqual("Reslice this card or speed up its gate: it spent $8.01 of its budget of $8, "
@@ -70,7 +77,7 @@ class CountTest(unittest.TestCase):
     def test_the_suite_asserts_its_own_size(self):
         found = unittest.TestLoader().discover(
             str(pathlib.Path(__file__).parent), pattern=pathlib.Path(__file__).name)
-        self.assertEqual(EXPECTED_TESTS + 1, found.countTestCases())   # the six above and this one
+        self.assertEqual(EXPECTED_TESTS + 1, found.countTestCases())   # the seven above and this one
 
 
 if __name__ == "__main__":
