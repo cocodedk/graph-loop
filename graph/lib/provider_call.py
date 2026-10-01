@@ -21,9 +21,11 @@ import tempfile
 import runner
 from workspace_claims import say
 
+IDLE_LIMIT = 600   # a call that does nothing this long is stopped and tried once more (`runner.Idle`)
+
 
 def _run(argv: list[str], stdin: str, env: dict | None = None, timeout: int = 3600,
-         cwd: str | None = None, drop: tuple[str, ...] = ()) -> subprocess.CompletedProcess:
+         cwd: str | None = None, drop: tuple[str, ...] = (), idle: float = 0) -> subprocess.CompletedProcess:
     # `runner.run` takes the child's COMPLETE environment; this call's own
     # `env` is only ever a partial overlay, so it is merged onto a copy of
     # this process's environment before it travels any further.
@@ -37,9 +39,14 @@ def _run(argv: list[str], stdin: str, env: dict | None = None, timeout: int = 36
     # disk and says nothing. This one resets the mode and retries.
     scratch = tempfile.TemporaryDirectory(prefix="call-tmp-")
     environment["TMPDIR"] = scratch.name
-    try:
+    def go() -> subprocess.CompletedProcess:
         return runner.run(argv, stdin=stdin, env=environment, timeout=timeout,
-                          cwd=cwd, drop=drop)
+                          cwd=cwd, drop=drop, idle=idle)
+    try:
+        try:
+            return go()
+        except runner.Idle:   # stalled: stopped, and tried once more
+            return go()
     finally:
         try:
             scratch.cleanup()

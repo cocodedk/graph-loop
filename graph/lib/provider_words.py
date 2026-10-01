@@ -103,3 +103,32 @@ def closed_object(pairs: list[tuple[str, object]]) -> dict:
     if len(pairs) != len({key for key, _value in pairs}):
         raise ValueError("duplicate JSON key")
     return dict(pairs)
+
+
+def _spent(body: dict) -> dict:
+    """What the call spent, read from the answer's own numbers.
+
+    A refusal carries them too — an expired session answers with
+    total_cost_usd 0 and a usage block of zeros — and the error path used to
+    drop them, so every refusal looked like it had spent nothing whether it had
+    or not. A field that is absent stays None: unknown is not zero.
+    """
+    usage = body.get("usage")
+    tokens = None
+    if isinstance(usage, dict):
+        # BOTH counts, or none. A block that reports zero input and omits output
+        # says nothing about what it spent, and summing what is there reads that
+        # silence as zero — which is the proof a live retry rests on.
+        counts = [value for value in (usage.get("input_tokens"), usage.get("output_tokens"))
+                  if isinstance(value, int) and not isinstance(value, bool)]
+        tokens = sum(counts) if len(counts) == 2 else None
+    denials = body.get("permission_denials")
+    cost = body.get("total_cost_usd")
+    # A JSON boolean is an int in Python: `false` would read as zero spend, and
+    # zero spend is the proof a live action may be repeated.
+    money = cost if isinstance(cost, (int, float)) and not isinstance(cost, bool) else None
+    turns = body.get("num_turns")
+    return {"cost": money, "tokens": tokens, "turns": turns if isinstance(turns, int) and not isinstance(turns, bool) else None,
+            # A missing list is unknown, not "no denials": -1 says so, and
+            # `unstarted` refuses anything that is not exactly zero.
+            "denials": len(denials) if isinstance(denials, list) else -1}
