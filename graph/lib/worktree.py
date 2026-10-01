@@ -141,9 +141,12 @@ class Worktree:
 
     def keep(self, why: str) -> str:
         """Leave a failed task's tree where it is, with the reason inside it."""
-        (pathlib.Path(self.path) / KEEP_NOTE).write_text(
-            f"{why}\n\nTask {self.task_id}, from {self.commit}.\n"
-            "Nothing here is merged. Read it, then delete the directory.\n", "utf-8")
+        try:
+            (pathlib.Path(self.path) / KEEP_NOTE).write_text(
+                f"{why}\n\nTask {self.task_id}, from {self.commit}.\n"
+                "Nothing here is merged. Read it, then delete the directory.\n", "utf-8")
+        except OSError:   # a full disk: the tree is kept all the same, and the caller records why
+            pass
         return self.path
 
     def diff(self, paths: list[str] | None = None, binary: bool = False,
