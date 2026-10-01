@@ -25,13 +25,18 @@ import tempfile
 
 import accounts
 import models
-from provider_call import _run  # the door stays here; provider_codex reads this module
+import runner
+from provider_call import (  # the door stays here; provider_codex reads this module
+    IDLE_LIMIT,
+    _run,
+)
 from provider_words import (  # noqa: F401 — MARKS re-exported for callers that import them from here
     AUTH_MARKS,
     CAPACITY_MARKS,
     LIMIT_MARKS,
     _classify_failure,
     _classify_text,
+    _spent,
     budget_words,
     closed_object,
 )
@@ -87,35 +92,6 @@ class Outcome:
         return self.kind == "ok"
 
 
-def _spent(body: dict) -> dict:
-    """What the call spent, read from the answer's own numbers.
-
-    A refusal carries them too — an expired session answers with
-    total_cost_usd 0 and a usage block of zeros — and the error path used to
-    drop them, so every refusal looked like it had spent nothing whether it had
-    or not. A field that is absent stays None: unknown is not zero.
-    """
-    usage = body.get("usage")
-    tokens = None
-    if isinstance(usage, dict):
-        # BOTH counts, or none. A block that reports zero input and omits output
-        # says nothing about what it spent, and summing what is there reads that
-        # silence as zero — which is the proof a live retry rests on.
-        counts = [value for value in (usage.get("input_tokens"), usage.get("output_tokens"))
-                  if isinstance(value, int) and not isinstance(value, bool)]
-        tokens = sum(counts) if len(counts) == 2 else None
-    denials = body.get("permission_denials")
-    cost = body.get("total_cost_usd")
-    # A JSON boolean is an int in Python: `false` would read as zero spend, and
-    # zero spend is the proof a live action may be repeated.
-    money = cost if isinstance(cost, (int, float)) and not isinstance(cost, bool) else None
-    turns = body.get("num_turns")
-    return {"cost": money, "tokens": tokens, "turns": turns if isinstance(turns, int) and not isinstance(turns, bool) else None,
-            # A missing list is unknown, not "no denials": -1 says so, and
-            # `unstarted` refuses anything that is not exactly zero.
-            "denials": len(denials) if isinstance(denials, list) else -1}
-
-
 BUILD_TIMEOUT = 7200   # a builder's call: two hours — an hour cut a decision-table build off at 58 minutes
 PLAN_TIMEOUT = 900     # a planner answers with text: fifteen minutes, or a stalled rewrite holds the whole loop
 
@@ -160,7 +136,9 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
         env = {**env, "LIVE_ALLOWED_PREFIXES": guard, "LIVE_ALLOWED_FILES": guard_files,
                "LIVE_WORKTREE": cwd or ""}
     try:
-        done = _run(argv, prompt, env, timeout, cwd=cwd, drop=drop)
+        done = _run(argv, prompt, env, timeout, cwd=cwd, drop=drop, idle=IDLE_LIMIT)
+    except runner.Idle:
+        return Outcome("crash", text=f"the call stalled twice: no output, no CPU and no child process for {IDLE_LIMIT}s each time")
     except subprocess.TimeoutExpired:
         return Outcome("crash", text="the call did not return inside its timeout")
     finally:

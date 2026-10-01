@@ -15,6 +15,8 @@ import sys
 import threading
 import time
 
+from runner_idle import Idle, _wait  # noqa: F401 — Idle is read as runner.Idle
+
 owned = threading.local()  # actual child handles, held by the driver turn
 
 GRACE_SECONDS = 5   # how long a group gets to die from SIGTERM before SIGKILL
@@ -27,7 +29,7 @@ locks to deadlock on."""
 
 def run(argv: list[str], *, stdin: str = "", env: dict[str, str] | None = None,
         cwd: str | None = None, timeout: float,
-        drop: tuple[str, ...] = ()) -> subprocess.CompletedProcess:
+        drop: tuple[str, ...] = (), idle: float = 0) -> subprocess.CompletedProcess:
     """Run `argv` to completion or `timeout`, whichever comes first.
 
     `env` is the child's complete environment, taken exactly as
@@ -86,7 +88,7 @@ def run(argv: list[str], *, stdin: str = "", env: dict[str, str] | None = None,
         try:
             if card and owned.stopping.is_set():
                 raise InterruptedError("the driver turn closed while the command started")
-            out, err = proc.communicate(input=stdin, timeout=timeout)
+            out, err = _wait(proc, stdin, timeout, idle)
             # 125 is reserved for an ownership/startup failure. A command that
             # itself returns it is conservatively treated as a harness fault.
             if card and (proc.returncode == 125 or proc.returncode < 0):
@@ -98,9 +100,9 @@ def run(argv: list[str], *, stdin: str = "", env: dict[str, str] | None = None,
             # Ctrl-C landing here is still the interrupt path's to finish.
             if not card and not terminate_group(proc.pid):
                 raise OSError(f"{argv[0]}: the process group survived SIGKILL")
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as expired:
             out, err = _kill_group(proc)
-            raise subprocess.TimeoutExpired(argv, timeout, output=out, stderr=err) from None
+            raise type(expired)(argv, expired.timeout, output=out, stderr=err) from None
         except BaseException:
             # Not a timeout: Ctrl-C, a broken pipe on a large prompt, anything
             # else the wait or the cleanup above can raise. `start_new_session=True` means the
