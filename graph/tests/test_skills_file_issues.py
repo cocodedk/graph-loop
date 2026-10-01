@@ -21,7 +21,12 @@ class Skills(unittest.TestCase):
 
     def test_the_plugin_version_moved_with_the_skills(self):
         version = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text("utf-8"))["version"]
-        self.assertEqual("0.4.6", version)
+        self.assertEqual("0.4.7", version)
+
+    def test_the_run_skill_asks_for_the_projects_account_during_setup(self):
+        text = (ROOT / "skills" / "run" / "SKILL.md").read_text("utf-8")
+        self.assertIn("Ask the person which Claude login the project spends", text)
+        self.assertIn("lean_account_limit", text)
 
     def test_the_run_skill_says_to_start_a_run_detached_from_the_agents_shell(self):
         text = (ROOT / "skills" / "run" / "SKILL.md").read_text("utf-8")
