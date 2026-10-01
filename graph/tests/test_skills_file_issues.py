@@ -21,7 +21,7 @@ class Skills(unittest.TestCase):
 
     def test_the_plugin_version_moved_with_the_skills(self):
         version = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text("utf-8"))["version"]
-        self.assertEqual("0.4.8", version)
+        self.assertEqual("0.4.9", version)
 
     def test_the_run_skill_asks_for_the_projects_account_during_setup(self):
         text = (ROOT / "skills" / "run" / "SKILL.md").read_text("utf-8")
