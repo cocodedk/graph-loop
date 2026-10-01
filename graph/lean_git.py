@@ -17,8 +17,10 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 
 BASE = "refs/remotes/origin/main"   # every feature starts here, after a fetch
+FETCHES, FETCH_PAUSE = 3, 5          # tries, and seconds between them
 
 
 def git(cwd: str, *args: str, env: dict | None = None) -> str:
@@ -46,8 +48,16 @@ def commit(repo: str, tree: str, base: str, subject: str) -> str:
 
 def unmerged(repo: str) -> list[str]:
     """Every branch on origin not merged into its main, after a fetch: the loop's own
-    unreviewed work and a person's alike. While any is listed, nothing is built."""
-    git(repo, "fetch", "--quiet", "--prune", "origin")
+    unreviewed work and a person's alike. While any is listed, nothing is built. A fetch that
+    fails is tried `FETCHES` times: over SSH one in five to ten failed with a valid key."""
+    for attempt in range(FETCHES):
+        try:
+            git(repo, "fetch", "--quiet", "--prune", "origin")
+            break
+        except RuntimeError:
+            if attempt == FETCHES - 1:
+                raise
+            time.sleep(FETCH_PAUSE)
     listed = git(repo, "for-each-ref", "--format=%(refname:short)", "--no-merged", BASE,
                  "refs/remotes/origin")
     return [name for name in listed.splitlines() if name not in ("origin", "origin/HEAD")]

@@ -121,7 +121,13 @@ def main(argv: list[str] | None = None) -> int:
         raise
     spec = str(pathlib.Path(args.spec[0]).resolve())
     info = lean_spec.front(pathlib.Path(spec).read_text("utf-8"))
-    waiting, revise = lean_git.unmerged(repo), ""
+    try:
+        waiting, revise = lean_git.unmerged(repo), ""
+    except RuntimeError as error:              # every try failed: nothing was built, and the person is told what to do
+        ws.event("lean_fetch_failed", error=str(error)[:500])
+        lean_run.mail(ws, "graph-loop needs you: git fetch failed",
+                      f"Run the spec again once `git fetch origin` works in {repo}. Nothing was built.\n\n{error}")
+        return 1
     own = waiting == [f"origin/lean/{lean_run.slug(spec)}"] and info.get("lean_status") == "pr_open"
     if own:                                    # its own pull request: fix what review found
         revise = lean_git.threads(str(info.get("lean_pr", "")))
