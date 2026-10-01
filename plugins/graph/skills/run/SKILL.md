@@ -49,10 +49,12 @@ Copy the closest file from `$GL/profiles/` into the repository as
 reads the first indented line of each. It refuses a profile that lacks one, so add
 any the copy does not have.
 
-A project that must spend one Claude account only, such as a personal project on a machine whose
-default login is a work account, adds `## account` with that account's name as `GRAPH_ACCOUNTS`
-names it, for example `personal`. The loop then spends that account and no other: when it runs out
-the run stops, and a name the machine does not configure stops the run before anything is spent.
+Ask the person which Claude login the project spends, and write it as `## account` with the name
+`GRAPH_ACCOUNTS` gives it, for example `personal`. The loop then spends that account and no other: when it
+runs out the run stops, and a name the machine does not configure stops the run before anything is spent.
+Without `## account` the loop spends the machine's accounts in order and moves to the next when one hits its
+limit (the `lean_account_limit` event says so), which a personal project on a machine whose default login is
+a work account must never do: so never leave it out for such a project.
 
 `GRAPH_ACCOUNTS` belongs to the machine, not the repository: `name=<CLAUDE_CONFIG_DIR>` pairs separated by
 commas, exported where the loop is started (a shell profile, or the top of the script that starts it), for
