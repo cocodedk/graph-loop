@@ -67,6 +67,16 @@ def restrict(name: str) -> None:
     _only = name
 
 
+def choose(name: str) -> None:
+    """The account a project's profile chooses (`## account`): a name pins the run to it, `any` lets the run
+    spend every configured account in order (a limit moves it on), and no choice is refused when the machine
+    has several, for a project could then run on the wrong login without anybody having decided it."""
+    if not name and len(names()) > 1:
+        raise SystemExit(f"this machine has several accounts ({', '.join(names())}): name the one this project "
+                         "spends as `## account` in its profile, or `any` to let the loop spend them in order")
+    restrict("" if name == "any" else name)
+
+
 @contextlib.contextmanager
 def without(retired):
     """Share one fixed retirement set across the driver's lanes, only for this run."""
