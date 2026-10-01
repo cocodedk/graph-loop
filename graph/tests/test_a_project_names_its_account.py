@@ -18,10 +18,10 @@ import lean_git
 import lean_run
 import tmp_root  # noqa: F401
 from test_keep import repo
-from test_lean import PROFILE_TEXT
+from test_lean import PROFILE_BASE
 from workspace import Workspace
 
-EXPECTED_TESTS = 3
+EXPECTED_TESTS = 5
 
 
 class ProjectAccount(unittest.TestCase):
@@ -30,7 +30,7 @@ class ProjectAccount(unittest.TestCase):
         (pathlib.Path(self.repo) / "CLAUDE.md").write_text(
             "Mechanics are in [profile-test.md](profile-test.md).\n")
         self.profile = pathlib.Path(self.repo) / "profile-test.md"
-        self.profile.write_text(PROFILE_TEXT)
+        self.profile.write_text(PROFILE_BASE)
         self.ws = Workspace(tempfile.mkdtemp())
         (self.ws.root / "contact").write_text("person@example.test\n")
         self.spec = pathlib.Path(tempfile.mkdtemp()) / "log-screen.md"
@@ -54,7 +54,7 @@ class ProjectAccount(unittest.TestCase):
 
     def run_lean(self, account=""):
         if account:
-            self.profile.write_text(f"{PROFILE_TEXT}\n## account\n\n    {account}\n")
+            self.profile.write_text(f"{PROFILE_BASE}\n## account\n\n    {account}\n")
         return lean.main(["--workspace", str(self.ws.root), "--repo", self.repo,
                           "--spec", str(self.spec)])
 
@@ -69,9 +69,20 @@ class ProjectAccount(unittest.TestCase):
         self.assertEqual([], self.spent)
         self.assertIn("holiday", self.mails[0][1])
 
-    def test_a_profile_without_it_leaves_every_account(self):
-        self.run_lean()
+    def test_a_profile_that_makes_no_choice_is_refused_when_the_machine_has_several_accounts(self):
+        with self.assertRaisesRegex(SystemExit, r"several accounts \(work, personal\).*`## account`.*`any`"):
+            self.run_lean()
+        lean_run.grill.assert_not_called()
+        self.assertEqual("graph-loop needs the project's account", self.mails[0][0].partition("] ")[2])
+
+    def test_any_lets_the_run_spend_every_account_in_order(self):
+        self.run_lean("any")
         self.assertEqual([("work", "personal")], self.spent)
+
+    def test_a_machine_with_one_account_has_nothing_to_choose(self):
+        with mock.patch.dict(os.environ, {"GRAPH_ACCOUNTS": "work"}):
+            self.run_lean()
+        self.assertEqual([("work",)], self.spent)
 
 
 class CountTest(unittest.TestCase):

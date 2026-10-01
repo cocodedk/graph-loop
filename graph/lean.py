@@ -140,7 +140,7 @@ def main(argv: list[str] | None = None) -> int:
         raise
     profile = read_profile(path)
     try:
-        accounts.restrict(profile.get("account", ""))
+        accounts.choose(profile.get("account", ""))
     except SystemExit as unknown:            # never another account's login: told what to add
         lean_run.mail(ws, "graph-loop needs the project's account", str(unknown))
         raise

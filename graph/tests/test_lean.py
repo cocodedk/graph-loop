@@ -17,7 +17,7 @@ import tmp_root  # noqa: F401
 from test_keep import repo, sha
 from workspace import Workspace
 
-PROFILE_TEXT = """# Profile: test
+PROFILE_BASE = """# Profile: test
 
 ## suite_command
 
@@ -33,6 +33,7 @@ Prose under a heading is not the command.
 
     out/app.bin
 """
+PROFILE_TEXT = PROFILE_BASE + "\n## account\n\n    any\n"   # the test machine has two accounts: a profile must choose
 
 
 class Entry(unittest.TestCase):
@@ -53,11 +54,11 @@ class Entry(unittest.TestCase):
     def argv(self):
         return ["--workspace", str(self.ws.root), "--repo", self.repo, "--spec", str(self.spec)]
 
-    def test_the_profile_linked_from_claude_md_gives_the_three_values(self):
+    def test_the_profile_linked_from_claude_md_gives_its_values(self):
         path = lean.profile_path(self.repo)
         self.assertEqual(str(pathlib.Path(self.repo) / "profile-test.md"), path)
         self.assertEqual({"suite_command": "./run-tests --all", "build_command": "./build-app",
-                          "artifact": "out/app.bin"}, lean.read_profile(path))
+                          "artifact": "out/app.bin", "account": "any"}, lean.read_profile(path))
 
     def test_a_profile_missing_a_heading_is_refused_by_name(self):
         path = pathlib.Path(self.repo) / "profile-test.md"
