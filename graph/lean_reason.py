@@ -1,6 +1,6 @@
 """The reason a lean run stopped, cut for the log without losing its cause.
 
-The cause sits at the start of the text ("the repair changed nothing. The builder said: ..."), the
+The cause sits at the start of the text ("The repair changed nothing. Read what the builder said, ..."), the
 gate's verdict at its end, and the middle is bulk. The last 2000 characters alone hid the cause.
 """
 

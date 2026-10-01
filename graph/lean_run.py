@@ -92,23 +92,23 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
     was asked. A revise round (`threads`, the review threads it answers) is reviewed
     like a first build, on the change it made against the branch it started from."""
     if not built.ok:
-        return f"the builder did not finish ({built.kind}): {built.text[:500]}", None
+        return f"The builder did not finish ({built.kind}). Run the spec again; first read what it said: {built.text[:500]}", None
     diff = tree.diff(against=tree.commit)
     if not diff.strip():
-        return "the builder changed nothing", None
+        return "Nothing changed. Make the change the spec asks for, then run the suite.", None
     if stray := lean_diff.leftovers(diff):
-        return "the change carries leftover files, remove them: " + ", ".join(stray), None
+        return "Remove these leftover files from the change: " + ", ".join(stray), None
     passed, tail = masked(ws, command, tree.path)
     ws.event("lean_suite", task=feature, round=round_, passed=passed, tail=tail[-2000:])
     if not passed:
-        return f"the suite is red ({command}):\n{tail}", None
+        return f"Fix the red suite. Run {command}, then fix the failure shown below:\n{tail}", None
     if red := lean_lint.run(ws, masked, command, tree.path, feature, round_):
         return red, None
     verdict = judge(ws, feature, spec, diff, tree.path, **({"threads": threads} if threads else {}))
     ws.event("lean_review", task=feature, round=round_, outcome=verdict.kind,
              verdict=verdict.verdict, findings=verdict.text[:1000])
     if verdict.verdict != "ACCEPT":
-        return f"the review did not accept ({verdict.kind}, {verdict.verdict}): {verdict.text}", verdict
+        return f"Fix what the reviewer refused ({verdict.kind}, {verdict.verdict}): {verdict.text}", verdict
     return "", verdict
 
 
@@ -151,7 +151,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                       effort=use["effort"])
         spent = lean_budget.after(ws, task, built, spent, resumed)
         if built.ok and tree.diff(binary=True, against=tree.commit) == before:
-            why = f"the repair changed nothing. The builder said:\n{built.text[:1500]}\n\n{why}"
+            why = f"The repair changed nothing. Read what the builder said, then change the code or the spec:\n{built.text[:1500]}\n\n{why}"
             break
         why, verdict = check(ws, feature, spec, tree, built, suite, round_, revise)
     # Findings are the reviewer's text unless the parser reads that text as its answer. Green, and
@@ -165,7 +165,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                 lean_git.publish(repo, work, feature, title,
                                  pr_body(spec_path, why, found, open_questions, built.text)))
         except RuntimeError as error:
-            why = f"it passed, but could not open its pull request: {error}\n\n{why}".strip()
+            why = f"It passed, but could not open its pull request. Fix this, then run the spec again: {error}\n\n{why}".strip()
         else:
             ws.event("lean_published", task=feature, commit=work, pr=url)
             record(spec_path, lean_status="pr_open", lean_pr=url, lean_rounds=None, lean_asked=None)
