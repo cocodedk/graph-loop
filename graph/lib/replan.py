@@ -26,7 +26,7 @@ from replan_budget import (  # noqa: F401 — public constant
 )
 
 # the words themselves live next door; `replan.prompt_for` stays the name callers use
-from replan_prompt import prompt_for
+from replan_prompt import prompt_for, wanted
 from resources import refused_before_reading
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "slicer"))
@@ -35,7 +35,6 @@ from contract_yaml import quote_plain_values
 # What a rewrite keeps: identity, lineage, place in the graph, what it has spent.
 KEEP = ("id", "why", "needs", "status", "sliced_from", "blocked_by_human",
         "gate_has_side_effects", "replans", "replan_history")
-WANTED = ("goal", "files", "done_when", "gate")
 
 
 @dataclasses.dataclass
@@ -154,7 +153,8 @@ def _store(backlog, task: dict, text: str) -> Replanned:
     # true: a key nobody stores is still READ on the way past (`needs: 1` reached
     # the graph check and raised), and a KEY is untrusted too — YAML's `1:` is the
     # integer 1, which no sort compares with a name (Codex, 2026-09-08).
-    extra = sorted(str(key) for key in fresh if key not in WANTED)
+    keys = wanted(task)
+    extra = sorted(str(key) for key in fresh if key not in keys)
     if extra:
         return _refuse(backlog, task, "a rewrite writes goal, files, done_when and "
                        "gate, and nothing else; this one also wrote " + ", ".join(extra))
@@ -180,7 +180,7 @@ def _store(backlog, task: dict, text: str) -> Replanned:
                        "test cases and moves as tests land — assert it only against what "
                        "the runner collects (`countTestCases()`/`run_all.EXPECTED`)")
     row = {key: task[key] for key in KEEP if key in task}
-    row.update({key: fresh[key] for key in WANTED if key in fresh})
+    row.update({key: fresh[key] for key in keys if key in fresh})
     # Frozen before this rewrite narrows anything: a card refused for its NAMES
     # is rewritten before any review (astra round 3, finding 8).
     row["requirement"] = task.get("requirement") or frozen_requirement(task)

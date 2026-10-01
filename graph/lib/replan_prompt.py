@@ -14,6 +14,13 @@ from backlog_status import is_live
 from contract import frozen_requirement
 from worktree_scope import changed_outside
 
+WANTED = ("goal", "files", "done_when", "gate")
+
+
+def wanted(task: dict) -> tuple[str, ...]:
+    """The keys a rewrite may write. A judge card keeps its lasting check in `gate_when_kept`, so it may write that too."""
+    return WANTED + (("gate_when_kept",) if task.get("gate_until_kept") is True else ())
+
 
 def _attempt_context(task: dict) -> str:
     tree = str(task.get("rebuild_from") or task.get("worktree") or "")
@@ -67,7 +74,9 @@ def prompt_for(task: dict) -> str:
            "collects (`countTestCases()`/`run_all.EXPECTED`).\n\n")
         + ("For this judge card, a named wrong implementation becomes one more test case "
         "in the card's own test file, which the frozen judge then keeps; never a "
-        "mutant implementation or a probe in the gate.\n\n"
+        "mutant implementation or a probe in the gate. The check the judge keeps is "
+        f"`gate_when_kept`: {task.get('gate_when_kept')}\nWhen the objection is about it, "
+        "rewrite it too.\n\n"
         if task.get("gate_until_kept") is True else
         "When the refusal names a concrete bypass that a frozen judge test misses, add an "
         "executed probe to THIS card's gate: the gate writes a small test file beside the project's "
@@ -78,8 +87,8 @@ def prompt_for(task: dict) -> str:
         + "A gate must never hide or delete the output a builder needs: no quiet flags "
         "that drop compiler errors, no deleting the log it greps. A stub's acceptance checks "
         "compilation/interface availability, never continued non-implementation.\n\n"
-        "Answer with YAML using only these keys, followed by the distress line: goal, files, done_when"
-        + ("." if is_live(task) else ", gate.")
+        "Answer with YAML using only these keys, followed by the distress line: "
+        + ", ".join(wanted(task)[: 3 if is_live(task) else None]) + "."
         + " Keep the goal to one idea, name every file the gate can fail on, "
         "and say plainly what the gate will prove and what it will not.\n"
         + distress.INSTRUCTION + distress.TEMPLATE
