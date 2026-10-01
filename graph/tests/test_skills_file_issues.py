@@ -21,7 +21,12 @@ class Skills(unittest.TestCase):
 
     def test_the_plugin_version_moved_with_the_skills(self):
         version = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text("utf-8"))["version"]
-        self.assertEqual("0.4.2", version)
+        self.assertEqual("0.4.3", version)
+
+    def test_the_run_skill_says_to_start_a_run_detached_from_the_agents_shell(self):
+        text = (ROOT / "skills" / "run" / "SKILL.md").read_text("utf-8")
+        self.assertIn("setsid nohup", text)
+        self.assertNotIn("run it in the background", text)   # a host stops a background task at its time limit
 
 
 if __name__ == "__main__":
