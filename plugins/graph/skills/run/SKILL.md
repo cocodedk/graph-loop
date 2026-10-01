@@ -71,6 +71,9 @@ Leave slow, flaky or paid tests (live model calls) out of the gate.
 
 Write one markdown file per feature: its goal, its behaviour, its acceptance tests,
 and what is out of scope. Settle every decision the builder would otherwise guess.
+Add a `gate:` line to the spec's front matter naming the one fast command that proves the feature (a single test
+file, say): the builder then runs only that, and the loop still runs the full suite after the build and after
+every repair. Without it the builder runs the full suite too, minutes a run on a large one.
 Run them in order, one per run, each after the previous pull request is merged. Keep them in the
 repository, for example `docs/lean/NN-name.md`. If the repository's own rules would
 stop an autonomous builder (for example "ask a person at every step"), the person
