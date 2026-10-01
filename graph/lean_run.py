@@ -25,6 +25,7 @@ import lean_spec
 import providers
 import review
 import tools
+from gate_reports import failing
 from lean_body import builder_prompt, grill_prompt, pr_body
 from lean_budget import CARD_BUDGET
 from lean_judge import CODEX_BIN, judge
@@ -35,6 +36,7 @@ from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
 
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
+MOST_REPAIRS = 4   # the ceiling, when each repair leaves fewer failing lines than the round before
 BUILD_EFFORT = lean_calls.block("builder")["effort"]   # the block's, at import; each call reads it again
 REPAIR_EFFORT = lean_calls.block("repair")["effort"]
 
@@ -139,7 +141,8 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
                   tree, effort=use["effort"])
     spent = lean_budget.after(ws, task, built, 0.0, False)
     why, verdict = check(ws, feature, spec, tree, built, suite, 1, revise)
-    for round_ in range(2, 2 + REPAIRS):
+    round_, limit = 2, 2 + REPAIRS
+    while round_ < limit:
         # Only a real answer is worth a repair (`Outcome.consumes_attempt`); a limit, a crash, a repair that
         # changed nothing or a card that spent its budget stops the run, its rounds kept.
         if not why or not built.ok or (verdict is not None and not verdict.ok):
@@ -148,6 +151,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             why = f"{lean_budget.stopped_words(spent)}\n\n{why}"
             break
         ws.event("lean_repair", task=feature, why=cut(why))
+        failed = failing(why)
         before = tree.diff(binary=True, against=tree.commit)
         use = lean_calls.started(ws, "repair", feature)
         resumed = bool(built.session)
@@ -160,6 +164,9 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             why = f"The repair changed nothing. Read what the builder said, then change the code or the spec:\n{built.text[:1500]}\n\n{why}"
             break
         why, verdict = check(ws, feature, spec, tree, built, suite, round_, revise)
+        if why and failing(why) < failed and limit < 2 + MOST_REPAIRS:   # fewer failing lines: one more repair
+            limit += 1
+        round_ += 1
     # Findings are the reviewer's text unless the parser reads that text as its answer. Green, and
     # accepted or still refused for named findings after the last repair: published. Else it stops.
     found = "" if verdict is None or review._read_review(verdict.text)[0] else verdict.text.strip()

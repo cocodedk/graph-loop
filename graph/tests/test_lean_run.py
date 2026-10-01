@@ -61,13 +61,13 @@ class Rig(unittest.TestCase):
             return Outcome("ok", session="s1")
         return build
 
-    def run_it(self, build, suites=(True,), reviews=(ACCEPT,), **revise):
-        suites, reviews = list(suites), list(reviews)
+    def run_it(self, build, suites=(True,), reviews=(ACCEPT,), tails=(), **revise):
+        suites, reviews, tails = list(suites), list(reviews), list(tails)   # tails: what each red suite printed
 
         def masked(ws, command, cwd):
             self.suites.append(command)
             passed = suites.pop(0)
-            return passed, "" if passed else "FAILED: AmberTest > overdue"
+            return passed, "" if passed else (tails.pop(0) if tails else "FAILED: AmberTest > overdue")
 
         def codex(_bin, prompt, **_kw):                  # the real judge's prompt, a fake reviewer
             self.reviews.append(prompt)
