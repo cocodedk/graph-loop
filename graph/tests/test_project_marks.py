@@ -66,6 +66,10 @@ class Marks(unittest.TestCase):
         self.assertEqual(WAITING, self.mark(front("done")))
         self.assertEqual(WAITING, self.mark("no front matter"))
 
+    def test_a_spec_a_person_marks_built_in_its_front_matter_shows_built(self):
+        self.assertEqual(BUILT, self.mark(front("built")))
+        self.assertEqual(BUILDING, self.mark(front("built"), running=["01-x"]))
+
     def test_building_beats_built_and_built_beats_the_front_matter(self):
         self.assertEqual(BUILDING, self.mark(front("stopped"), running=["01-x"], built=["01-x"]))
         self.assertEqual(BUILT, self.mark(front("pr_open"), built=["01-x"]))
@@ -149,7 +153,7 @@ class RealGit(unittest.TestCase):
         self.assertNotIn("custom title", report)
 
 
-EXPECTED_TESTS = 14
+EXPECTED_TESTS = 15
 
 
 class CountTest(unittest.TestCase):
