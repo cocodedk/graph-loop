@@ -76,6 +76,8 @@ def card_gate(spec: str) -> str:
     return gate.strip() if isinstance(gate, str) and gate.strip() and "\n" not in gate.strip() else ""
 
 
+ASKED_LIMIT = 6000   # characters of the grill's questions the spec keeps: a dozen long ones fit
+CUT_NOTE = "\n[cut: the mail has the whole list]"   # what ends a list that does not
 GRILL_ROUNDS = 4   # the fourth real refusal goes on: late questions were mostly detail a builder can settle
 
 

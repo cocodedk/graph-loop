@@ -149,7 +149,8 @@ def main(argv: list[str] | None = None) -> int:
         if asked:                                  # kept, so nothing takes it for a spec that only waits
             real = lean_spec.refused(ws.events())  # a failure to answer is no round, and lets nothing through
             count += real
-            lean_spec.record(spec, lean_status="questions", lean_rounds=count, lean_asked=asked[:1500])
+            lean_spec.record(spec, lean_status="questions", lean_rounds=count, lean_asked=asked if len(asked) <= lean_spec.ASKED_LIMIT
+                             else asked[:lean_spec.ASKED_LIMIT] + lean_spec.CUT_NOTE)
             if not (real and count >= lean_spec.GRILL_ROUNDS):
                 return 2
             open_questions = asked                 # the round limit: this run goes on with them
