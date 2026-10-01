@@ -26,6 +26,11 @@ def excerpt(text: str, *, tail: bool = True) -> str:
     return earlier + (console[-LIMIT:] if tail else console[:LIMIT]) + heading + digest
 
 
+def failing(text: str) -> int:
+    """How many lines of a gate's output a test runner marks as a failed case."""
+    return sum(1 for line in text.splitlines() if FAILING.search(line))
+
+
 def junit_failures(cwd: str, started: int) -> str:
     """Newest reports first, only mtimes at or after this gate's start (ns)."""
     root = pathlib.Path(cwd).resolve()
