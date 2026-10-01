@@ -90,6 +90,12 @@ def finish(ws, repo: str, profile: dict, feature: str, url: str) -> bool:
     return ready
 
 
+def end(code: int, words: str) -> int:
+    """The run's last line, so a log that holds only the mail's line still says how it ended."""
+    print(f"lean: exit {code}, {words}")
+    return code
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="lean.py", description=__doc__.split("\n\n")[0])
     parser.add_argument("--workspace", required=True)
@@ -127,7 +133,7 @@ def main(argv: list[str] | None = None) -> int:
         ws.event("lean_fetch_failed", error=str(error)[:500])
         lean_run.mail(ws, "graph-loop needs you: git fetch failed",
                       f"Run the spec again once `git fetch origin` works in {repo}. Nothing was built.\n\n{error}")
-        return 1
+        return end(1, "git fetch failed, nothing was built")
     own = waiting == [f"origin/lean/{lean_run.slug(spec)}"] and info.get("lean_status") == "pr_open"
     if own:                                    # its own pull request: fix what review found
         revise = lean_git.threads(str(info.get("lean_pr", "")))
@@ -137,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
         lean_run.mail(ws, "graph-loop is waiting: unmerged branches",
                       f"Nothing was built. Merge or delete these branches first:\n{names}"
                       + ("\n\nIts own pull request has no unresolved review threads to fix." if own else ""))
-        return 3
+        return end(3, "waiting on unmerged branches, nothing was built")
     # Questions first, nothing on a guess: once, before a spec's first build. A spec
     # carrying on after a stop was grilled then. The status does not prove the text is
     # unchanged: a spec whose requirements change starts afresh without its lean_ fields.
@@ -152,13 +158,15 @@ def main(argv: list[str] | None = None) -> int:
             lean_spec.record(spec, lean_status="questions", lean_rounds=count, lean_asked=asked if len(asked) <= lean_spec.ASKED_LIMIT
                              else asked[:lean_spec.ASKED_LIMIT] + lean_spec.CUT_NOTE)
             if not (real and count >= lean_spec.GRILL_ROUNDS):
-                return 2
+                return end(2, "questions, nothing was built")
             open_questions = asked                 # the round limit: this run goes on with them
     url = lean_run.run_feature(ws, repo, spec, profile, path, revise, str(info.get("lean_pr", "")),
                                open_questions=open_questions)
     if not url:
-        return 1
-    return 0 if finish(ws, repo, profile, lean_run.slug(spec), url) else 1
+        return end(1, "stopped, see the mail and events.jsonl")
+    if finish(ws, repo, profile, lean_run.slug(spec), url):
+        return end(0, f"pr_open {url}")
+    return end(1, f"pr_open {url}, but the build is not ready")
 
 
 if __name__ == "__main__":
