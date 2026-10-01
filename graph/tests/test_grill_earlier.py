@@ -43,7 +43,7 @@ class Earlier(unittest.TestCase):
     def test_a_refusal_keeps_its_questions_in_the_spec(self):
         with mock.patch.object(lean_run, "grill", return_value="Which colour?"):
             self.assertEqual(2, lean.main(self.argv()))
-        self.assertEqual("Which colour?", lean_spec.front(self.spec.read_text())["lean_asked"])
+        self.assertEqual("Which colour?", lean_spec.state(self.ws, str(self.spec))["lean_asked"])
 
     def test_a_long_list_is_kept_whole_and_a_longer_one_ends_with_a_cut_note(self):
         for size, kept in ((3000, 3000), (8000, lean_spec.ASKED_LIMIT)):
@@ -52,7 +52,7 @@ class Earlier(unittest.TestCase):
                 questions = "".join(f"Question {n} is long?\n" for n in range(size // 20))[:size]
                 with mock.patch.object(lean_run, "grill", return_value=questions):
                     self.assertEqual(2, lean.main(self.argv()))
-                asked = lean_spec.front(self.spec.read_text())["lean_asked"].rstrip("\n")
+                asked = lean_spec.state(self.ws, str(self.spec))["lean_asked"].rstrip("\n")
                 self.assertEqual(questions.rstrip("\n") if size == kept else questions[:kept] + lean_spec.CUT_NOTE, asked)
 
     def test_the_next_run_hands_them_to_the_grill(self):

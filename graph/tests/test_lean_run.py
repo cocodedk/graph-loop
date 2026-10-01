@@ -16,6 +16,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import alert_email
 import lean_git
 import lean_run
+import lean_spec
 import tmp_root  # noqa: F401
 from providers import Outcome
 from test_keep import repo, sha
@@ -107,8 +108,9 @@ class GreenFeature(Rig):
         self.assertFalse(pathlib.Path(started["tree"]).exists())
         self.assertIn("ring.py", self.reviews[0])
         self.assertEqual([], self.mails)
-        self.assertTrue(self.spec.read_text().startswith(
-            "---\nlean_status: pr_open\nlean_pr: https://example.test/pull/1\n---\n"))
+        self.assertEqual(("pr_open", "https://example.test/pull/1"),
+                         (lean_spec.state(self.ws, str(self.spec))["lean_status"], lean_spec.state(self.ws, str(self.spec))["lean_pr"]))
+        self.assertEqual("Show the overdue rest ring in amber.\n", self.spec.read_text())   # the spec is never written
 
     def test_a_branch_left_by_an_earlier_run_is_never_moved(self):
         subprocess.run(("git", "-C", self.repo, "branch", "lean/rest-ring"), check=True)
@@ -118,7 +120,7 @@ class GreenFeature(Rig):
         self.assertEqual([], self.prs)
         stopped = next(row for row in self.ws.events() if row["kind"] == "lean_stopped")
         self.assertIn("could not open its pull request", stopped["why"])
-        self.assertIn("lean_status: stopped", self.spec.read_text())
+        self.assertEqual("stopped", lean_spec.state(self.ws, str(self.spec))["lean_status"])
 
 
 class Repair(Rig):

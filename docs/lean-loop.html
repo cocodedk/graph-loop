@@ -187,7 +187,7 @@
     { id: "real_answer", kind: "decision", x: 400, y: 765, label: "Real answer?", changed: true,
       text: "Sometimes the builder cannot work at all: the account reached its usage limit, the AI service is busy, the sign-in expired, or the program crashed. There is nothing to judge, so the run stops at once and keeps its repairs for the next run. New on 28 September (#170): a usage limit used to use up every repair within seconds." },
     { id: "stop_builder", kind: "end-wait", x: 670, y: 765, label: "Stops, keeps the work", sub: "exit 1 · no round spent",
-      text: "The run stops, and the worktree with everything written so far is kept; the email says where. A new spec is marked lean_status: stopped in its file, and the next run carries on in that worktree, for example once the usage limit resets. A revision that stops starts again from its pull request." },
+      text: "The run stops, and the worktree with everything written so far is kept; the email says where. A new spec is recorded as stopped in the run's workspace (never in its file), and the next run carries on in that worktree, for example once the usage limit resets. A revision that stops starts again from its pull request." },
     { id: "suite", kind: "decision", x: 400, y: 860, label: "Suite green?",
       text: "The project's tests, together called the suite, run in a sandbox: an isolated space with no passwords and an empty home folder, so no test can lean on anything private. Green means every test passed. A failing test, or a builder that changed nothing, sends the work to a repair." },
     { id: "revision", kind: "decision", x: 400, y: 955, label: "Revision?", changed: true,

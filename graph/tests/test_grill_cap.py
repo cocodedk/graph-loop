@@ -44,12 +44,13 @@ class Cap(unittest.TestCase):
             self.addCleanup(patched.stop)
 
     def run_lean(self, rounds, answer, feature=""):
-        head = f"---\nlean_status: questions\nlean_rounds: {rounds}\n---\n" if rounds else ""
-        self.spec.write_text(head + "Restyle the Log screen.\n")
+        self.spec.write_text("Restyle the Log screen.\n")
+        lean_spec.record(self.ws, str(self.spec), lean_status="questions" if rounds else None,
+                         lean_rounds=rounds or None, lean_asked=None)   # where the last run left it
         with mock.patch.object(review, "codex", return_value=answer), \
                 mock.patch.object(lean_run, "run_feature", return_value=feature) as run:
             code = lean.main(["--workspace", str(self.ws.root), "--repo", self.repo, "--spec", str(self.spec)])
-        return code, run, lean_spec.front(self.spec.read_text())
+        return code, run, lean_spec.state(self.ws, str(self.spec))
 
     def test_a_real_refusal_is_counted_and_a_failure_to_answer_is_not(self):
         code, run, matter = self.run_lean(0, REFUSED)
@@ -92,7 +93,7 @@ class Cleared(Rig):
     def test_publishing_clears_the_count_and_the_questions(self):
         self.spec.write_text("---\nlean_status: questions\nlean_rounds: 4\nlean_asked: Which?\n---\nBody.\n")
         self.run_it(self.builder(("ring.py", "amber\n")))
-        matter = lean_spec.front(self.spec.read_text())
+        matter = lean_spec.state(self.ws, str(self.spec))
         self.assertEqual("pr_open", matter["lean_status"])
         self.assertNotIn("lean_rounds", matter)
         self.assertNotIn("lean_asked", matter)

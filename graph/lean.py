@@ -151,7 +151,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def _go(ws, repo: str, path: str, profile: dict, spec: str) -> int:
     """One run of the spec, with its lock held."""
-    info = lean_spec.front(pathlib.Path(spec).read_text("utf-8"))
+    info = lean_spec.state(ws, spec)
     try:
         waiting, revise = lean_git.unmerged(repo), ""
     except RuntimeError as error:              # every try failed: nothing was built, and the person is told what to do
@@ -171,7 +171,7 @@ def _go(ws, repo: str, path: str, profile: dict, spec: str) -> int:
         return end(3, "waiting on unmerged branches, nothing was built")
     # Questions first, nothing on a guess: once, before a spec's first build. A spec
     # carrying on after a stop was grilled then. The status does not prove the text is
-    # unchanged: a spec whose requirements change starts afresh without its lean_ fields.
+    # unchanged: a spec whose requirements change starts afresh once its spec-<name>.json is deleted.
     open_questions = ""
     if not revise and info.get("lean_status") != "stopped":
         count = lean_spec.rounds(info)
@@ -180,7 +180,7 @@ def _go(ws, repo: str, path: str, profile: dict, spec: str) -> int:
         if asked:                                  # kept, so nothing takes it for a spec that only waits
             real = lean_spec.refused(ws.events())  # a failure to answer is no round, and lets nothing through
             count += real
-            lean_spec.record(spec, lean_status="questions", lean_rounds=count, lean_asked=asked if len(asked) <= lean_spec.ASKED_LIMIT
+            lean_spec.record(ws, spec, lean_status="questions", lean_rounds=count, lean_asked=asked if len(asked) <= lean_spec.ASKED_LIMIT
                              else asked[:lean_spec.ASKED_LIMIT] + lean_spec.CUT_NOTE)
             if not (real and count >= lean_spec.GRILL_ROUNDS):
                 return end(2, "questions, nothing was built")

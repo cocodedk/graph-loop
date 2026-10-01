@@ -11,6 +11,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import lean_budget
 import lean_run
+import lean_spec
 import tmp_root  # noqa: F401
 from providers import Outcome
 from test_lean_run import Rig
@@ -47,7 +48,7 @@ class Budget(Rig):
         for text in ("budget of $8", "Reslice or simplify", "zz-next", "zz-after"):
             self.assertIn(text, body)
         self.assertNotIn("lessons", body)
-        self.assertIn("lean_status: stopped", self.spec.read_text())
+        self.assertEqual("stopped", lean_spec.state(self.ws, str(self.spec))["lean_status"])
 
     def test_a_card_under_its_budget_is_unchanged(self):
         self.assertEqual([8, 6.5], self.calls([1.5, 1.6], suites=(False, True))[:2])

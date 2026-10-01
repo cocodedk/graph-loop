@@ -11,6 +11,7 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import lean_run
+import lean_spec
 from providers import Outcome
 from test_lean_run import Rig, show
 
@@ -26,7 +27,7 @@ class Published(Rig):
         self.assertIn("the ring ignores dark mode", self.bodies[0])   # for the PR's reviewer
         self.assertEqual("c\n", show(self.repo, "lean/rest-ring", "ring.py"))
         self.assertEqual([], self.mails)                                # no stop, no person paged
-        self.assertIn("lean_status: pr_open", self.spec.read_text())
+        self.assertEqual("pr_open", lean_spec.state(self.ws, str(self.spec))["lean_status"])
 
     def test_a_refused_change_that_cannot_open_its_pull_request_keeps_the_findings(self):
         subprocess.run(("git", "-C", self.repo, "branch", "lean/rest-ring"), check=True)

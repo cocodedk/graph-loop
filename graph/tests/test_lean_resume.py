@@ -11,6 +11,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import lean_git
 import lean_run
+import lean_spec
 from test_lean_run import Rig
 
 
@@ -19,7 +20,7 @@ class Resume(Rig):
         self.run_it(self.builder(("ring.py", "grey\n"), ("ring.py", "grey1\n"), ("ring.py", "grey2\n")),
                     suites=(False, False, False))
         kept = next(row for row in self.ws.events() if row["kind"] == "lean_stopped")["tree"]
-        self.assertIn("lean_status: stopped", self.spec.read_text())
+        self.assertEqual("stopped", lean_spec.state(self.ws, str(self.spec))["lean_status"])
         self.prompts.clear()
         url = self.run_it(self.builder(("ring.py", "amber\n")))
         self.assertTrue(url)
@@ -28,7 +29,7 @@ class Resume(Rig):
         self.assertEqual(kept, started["tree"])                 # the same checkout, not a new one
         self.assertIn("## Your last attempt failed", self.prompts[0])
         self.assertIn("FAILED: AmberTest > overdue", self.prompts[0])
-        self.assertIn("lean_status: pr_open", self.spec.read_text())
+        self.assertEqual("pr_open", lean_spec.state(self.ws, str(self.spec))["lean_status"])
 
     def test_a_kept_worktree_that_is_gone_starts_fresh(self):
         self.spec.write_text("---\nlean_status: stopped\nlean_worktree: /nowhere/at/all\n---\n"
