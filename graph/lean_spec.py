@@ -70,6 +70,16 @@ def start(repo: str, feature: str, info: dict, revise: str = "") -> tuple[Worktr
         return Worktree(repo, feature, commit=lean_git.BASE).create(), ""
 
 
+def unstarted(ws, feature: str, error: Exception) -> str:
+    """The checkout could not be cut (a full temp folder, usually): the stop is recorded and mailed, cause
+    first, and "" says nothing was built. Nothing is kept in the spec's state: no tree exists to resume in."""
+    why = (f"Creating the checkout failed: {str(error)[-500:]}\nIf the temp folder is full, free space in it or "
+           "start the loop with TMPDIR set to a folder on a bigger disk, then run the spec again. Nothing was built.")
+    ws.event("lean_stopped", task=feature, why=why)
+    ws.mail_person(f"graph-loop needs you: {feature}", f"{feature} stopped.\n\nWhy:\n{why}")
+    return ""
+
+
 NOTES = (("rules.md", "The project's standing rules (settled: ask nothing about what they settle, and follow them)"),
          ("lessons.md", "Lessons from earlier runs of this project (hints to check, never proof)"))   # beside the specs, never specs
 

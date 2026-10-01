@@ -12,6 +12,7 @@ A fourth rule protects refs: each checkout is a private clone with its own
 
 from __future__ import annotations
 
+import contextlib
 import pathlib
 import shutil
 import subprocess
@@ -89,6 +90,14 @@ class Worktree:
         return self
 
     def create(self, parent: str | None = None) -> Worktree:
+        try:
+            return self._cut(parent)
+        except (RuntimeError, OSError):   # a full disk leaves half a checkout (#286): take it back, then fail as before
+            with contextlib.suppress(OSError):
+                self.remove()
+            raise
+
+    def _cut(self, parent: str | None) -> Worktree:
         if hasattr(owned, "trees"):
             owned.trees.append(self)  # before any allocation can fail
         base = parent or tempfile.mkdtemp(prefix="graph-")
