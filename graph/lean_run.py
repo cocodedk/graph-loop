@@ -174,6 +174,8 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             why = f"It passed, but could not open its pull request. Fix this, then run the spec again: {error}\n\n{why}".strip()
         else:
             ws.event("lean_published", task=feature, commit=work, pr=url)
+            if revise and not why and (ids := getattr(revise, "ids", ())):   # accepted: each thread was checked fixed
+                ws.event("lean_threads_resolved", task=feature, threads=len(ids), resolved=lean_git.resolve(ids, work))
             record(ws, spec_path, lean_status="pr_open", lean_pr=url, lean_rounds=None, lean_asked=None)
             try:
                 tree.remove()
