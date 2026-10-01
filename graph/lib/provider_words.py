@@ -10,7 +10,7 @@ import re
 from gate_programs import programs
 
 LIMIT_MARKS = ("hit your weekly limit", "hit your session limit",
-               "usage limit", "resets ", "quota", "http 429", "status 429",
+               "usage limit", "spend limit", "resets ", "quota", "http 429", "status 429",
                "rate limit", "rate_limit", "too many requests")
 CAPACITY_MARKS = ("at capacity", "try a different model", "overloaded",
                   "is not supported when using", "model metadata for", "model_not_found",

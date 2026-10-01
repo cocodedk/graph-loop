@@ -42,12 +42,17 @@ REPAIR_EFFORT = lean_calls.block("repair")["effort"]
 def build(ws, task: dict, prompt: str, tree, resume: str = "",
           effort: str = providers.EFFORT) -> providers.Outcome:
     """One builder call in the worktree, at `effort`, with the builder tool set for this suite."""
-    feature, account = task["id"], accounts.available()[0]
-    out = providers.claude(CLAUDE_BIN, prompt, account=account, cwd=tree.path, resume=resume,
-                           effort=effort, model=task.get("model", ""), allowed_tools=tools.builder_tools(task),
-                           disallowed_tools=tools.builder_denies(task), budget=task.get("budget", CARD_BUDGET))
-    ws.attempt(feature, account=account, kind=out.kind, cost=out.cost, tokens=out.tokens,
-               effort=effort, purpose="build", turns=out.turns)
+    feature = task["id"]
+    for account in accounts.available():   # a limit moves the call on; a project that names its account has one
+        out = providers.claude(CLAUDE_BIN, prompt, account=account, cwd=tree.path, resume=resume,
+                               effort=effort, model=task.get("model", ""), allowed_tools=tools.builder_tools(task),
+                               disallowed_tools=tools.builder_denies(task), budget=task.get("budget", CARD_BUDGET))
+        ws.attempt(feature, account=account, kind=out.kind, cost=out.cost, tokens=out.tokens,
+                   effort=effort, purpose="build", turns=out.turns)
+        if out.kind != "limit":
+            break
+        ws.event("lean_account_limit", task=feature, account=account)
+        resume = ""                        # the session is in the first account's store, not the next one's
     return out
 
 
