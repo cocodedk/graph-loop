@@ -9,6 +9,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 from campaigns import campaign
 from contract import contract_digest
+from providers import REVIEW_EFFORT
 from router_probe import CARD, CATALOG, Decisions
 
 EXPECTED_TESTS = 5
@@ -52,7 +53,7 @@ class RouterEvidenceTest(unittest.TestCase):
         self.assertEqual(("medium", "fallback"), (result.effort, result.source))
 
     def test_distinct_configured_models_can_review_each_other(self):
-        probe = Decisions(model="opus", effort="xhigh")
+        probe = Decisions(model="opus", effort=REVIEW_EFFORT)
         with patch.dict("os.environ", {"GRAPH_BUILDERS": "sonnet,opus", "GRAPH_CLAUDE_REVIEWERS": "opus"}), \
              patch("urllib.request.urlopen", side_effect=probe):
             result = self.router.choose(CARD, "review", builder_model="sonnet")

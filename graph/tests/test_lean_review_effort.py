@@ -1,4 +1,4 @@
-"""The lean loop's reviewer runs at the effort the owner set (2026-09-26: xhigh)."""
+"""The lean loop's reviewer runs at the effort the owner set (2026-10-01: medium)."""
 
 import pathlib
 import sys
@@ -20,7 +20,7 @@ class LeanReviewEffortTest(unittest.TestCase):
             return "outcome"
         with mock.patch.object(lean_run.review, "codex", codex):
             lean_run.judge(mock.Mock(), "feature", "spec", "diff", "/tmp")
-        self.assertEqual("xhigh", calls[0]["effort"])
+        self.assertEqual("medium", calls[0]["effort"])
 
 
 if __name__ == "__main__":

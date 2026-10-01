@@ -28,8 +28,8 @@ Rules it enforces, each bought with a failure:
 - Up to three code cards build side by side; `--lanes` may lower that ceiling. A
   Jev decision (`model_router.py`, `docs/ROUTER.md`) picks the configured model
   and effort for each build and review from the resource belt it is actually
-  offered — never a free-form name. Every first build runs at medium and
-  every review at xhigh; a builder climbs to high only from a recorded medium
+  offered — never a free-form name. Every first build and
+  every review runs at medium; a builder climbs to high only from a recorded medium
   build on this same contract that then failed its gate, never from a round
   counter alone. A refusal before reading skips the unavailable account or
   model and tries the next configured one; the default belt includes Opus and Sonnet

@@ -238,7 +238,7 @@ every prompt, answer, diff and gate output is a numbered file under
 - Raise effort for a task that keeps failing the same way — two matching gate
   failures mean the task is wrong, not the model too small, and it is
   re-sliced. A build can go from medium to high only after one failed medium
-  build of the same contract; a review runs at xhigh; `max` is never used.
+  build of the same contract; a review runs at medium; `max` is never used.
 - Stop because one resource ran out. Every part that spends a resource walks the
   same belt, so an expired account, an exhausted one or a model at capacity is
   replaced rather than fatal — and a resource that answered is never asked twice
