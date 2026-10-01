@@ -24,6 +24,9 @@ This sits beside the current loop (`graph-goal.py`) and changes none of it.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
+import os
 import pathlib
 import re
 import sys
@@ -96,6 +99,22 @@ def end(code: int, words: str) -> int:
     return code
 
 
+@contextlib.contextmanager
+def one_run(ws, feature: str):
+    """One run per spec: a second `lean.py` on it exits at once, for two gates on one shared stack fail each
+    other. The flock goes with the process, so a crash leaves nothing to clean up."""
+    held = os.open(ws.root / f"run-{feature}.lock", os.O_WRONLY | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        os.close(held)
+        raise SystemExit(f"Another run holds {feature}: wait for it to end, or stop it, then run the spec again.") from None
+    try:
+        yield
+    finally:
+        os.close(held)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="lean.py", description=__doc__.split("\n\n")[0])
     parser.add_argument("--workspace", required=True)
@@ -126,6 +145,12 @@ def main(argv: list[str] | None = None) -> int:
         lean_run.mail(ws, "graph-loop needs the project's account", str(unknown))
         raise
     spec = str(pathlib.Path(args.spec[0]).resolve())
+    with one_run(ws, lean_run.slug(spec)):
+        return _go(ws, repo, path, profile, spec)
+
+
+def _go(ws, repo: str, path: str, profile: dict, spec: str) -> int:
+    """One run of the spec, with its lock held."""
     info = lean_spec.front(pathlib.Path(spec).read_text("utf-8"))
     try:
         waiting, revise = lean_git.unmerged(repo), ""
@@ -167,6 +192,7 @@ def main(argv: list[str] | None = None) -> int:
     if finish(ws, repo, profile, lean_run.slug(spec), url):
         return end(0, f"pr_open {url}")
     return end(1, f"pr_open {url}, but the build is not ready")
+
 
 
 if __name__ == "__main__":
