@@ -114,7 +114,7 @@ class TheBoxIsProvedBeforeItIsTrusted(unittest.TestCase):
 
         with unittest.mock.patch("runner.run", watch):
             run_gate("true", tempfile.mkdtemp(), confine=False)
-        self.assertEqual(["bash", "-c", "true"], seen["argv"])
+        self.assertEqual(["bash", "-c", "exec 2>&1\ntrue"], seen["argv"])   # plain bash; the one stream is the gate's own
         self.assertIsNone(seen["env"])   # the commander's own gate, with the stack it needs
 
 

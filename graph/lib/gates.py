@@ -53,6 +53,7 @@ def run_gate(command: str, cwd: str, timeout: int = DEFAULT_TIMEOUT,
     """
     # Never made for an unconfined (LIVE) gate: nothing below reads it then.
     home = tempfile.mkdtemp(prefix="gate-home-") if confine else ""
+    command = f"exec 2>&1\n{command}"   # one stream, in the order written: noise on stderr must not land last
     boxed = confine and gate_sandbox.works()
     argv = (gate_sandbox.argv(command, cwd, home, **({"paths": paths} if paths else {}))
             if boxed else ["bash", "-c", command])
