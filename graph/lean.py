@@ -80,7 +80,7 @@ def finish(ws, repo: str, profile: dict, feature: str, url: str) -> bool:
     passed, tail = lean_run.masked(ws, profile["build_command"], tree.path)
     artifact = pathlib.Path(tree.path) / profile["artifact"]
     ready = passed and artifact.is_file()
-    ws.event("lean_built", commit=tree.commit, passed=passed,
+    ws.event("lean_built", task=feature, tree=tree.path, commit=tree.commit, passed=passed,
              artifact=str(artifact) if ready else "", tail=tail[-2000:])
     if ready:
         lean_run.mail(ws, "graph-loop: ready for review",

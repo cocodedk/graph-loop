@@ -126,6 +126,9 @@ the branch on merge, or it will block the next run.
 
 To watch a running loop, and see which of a project's specs are built, use the `graph:dashboard` skill.
 
+Runs leave their trees in the temp folder. Once specs are merged, `python3 $GL/graph/lean_clean.py --workspace <ws>
+--repo <repo>` removes the trees of those specs only, never by age, and prints any it could not remove.
+
 ## A fault in graph-loop itself
 
 If graph-loop misbehaves (a wrong verdict, a lost or stuck run, a misleading screen, a skill that
