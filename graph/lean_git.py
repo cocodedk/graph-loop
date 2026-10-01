@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+from typing import Self
 
 BASE = "refs/remotes/origin/main"   # every feature starts here, after a fetch
 FETCHES, FETCH_PAUSE = 3, 5          # tries, and seconds between them
@@ -99,18 +100,42 @@ def update(repo: str, work: str, feature: str, url: str, found: str = "") -> str
 
 
 THREADS = ("query($u:URI!){resource(url:$u){... on PullRequest{reviewThreads(first:100){nodes{"
-           "isResolved comments(first:1){nodes{path line body}}}}}}}")
+           "id isResolved comments(first:1){nodes{path line body}}}}}}}")
+RESOLVE = ("mutation($t:ID!,$b:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$t,"
+           "body:$b}){comment{id}} resolveReviewThread(input:{threadId:$t}){thread{id}}}")
 
 
-def threads(url: str) -> str:
+class Threads(str):
+    """The unresolved review threads as text, carrying their ids so the ones a round fixed can be resolved."""
+
+    ids: tuple[str, ...]
+
+    def __new__(cls, text: str, ids: tuple[str, ...] = ()) -> Self:
+        found = super().__new__(cls, text)
+        found.ids = ids
+        return found
+
+
+def threads(url: str) -> Threads:
     """The pull request's unresolved review threads as text, "" when none."""
     done = subprocess.run(("gh", "api", "graphql", "-f", f"query={THREADS}", "-F", f"u={url}"),
                           capture_output=True, text=True, check=False)
     if done.returncode:
         raise RuntimeError(f"gh api graphql: {(done.stderr or done.stdout).strip()[:300]}")
     nodes = json.loads(done.stdout)["data"]["resource"]["reviewThreads"]["nodes"]
-    found = [node["comments"]["nodes"][0] for node in nodes
-             if not node["isResolved"] and node["comments"]["nodes"]]
-    return "\n\n".join(f"{c['path']}:{c.get('line') or ''}\n"
-                       f"{re.sub(r'(?s)<details>.*?</details>|<!--.*?-->', '', c['body']).strip()}"
-                       for c in found)
+    found = [node for node in nodes if not node["isResolved"] and node["comments"]["nodes"]]
+    text = "\n\n".join(f"{c['path']}:{c.get('line') or ''}\n"
+                        f"{re.sub(r'(?s)<details>.*?</details>|<!--.*?-->', '', c['body']).strip()}"
+                        for c in (node["comments"]["nodes"][0] for node in found))
+    return Threads(text, tuple(node["id"] for node in found if node.get("id")))
+
+
+def resolve(ids: tuple[str, ...], head: str) -> int:
+    """Reply `fixed at head <sha>` to each thread and resolve it; how many were. A thread gh would not
+    resolve stays open for a person, and a pushed pull request never fails for it."""
+    done = 0
+    for thread in ids:
+        answer = subprocess.run(("gh", "api", "graphql", "-f", f"query={RESOLVE}", "-F", f"t={thread}",
+                                 "-f", f"b=fixed at head {head[:12]}"), capture_output=True, text=True, check=False)
+        done += answer.returncode == 0
+    return done
