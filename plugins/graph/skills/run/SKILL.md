@@ -74,7 +74,7 @@ stop an autonomous builder (for example "ask a person at every step"), the perso
 must write an exception for the loop into those rules and merge it to `main` before
 the run.
 
-## 5. Lessons, optional
+## 5. Lessons and rules, optional
 
 `lessons.md` beside the specs holds what agents keep rediscovering about this project, one fact per
 line with its evidence (a spec, an event or a commit). For example: `- Say which earlier tests the
@@ -82,6 +82,10 @@ builder may change (the grill asked three times, specs 06–10).` The grill and 
 hints to check, never as proof; the reviewer never sees it. People write it, not the loop. Delete a
 line that turns out wrong. When a lesson keeps coming back, turn it into a check (a test, or a line
 every spec carries) and delete the line.
+
+`rules.md` beside the specs holds rules the project has settled, such as what every screen shows while
+loading, on an error and when empty. The grill asks nothing about what they settle and the builder
+follows them, so no spec has to repeat them. People write it too.
 
 ## 6. Run
 

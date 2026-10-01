@@ -19,9 +19,9 @@ REFS = ("origin/main", "main")
 
 
 def spec_files(project: str) -> list[pathlib.Path]:
-    """The `*.md` files of `docs/lean` except `lessons.md`, by file name."""
+    """The `*.md` files of `docs/lean` except the notes beside them (`lean_spec.NOTES`), by file name."""
     folder = pathlib.Path(project) / "docs" / "lean"
-    return sorted((path for path in folder.glob("*.md") if path.is_file() and path.name != "lessons.md"),
+    return sorted((path for path in folder.glob("*.md") if path.is_file() and path.name not in dict(lean_spec.NOTES)),
                   key=lambda path: path.name)
 
 

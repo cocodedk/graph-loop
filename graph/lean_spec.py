@@ -70,14 +70,22 @@ def start(repo: str, feature: str, info: dict, revise: str = "") -> tuple[Worktr
         return Worktree(repo, feature, commit=lean_git.BASE).create(), ""
 
 
+NOTES = (("rules.md", "The project's standing rules (settled: ask nothing about what they settle, and follow them)"),
+         ("lessons.md", "Lessons from earlier runs of this project (hints to check, never proof)"))   # beside the specs, never specs
+
+
 def lessons(folder) -> str:
-    """The project's lessons from earlier runs, `lessons.md` beside its specs, as a prompt section,
-    or "" when there are none. People write them, one fact per line with its evidence; the loop only
-    reads them. They go to the grill and the builder, never to the reviewer, whose judgement stays
-    its own."""
-    path = pathlib.Path(folder) / "lessons.md"
-    text = path.read_text("utf-8").strip() if path.is_file() else ""
-    return f"\n\n## Lessons from earlier runs of this project (hints to check, never proof)\n\n{text}" if text else ""
+    """The project's notes beside its specs as prompt sections, or "" when there are none. `rules.md` holds
+    rules the project has settled: the grill asks nothing about what they settle and the builder follows them.
+    `lessons.md` holds what agents keep rediscovering, one fact per line with its evidence: hints to check,
+    never proof. People write both; the loop only reads them. They go to the grill and the builder, never to
+    the reviewer, whose judgement stays its own."""
+    out = ""
+    for name, heading in NOTES:
+        path = pathlib.Path(folder) / name
+        if path.is_file() and (text := path.read_text("utf-8").strip()):
+            out += f"\n\n## {heading}\n\n{text}"
+    return out
 
 
 def slug(path: str) -> str:

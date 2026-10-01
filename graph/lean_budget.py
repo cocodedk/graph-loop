@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pathlib
 
+import lean_spec
 import project_specs
 from providers import Outcome
 
@@ -53,6 +54,6 @@ def review_note(spec_path: str) -> str:
     folder = pathlib.Path(spec_path).parent
     built = project_specs.built_names(str(folder.parent.parent)) or set()
     later = [path.stem for path in sorted(folder.glob("*.md"))
-             if path.name != "lessons.md" and path.stem > pathlib.Path(spec_path).stem and path.stem not in built]
+             if path.name not in dict(lean_spec.NOTES) and path.stem > pathlib.Path(spec_path).stem and path.stem not in built]
     named = f" and the cards after it: {', '.join(later[:5])}" if later else ""
     return f"\n\nReslice or simplify this card{named} before any of them runs: a card this expensive is a planning problem."
