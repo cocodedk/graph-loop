@@ -46,7 +46,7 @@ class ReviewEffortTest(unittest.TestCase):
             argv = pathlib.Path(handle.name).read_text()
         self.assertIn('model_reasoning_effort="medium"', argv)
         self.assertNotIn("max", argv)
-        self.assertEqual("xhigh", providers.REVIEW_EFFORT)   # the owner, 2026-09-26: reviews at xhigh
+        self.assertEqual("medium", providers.REVIEW_EFFORT)   # the owner, 2026-10-01: reviews at medium (xhigh from 2026-09-26)
 
 
 class CodexTest(unittest.TestCase):
@@ -57,7 +57,7 @@ class CodexTest(unittest.TestCase):
             out = codex(binary, "review this")
             argv = pathlib.Path(handle.name).read_text()
         self.assertIn(f"--model {models.LEAN['review']['model']}", argv)
-        self.assertIn('model_reasoning_effort="xhigh"', argv)
+        self.assertIn('model_reasoning_effort="medium"', argv)
         self.assertEqual("ACCEPT", out.verdict)
 
     def test_a_reject_carries_the_findings(self):

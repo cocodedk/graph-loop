@@ -28,9 +28,9 @@ CHANGED = {"builder": {"model": "b-model", "effort": "b-effort"}, "repair": {"mo
 class TheBlock(unittest.TestCase):
     def test_it_holds_the_four_calls(self):
         self.assertEqual({"builder": {"model": "claude-sonnet-5-5", "effort": "high"},
-                          "repair": {"model": "claude-sonnet-5-5", "effort": "high"},
-                          "grill": {"model": "gpt-6.1-sol", "effort": "xhigh"},
-                          "review": {"model": "gpt-6.1-sol", "effort": "xhigh"}}, models.LEAN)
+                          "repair": {"model": "claude-sonnet-5-5", "effort": "medium"},
+                          "grill": {"model": "gpt-6.1-sol", "effort": "medium"},
+                          "review": {"model": "gpt-6.1-sol", "effort": "medium"}}, models.LEAN)
 
     def test_the_codex_reviewers_start_with_the_review_model(self):
         with mock.patch.dict(os.environ, {"GRAPH_REVIEWERS": ""}):

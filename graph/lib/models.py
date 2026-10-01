@@ -20,11 +20,13 @@ import os
 # The place to change the model or the effort of a lean call: one line each. Read when a
 # call is made, so a change here reaches the call, its event and the dashboard.
 # The owner, 2026-09-30: gpt-6.1-sol is cheaper and better than gpt-6-sol for the grill and the review.
+# 2026-10-01: grill, review and repair at medium (they took 49, 159 and 54 of 436 minutes over 14 specs; no recorded
+# run showed xhigh catching more). The first build stays at high; raise a call only after it fails at medium.
 LEAN = {
     "builder": {"model": "claude-sonnet-5-5", "effort": "high"},   # the first build
-    "repair": {"model": "claude-sonnet-5-5", "effort": "high"},    # each repair round
-    "grill": {"model": "gpt-6.1-sol", "effort": "xhigh"},
-    "review": {"model": "gpt-6.1-sol", "effort": "xhigh"},
+    "repair": {"model": "claude-sonnet-5-5", "effort": "medium"},  # each repair round
+    "grill": {"model": "gpt-6.1-sol", "effort": "medium"},
+    "review": {"model": "gpt-6.1-sol", "effort": "medium"},
 }
 
 # The Claude builders first, Astra behind them (issue #67: the belt "may hold" codex
