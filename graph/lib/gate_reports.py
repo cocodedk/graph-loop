@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 import xml.etree.ElementTree as ET
 
 from issue_scrub import scrub
@@ -10,6 +11,7 @@ from issue_scrub import scrub
 HEADING = "\n\nJUnit failures:\n"
 LIMIT = 2000
 CASES = 20
+FAILING = re.compile(r"FAIL|ERROR:|AssertionError|[✗×✖]")   # what a test runner prints for a failed case
 
 
 def excerpt(text: str, *, tail: bool = True) -> str:
@@ -19,7 +21,9 @@ def excerpt(text: str, *, tail: bool = True) -> str:
     marks the digest so later readers do not cut it or the console away.
     """
     console, heading, digest = text.partition(HEADING)
-    return (console[-LIMIT:] if tail else console[:LIMIT]) + heading + digest
+    failing = [line.strip()[:200] for line in console[:-LIMIT].splitlines() if FAILING.search(line)] if tail else []
+    earlier = "[failing lines before the tail]\n" + "\n".join(failing[-CASES:]) + "\n[the tail]\n" if failing else ""
+    return earlier + (console[-LIMIT:] if tail else console[:LIMIT]) + heading + digest
 
 
 def junit_failures(cwd: str, started: int) -> str:
