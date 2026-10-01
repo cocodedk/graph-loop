@@ -83,14 +83,14 @@ class Check(Rig):
         self.assertEqual(("", ACCEPT), (why, verdict))
         judge.assert_called_once()
         why, verdict, judge = self.check(SUITE, suite=False)
-        self.assertEqual((f"the suite is red ({SUITE}):\nE501 line too long", None), (why, verdict))
+        self.assertEqual((f"Fix the red suite. Run {SUITE}, then fix the failure shown below:\nE501 line too long", None), (why, verdict))
         judge.assert_not_called()
         self.assertEqual([SUITE] * 2, self.ran)
         self.assertEqual([], self.lint_events())
         with mock.patch.object(lean_run, "masked", self.masked()), \
                 mock.patch.object(lean_run, "judge", return_value=Outcome("ok", verdict="REJECT", text="no test")):
             why, _ = lean_run.check(self.ws, "rest-ring", "spec", Tree(), Outcome("ok"), SUITE, 1)
-        self.assertEqual("the review did not accept (ok, REJECT): no test", why)
+        self.assertEqual("Fix what the reviewer refused (ok, REJECT): no test", why)
 
     def test_a_green_lint_lets_the_reviewer_be_asked(self):
         why, verdict, judge = self.check(lean_lint.Commands(SUITE, LINT))
@@ -102,7 +102,7 @@ class Check(Rig):
 
     def test_a_red_lint_returns_its_reason_and_the_reviewer_is_not_asked(self):
         why, verdict, judge = self.check(lean_lint.Commands(SUITE, LINT), lint=False)
-        self.assertEqual((f"the lint is red ({LINT}):\nE501 line too long", None), (why, verdict))
+        self.assertEqual((f"Fix the red lint. Run {LINT}, then fix the findings shown below:\nE501 line too long", None), (why, verdict))
         judge.assert_not_called()
         (event,) = self.lint_events()
         self.assertEqual((False, "E501 line too long"), (event["passed"], event["tail"]))
@@ -110,14 +110,14 @@ class Check(Rig):
     def test_the_output_in_the_reason_and_the_event_is_its_last_2000_characters(self):
         long = "head" + "x" * 1996 + "tail"
         why, _, _ = self.check(lean_lint.Commands(SUITE, LINT), lint=False, output=long)
-        self.assertEqual(f"the lint is red ({LINT}):\n" + long[-2000:], why)
+        self.assertEqual(f"Fix the red lint. Run {LINT}, then fix the findings shown below:\n" + long[-2000:], why)
         self.assertEqual(long[-2000:], self.lint_events()[0]["tail"])
         why, _, _ = self.check(lean_lint.Commands(SUITE, LINT), lint=False, output="short")
         self.assertTrue(why.endswith(":\nshort"))
 
     def test_a_red_suite_never_runs_the_lint(self):
         why, _, _ = self.check(lean_lint.Commands(SUITE, LINT), suite=False)
-        self.assertTrue(why.startswith("the suite is red"))
+        self.assertTrue(why.startswith("Fix the red suite"))
         self.assertEqual([SUITE], self.ran)
         self.assertEqual([], self.lint_events())
 
@@ -145,14 +145,14 @@ class Repairs(Rig):
     def test_a_red_lint_repairs_with_its_reason_at_most_twice_then_stops(self):
         self.assertEqual("", self.run_it(["a", "b", "c"]))
         self.assertEqual(1 + lean_run.REPAIRS, len(self.prompts))
-        self.assertIn(f"the lint is red ({LINT}):\nE501 line too long", self.prompts[1])
+        self.assertIn(f"Fix the red lint. Run {LINT}, then fix the findings shown below:\nE501 line too long", self.prompts[1])
         self.assertEqual([SUITE, LINT] * 3, self.ran)
         self.assertEqual("lean_stopped", self.ws.events()[-1]["kind"])
 
     def test_a_repair_that_changes_nothing_stops_the_run(self):
         self.assertEqual("", self.run_it(["a"]))
         self.assertEqual(2, len(self.prompts))
-        self.assertIn("the repair changed nothing", self.ws.events()[-1]["why"])
+        self.assertIn("The repair changed nothing", self.ws.events()[-1]["why"])
 
 
 class Prompt(unittest.TestCase):

@@ -44,8 +44,8 @@ def after(ws, task: dict, out: Outcome, before: float, resumed: bool) -> float:
 
 
 def stopped_words(spent_so_far: float) -> str:
-    return (f"the card spent ${spent_so_far:.2f} of its budget of ${CARD_BUDGET}: it is too big or its gate "
-            "too slow, so it starts no repair")
+    return (f"Reslice this card or speed up its gate: it spent ${spent_so_far:.2f} of its budget of ${CARD_BUDGET}, "
+            "so it starts no repair")
 
 
 def review_note(spec_path: str) -> str:

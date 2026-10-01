@@ -104,7 +104,7 @@ class Stopped(Rig):
         self.assertEqual("", self.run_it(blocked, suites=(False, False, False)))
         self.assertEqual(2, len(self.prompts))           # one repair: a second would do the same
         body = self.mails[0][1]
-        self.assertIn("the repair changed nothing", body)
+        self.assertIn("The repair changed nothing", body)
         self.assertIn("I need permission to start a web server.", body)
         self.assertIn("FAILED: AmberTest > overdue", body)   # the failure it could not fix
 

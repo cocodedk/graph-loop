@@ -17,7 +17,7 @@ from lean_reason import cut
 from test_lean_run import PROFILE, Rig
 
 EXPECTED_TESTS = 5
-HEAD = "the suite is red (run-the-suite):\n"
+HEAD = "Fix the red suite. Run run-the-suite, then fix the failure shown below:\n"
 
 
 class Cut(unittest.TestCase):

@@ -176,7 +176,7 @@ class Repair(Rig):
     def test_a_builder_that_changes_nothing_is_not_reviewed(self):
         self.run_it(self.builder(), suites=(), reviews=())
         self.assertEqual([], self.suites)
-        self.assertIn("changed nothing", self.mails[0][1])
+        self.assertIn("Nothing changed", self.mails[0][1])
 
 
 if __name__ == "__main__":

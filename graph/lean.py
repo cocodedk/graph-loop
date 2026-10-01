@@ -50,7 +50,7 @@ def profile_path(repo: str, given: str = "") -> str:
     guide = pathlib.Path(repo) / "CLAUDE.md"
     named = re.search(r"profile-[\w.-]*\.md", guide.read_text("utf-8")) if guide.exists() else None
     if not named or not (pathlib.Path(repo) / named.group(0)).is_file():
-        raise SystemExit(f"no profile: {guide} links no profile-*.md here; pass --profile")
+        raise SystemExit(f"Link a profile-*.md from {guide}, or pass --profile: it links none.")
     return str(pathlib.Path(repo) / named.group(0))
 
 
@@ -65,7 +65,7 @@ def read_profile(path: str) -> dict:
             values[heading] = line.strip()
     missing = [field for field in FIELDS if field not in values]
     if missing:
-        raise SystemExit(f"{path} has no indented line under: {', '.join('## ' + m for m in missing)}")
+        raise SystemExit(f"Add an indented line under each of these headings in {path}: {', '.join('## ' + m for m in missing)}")
     return values
 
 
@@ -84,9 +84,9 @@ def finish(ws, repo: str, profile: dict, feature: str, url: str) -> bool:
                       f"{feature}: {url}\n\nThe build: {artifact}\n\nReview and merge the pull "
                       "request; the next spec waits until it is merged.")
     else:
-        why = "the build is red" if not passed else f"the build left no {profile['artifact']}"
+        fix = "Fix the red build" if not passed else f"Make the build leave {profile['artifact']}"
         lean_run.mail(ws, f"graph-loop needs you: the build of {feature}",
-                      f"{feature}: {url}\n\nBut {why}:\n{tail}")
+                      f"{feature}: {url}\n\nThe pull request is open. {fix}:\n{tail}")
     return ready
 
 
