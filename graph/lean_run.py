@@ -3,9 +3,9 @@
 A worktree off origin/main; one builder writes the feature and its tests; the suite runs masked
 (`gates.run_gate`); one reviewer reads the diff. A red suite or a refused review gets a repair with
 the failure text, up to `REPAIRS`, while repairs change something and the card's budget lasts
-(`lean_budget`); a model that gave no real answer gets none. Green, with a verdict: pushed as
-`lean/<feature>` with a pull request carrying the findings. Otherwise the person is emailed why and
-the feature stops, its worktree kept; the workspace records how it ended (`spec-<name>.json`).
+(`lean_budget`); a model that gave no real answer gets none. Green, with a verdict: pushed as `lean/<feature>`
+with a pull request carrying the findings. Otherwise the person is emailed why and the feature stops, its
+worktree kept; the workspace records how it ended (`spec-<name>.json`).
 """
 
 from __future__ import annotations
@@ -126,7 +126,10 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     `revise` is the open pull request's review findings: fix them on its branch."""
     feature = slug(spec_path)
     spec = pathlib.Path(spec_path).read_text("utf-8")
-    tree, last = lean_spec.start(repo, feature, lean_spec.state(ws, spec_path), revise)
+    try:
+        tree, last = lean_spec.start(repo, feature, lean_spec.state(ws, spec_path), revise)
+    except (RuntimeError, OSError) as error:   # no room for the checkout: stopped and told, never a bare crash
+        return lean_spec.unstarted(ws, feature, error)
     ws.event("lean_feature_started", task=feature, spec=str(spec_path), base=tree.commit,
              tree=tree.path, resumed=bool(last))
     own = lean_spec.card_gate(spec)
@@ -143,8 +146,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     why, verdict = check(ws, feature, spec, tree, built, suite, 1, revise)
     round_, limit = 2, 2 + REPAIRS
     while round_ < limit:
-        # Only a real answer is worth a repair (`Outcome.consumes_attempt`); a limit, a crash, a repair that
-        # changed nothing or a card that spent its budget stops the run, its rounds kept.
+        # Only a real answer is worth a repair (`consumes_attempt`); a limit, a crash, a no-op repair or a spent budget stops the run.
         if not why or not built.ok or (verdict is not None and not verdict.ok):
             break
         if spent >= CARD_BUDGET:                   # planned wrongly: no repair, stop and say so
@@ -167,8 +169,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
         if why and failing(why) < failed and limit < 2 + MOST_REPAIRS:   # fewer failing lines: one more repair
             limit += 1
         round_ += 1
-    # Findings are the reviewer's text unless the parser reads that text as its answer. Green, and
-    # accepted or still refused for named findings after the last repair: published. Else it stops.
+    # Green, and accepted or refused for named findings (not a failed parse) after the last repair: published.
     found = "" if verdict is None or review._read_review(verdict.text)[0] else verdict.text.strip()
     if not why or (verdict is not None and verdict.verdict == "REJECT" and found):
         try:
