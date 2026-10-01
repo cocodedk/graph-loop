@@ -33,6 +33,9 @@ python3 $GL/graph/loops.py <project> --only open        # what is left
 python3 $GL/graph/loops.py <project> --only attention   # stopped, or a pull request waiting for them
 ```
 
+A spec built by hand, without the loop, shows as waiting. Mark it built with `lean_status: built` in its
+front matter, or with a merged commit line `feat(<spec-name>): ...`.
+
 ## 4. Say how to keep it open
 
 A live, refreshing screen cannot run inside this conversation. Give the person the command with the real

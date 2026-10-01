@@ -90,11 +90,11 @@ def status_of(path: pathlib.Path) -> object:
 
 
 def mark(path: pathlib.Path, running: set[str], built: set[str] | None) -> str:
-    """The first mark that holds: building, built, stopped, question, pr open, waiting."""
+    """The first mark that holds: building, built (a `feat(<spec>)` commit line, or a person's `lean_status: built`), stopped, question, pr open, waiting."""
     name = lean_spec.slug(path.name)
     if name in running:
         return BUILDING
     if built and name in built:
         return BUILT
     status = status_of(path)
-    return {"stopped": STOPPED, "questions": QUESTION, "pr_open": PR_OPEN}.get(str(status), WAITING)
+    return {"built": BUILT, "stopped": STOPPED, "questions": QUESTION, "pr_open": PR_OPEN}.get(str(status), WAITING)
