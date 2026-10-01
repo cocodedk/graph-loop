@@ -11,6 +11,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import lean
+import lean_body
 import lean_git
 import lean_run
 import lean_spec
@@ -21,7 +22,7 @@ from test_keep import repo
 from test_lean import PROFILE_TEXT
 from workspace import Workspace
 
-EXPECTED_TESTS = 4
+EXPECTED_TESTS = 5
 
 
 class Earlier(unittest.TestCase):
@@ -72,6 +73,12 @@ class Earlier(unittest.TestCase):
         for words in ("Earlier round", "Which colour?", "still leaves unanswered", "never about new detail"):
             self.assertIn(words, later)
         self.assertTrue(later.startswith(first[:200]))                    # the rest of the prompt is the same
+
+
+    def test_only_a_first_rounds_prompt_asks_for_every_question_at_once(self):
+        asked = "Ask every question you have now, in this one answer"
+        self.assertIn(asked, lean_body.grill_prompt("profile.md", "", "spec"))
+        self.assertNotIn(asked, lean_body.grill_prompt("profile.md", "", "spec", earlier="Which colour?"))
 
 
 class CountTest(unittest.TestCase):

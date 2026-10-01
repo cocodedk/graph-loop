@@ -46,6 +46,8 @@ def grill_prompt(profile_path: str, lessons: str, specs: str, earlier: str = "")
              f"spec since. Now ask only about an earlier question the spec still leaves unanswered, or "
              f"about something the edits made contradict itself or the code; never about new detail the "
              f"edits introduced: the builder settles that.") if earlier else ""
+    once = "" if earlier else (" Ask every question you have now, in this one answer: a question held back "
+                               "costs the person another round.")
     return (f"You read this spec before it is built, read-only; the repository's CLAUDE.md, "
               f"its brief and the profile at {profile_path} give the context. A builder implements "
               f"it next. It edits files and runs git, the suite and the programs the suite uses; it "
@@ -60,4 +62,4 @@ def grill_prompt(profile_path: str, lessons: str, specs: str, earlier: str = "")
               f"each, to where it ends, and names a design reference (a mock, a sketch or an existing "
               f"screen) to match. Ask about anything vague, contradictory or likely to confuse a user. "
               f"Each finding is one question to the person. What the builder can settle itself is "
-              f"no question: accept.{lessons}{again}\n\n{specs}\n\n{VERDICT}")
+              f"no question: accept.{once}{lessons}{again}\n\n{specs}\n\n{VERDICT}")
