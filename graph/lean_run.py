@@ -106,12 +106,12 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
         return f"Nothing changed. Make the change the spec asks for, then run the suite.{said}", None
     if stray := lean_diff.leftovers(diff):
         return "Remove these leftover files from the change: " + ", ".join(stray), None
+    if red := lean_lint.run(ws, masked, command, tree.path, feature, round_):   # seconds, before the suite's minutes
+        return red, None
     passed, tail = masked(ws, command, tree.path)
     ws.event("lean_suite", task=feature, round=round_, passed=passed, tail=tail[-2000:])
     if not passed:
         return f"Fix the red suite. Run {command}, then fix the failure shown below:\n{tail}", None
-    if red := lean_lint.run(ws, masked, command, tree.path, feature, round_):
-        return red, None
     verdict = judge(ws, feature, spec, diff, tree.path, **({"threads": threads} if threads else {}))
     ws.event("lean_review", task=feature, round=round_, outcome=verdict.kind,
              verdict=verdict.verdict, findings=verdict.text[:1000])

@@ -1,4 +1,4 @@
-"""The profile's optional lint command: run after a green suite, in the same gate box."""
+"""The profile's optional lint command: run before the suite, in the same gate box."""
 
 from __future__ import annotations
 

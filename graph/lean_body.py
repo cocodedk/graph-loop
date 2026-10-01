@@ -30,7 +30,7 @@ def builder_prompt(spec: str, script: str, profile_path: str, lessons: str, own_
     return (f"Implement what this spec asks, including its tests. Follow the repository's "
             f"CLAUDE.md and the profile at {profile_path}. {run}. And never start or wait on a "
             f"background job: every wait is a paid turn. Do not commit: the loop commits."
-            + (f" The loop also runs `{lint}` after the suite and needs it green: run it yourself when "
+            + (f" The loop also runs `{lint}` before the suite and needs it green: run it yourself when "
                f"your permissions allow." if lint else "")
             + f"\n\n## Spec\n\n{spec}{lessons}" + (
                 f"\n\n## Questions the grill left open\n\nNobody has answered these:\n\n```\n{open_questions}\n```\n\n"
