@@ -15,6 +15,7 @@ from unittest import mock
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import lean_git
+import lean_spec
 from test_lean_run import Rig
 from worktree import KEEP_NOTE
 
@@ -41,13 +42,13 @@ class FullDisk(Rig):
         self.assertIn("No space left on device", stopped["why"])
         self.assertEqual(1, len(self.mails))
         self.assertIn("No space left on device", self.mails[0][1])
-        self.assertIn("lean_status: stopped", self.spec.read_text())
+        self.assertEqual("stopped", lean_spec.state(self.ws, str(self.spec))["lean_status"])
 
     def test_the_accepted_work_is_kept_for_the_next_run(self):
         self.stop_on_a_full_disk()
         kept = next(row for row in self.ws.events() if row["kind"] == "lean_stopped")["tree"]
         self.assertEqual("amber\n", (pathlib.Path(kept) / "ring.py").read_text())
-        self.assertIn(f"lean_worktree: {kept}", self.spec.read_text())
+        self.assertEqual(kept, lean_spec.state(self.ws, str(self.spec))["lean_worktree"])
 
 
 class CountTest(unittest.TestCase):

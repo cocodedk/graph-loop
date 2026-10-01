@@ -16,6 +16,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import lean_run
+import lean_spec
 import providers
 import tmp_root  # noqa: F401
 from providers import Outcome, claude
@@ -67,7 +68,7 @@ class Stop(Rig):
         self.assertEqual(1, len(self.prompts))                         # a repair would spend it again
         stopped = next(row for row in self.ws.events() if row["kind"] == "lean_stopped")
         self.assertTrue((pathlib.Path(stopped["tree"]) / "ring.py").is_file())   # the work is kept
-        self.assertIn("lean_status: stopped", self.spec.read_text())
+        self.assertEqual("stopped", lean_spec.state(self.ws, str(self.spec))["lean_status"])
         self.assertIn("spend cap of $40", self.mails[0][1])
 
     def test_the_lean_builder_is_given_the_cap(self):

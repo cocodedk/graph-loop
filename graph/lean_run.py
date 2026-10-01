@@ -5,7 +5,7 @@ A worktree off origin/main; one builder writes the feature and its tests; the su
 the failure text, up to `REPAIRS`, while repairs change something and the card's budget lasts
 (`lean_budget`); a model that gave no real answer gets none. Green, with a verdict: pushed as
 `lean/<feature>` with a pull request carrying the findings. Otherwise the person is emailed why and
-the feature stops, its worktree kept; the spec's front matter records how it ended.
+the feature stops, its worktree kept; the workspace records how it ended (`spec-<name>.json`).
 """
 
 from __future__ import annotations
@@ -119,7 +119,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
     `revise` is the open pull request's review findings: fix them on its branch."""
     feature = slug(spec_path)
     spec = pathlib.Path(spec_path).read_text("utf-8")
-    tree, last = lean_spec.start(repo, feature, spec, revise)
+    tree, last = lean_spec.start(repo, feature, lean_spec.state(ws, spec_path), revise)
     ws.event("lean_feature_started", task=feature, spec=str(spec_path), base=tree.commit,
              tree=tree.path, resumed=bool(last))
     own = lean_spec.card_gate(spec)
@@ -169,7 +169,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             why = f"It passed, but could not open its pull request. Fix this, then run the spec again: {error}\n\n{why}".strip()
         else:
             ws.event("lean_published", task=feature, commit=work, pr=url)
-            record(spec_path, lean_status="pr_open", lean_pr=url, lean_rounds=None, lean_asked=None)
+            record(ws, spec_path, lean_status="pr_open", lean_pr=url, lean_rounds=None, lean_asked=None)
             try:
                 tree.remove()
             except OSError as error:   # files a suite's container left as root: tidy later
@@ -177,7 +177,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             return url
     kept = tree.keep(why)
     if not revise:                   # a revision that stopped leaves its pull request open
-        record(spec_path, lean_status="stopped", lean_worktree=kept, lean_rounds=None, lean_asked=None)
+        record(ws, spec_path, lean_status="stopped", lean_worktree=kept, lean_rounds=None, lean_asked=None)
     ws.event("lean_stopped", task=feature, why=cut(why), tree=kept)
     mail(ws, f"graph-loop needs you: {feature}",
          f"{feature} stopped.\n\nWhy:\n{why}\n\nIts work is kept at {kept}."

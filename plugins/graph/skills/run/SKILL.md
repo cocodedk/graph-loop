@@ -11,8 +11,8 @@ reads the diff. After up to two repair passes (none when the builder or reviewer
 real answer, such as on a usage limit: that stops the run at once), the work is pushed as the branch
 `lean/<feature>` with a pull request; `main` never moves. A green change the reviewer
 still refuses after the last repair is pushed too, its findings in the pull request's
-description for whoever merges it. The spec file's front matter
-gets `lean_status` (`pr_open` or `stopped`) and `lean_pr` or `lean_worktree`. While any
+description for whoever merges it. The workspace's `spec-<name>.json`
+gets `lean_status` (`pr_open` or `stopped`) and `lean_pr` or `lean_worktree`; the spec file is never written. While any
 branch on origin is unmerged, the loop's own or anyone's, the run builds nothing. So
 the next spec waits until the person has merged (or deleted) every open branch. You set
 the run up; the loop does the building.
@@ -91,7 +91,7 @@ python3 $GL/graph/lean.py --workspace <ws> --repo <repo> --spec docs/lean/01-fir
 
 The run first fetches origin. Then, before a spec's first build, a reviewer reads it
 (a spec that carries on after a stop is not read again; if its requirements change,
-delete its `lean_` front matter so it starts afresh):
+delete its `<ws>/spec-<name>.json` so it starts afresh):
 
 - **Exit 2:** its questions have been emailed and nothing was built. Answer them in
   the specs, then run again. A feature with a user interface is questioned until its
@@ -104,8 +104,8 @@ delete its `lean_` front matter so it starts afresh):
 - **Exit 0:** the pull request is open, its branch was built, and the person got a
   "ready for review" mail with the PR link and the artifact.
 - **Exit 1:** the feature stopped, or its build was red. The mail says which. A stopped
-  feature's worktree is kept and the mail names it; the spec's front matter names it
-  too (`lean_worktree`) unless the run was fixing an open pull request. A red build
+  feature's worktree is kept and the mail names it; so does its `spec-<name>.json`
+  (`lean_worktree`) unless the run was fixing an open pull request. A red build
   leaves its pull request open. Read the workspace log before changing anything.
 
 Runs take hours, so start one detached from your shell tool, never as its background task: the host

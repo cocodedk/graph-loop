@@ -1,12 +1,13 @@
-"""A lean spec file's own record, and the checkout its next run builds in.
+"""A lean spec's record of its last run, and the checkout its next run builds in.
 
-The front matter says how the last run ended (`lean_status`, `lean_pr`,
-`lean_worktree`). A stopped spec carries on in its kept worktree; a spec whose
-pull request has review findings is revised on its own branch.
+How the last run ended (`lean_status`, `lean_pr`, `lean_worktree`) is kept in the workspace,
+`spec-<name>.json`, and the spec file is never written. A stopped spec carries on in its kept
+worktree; a spec whose pull request has review findings is revised on its own branch.
 """
 
 from __future__ import annotations
 
+import json
 import pathlib
 import re
 
@@ -23,18 +24,33 @@ def front(spec: str) -> dict:
     return (yaml.safe_load(matter["front"]) or {}) if matter else {}
 
 
-def record(spec_path: str, **fields: str) -> None:
-    """Write `fields` into the spec file's front matter, every other byte left alone."""
-    path = pathlib.Path(spec_path)
-    text = path.read_text("utf-8")
-    if not cardfile.FRONT.match(text):      # a spec with no front matter gets one (a None field removes: none to write)
-        text = f"---\n{yaml.safe_dump({k: v for k, v in fields.items() if v is not None}, sort_keys=False)}---\n{text}"
-    for field, value in fields.items():
-        text = cardfile.patch(text, field, value)
-    path.write_text(text, "utf-8")
+def _kept(ws, spec_path: str) -> pathlib.Path:
+    return ws.root / f"spec-{slug(spec_path)}.json"
 
 
-def start(repo: str, feature: str, spec: str, revise: str = "") -> tuple[Worktree, str]:
+def state(ws, spec_path: str) -> dict:
+    """What the loop knows of the spec's last run (`lean_*`): the workspace's word over any an older run left
+    in the spec's front matter. A field the workspace cleared is gone, whatever the front matter says."""
+    try:
+        kept = json.loads(_kept(ws, spec_path).read_text("utf-8"))
+    except (OSError, ValueError):
+        kept = {}
+    older = {k: v for k, v in front(pathlib.Path(spec_path).read_text("utf-8")).items() if k.startswith("lean_")}
+    return {k: v for k, v in {**older, **kept}.items() if v is not None}
+
+
+def record(ws, spec_path: str, **fields: str | int | None) -> None:
+    """Write `fields` into the spec's state in the workspace. The spec file is never written: its front matter
+    was committed by accident, blocked `git pull`, and losing it lost the resume point. None clears a field."""
+    try:
+        kept = json.loads(_kept(ws, spec_path).read_text("utf-8"))
+    except (OSError, ValueError):
+        kept = {}
+    kept.update(fields)
+    _kept(ws, spec_path).write_text(json.dumps(kept), "utf-8")
+
+
+def start(repo: str, feature: str, info: dict, revise: str = "") -> tuple[Worktree, str]:
     """The checkout to build in, and why the last attempt fell short ("" for a fresh one).
 
     Revising: the checkout starts at the pull request's branch. Stopped with its
@@ -43,7 +59,6 @@ def start(repo: str, feature: str, spec: str, revise: str = "") -> tuple[Worktre
     if revise:
         return Worktree(repo, feature, commit=f"refs/remotes/origin/lean/{feature}").create(), revise
     tree = Worktree(repo, feature, commit=lean_git.BASE)
-    info = front(spec)
     kept = pathlib.Path(str(info.get("lean_worktree") or "")) if info.get("lean_status") == "stopped" else None
     if not kept or not (kept / ".git").is_dir():
         return tree.create(), ""

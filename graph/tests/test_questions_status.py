@@ -45,7 +45,7 @@ class Marked(unittest.TestCase):
                 mock.patch.object(lean_run, "run_feature") as feature:
             self.assertEqual(2, lean.main(self.argv()))
         feature.assert_not_called()
-        self.assertEqual("questions", lean_spec.front(self.spec.read_text())["lean_status"])
+        self.assertEqual("questions", lean_spec.state(self.ws, str(self.spec))["lean_status"])
 
     def test_after_the_answers_the_spec_is_grilled_again(self):
         (self.ws.root / "contact").write_text("person@example.test\n")
