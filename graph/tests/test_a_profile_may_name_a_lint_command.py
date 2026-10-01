@@ -1,5 +1,5 @@
-"""A profile may name a `## lint_command`, run after a green suite and before the reviewer: a red lint is a red
-suite (issue 244; four of eleven builds reached CI red on lint alone). The suite, the lint, the reviewer and the
+"""A profile may name a `## lint_command`, run before the suite (issue 288: it takes seconds, the suite minutes) and
+the reviewer: a red lint is a red suite (issue 244; four of eleven builds reached CI red on lint alone). The suite, the lint, the reviewer and the
 builder are faked."""
 
 import pathlib
@@ -96,7 +96,7 @@ class Check(Rig):
         why, verdict, judge = self.check(lean_lint.Commands(SUITE, LINT))
         self.assertEqual(("", ACCEPT), (why, verdict))
         judge.assert_called_once()
-        self.assertEqual([SUITE, LINT], self.ran)
+        self.assertEqual([LINT, SUITE], self.ran)
         (event,) = self.lint_events()
         self.assertEqual(("rest-ring", 1, True), (event["task"], event["round"], event["passed"]))
 
@@ -104,6 +104,7 @@ class Check(Rig):
         why, verdict, judge = self.check(lean_lint.Commands(SUITE, LINT), lint=False)
         self.assertEqual((f"Fix the red lint. Run {LINT}, then fix the findings shown below:\nE501 line too long", None), (why, verdict))
         judge.assert_not_called()
+        self.assertEqual([LINT], self.ran)   # the suite, minutes long, never ran
         (event,) = self.lint_events()
         self.assertEqual((False, "E501 line too long"), (event["passed"], event["tail"]))
 
@@ -115,11 +116,11 @@ class Check(Rig):
         why, _, _ = self.check(lean_lint.Commands(SUITE, LINT), lint=False, output="short")
         self.assertTrue(why.endswith(":\nshort"))
 
-    def test_a_red_suite_never_runs_the_lint(self):
+    def test_a_red_suite_follows_a_green_lint(self):
         why, _, _ = self.check(lean_lint.Commands(SUITE, LINT), suite=False)
         self.assertTrue(why.startswith("Fix the red suite"))
-        self.assertEqual([SUITE], self.ran)
-        self.assertEqual([], self.lint_events())
+        self.assertEqual([LINT, SUITE], self.ran)
+        self.assertEqual([True], [row["passed"] for row in self.lint_events()])
 
 
 class Repairs(Rig):
@@ -146,7 +147,7 @@ class Repairs(Rig):
         self.assertEqual("", self.run_it(["a", "b", "c"]))
         self.assertEqual(1 + lean_run.REPAIRS, len(self.prompts))
         self.assertIn(f"Fix the red lint. Run {LINT}, then fix the findings shown below:\nE501 line too long", self.prompts[1])
-        self.assertEqual([SUITE, LINT] * 3, self.ran)
+        self.assertEqual([LINT] * 3, self.ran)
         self.assertEqual("lean_stopped", self.ws.events()[-1]["kind"])
 
     def test_a_repair_that_changes_nothing_stops_the_run(self):
@@ -159,7 +160,7 @@ class Prompt(unittest.TestCase):
     def test_the_builder_is_told_the_lint_command_and_without_one_the_prompt_is_unchanged(self):
         plain = lean_body.builder_prompt("spec", "gate.sh", "profile.md", "", False)
         told = lean_body.builder_prompt("spec", "gate.sh", "profile.md", "", False, "", LINT)
-        self.assertIn(f"runs `{LINT}` after the suite", told)
+        self.assertIn(f"runs `{LINT}` before the suite", told)
         self.assertNotIn("lint", plain)
         self.assertEqual(plain, told.replace(told[told.index(" The loop also"):told.index("\n\n## Spec")], ""))
 
