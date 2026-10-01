@@ -108,7 +108,15 @@ delete its `lean_` front matter so it starts afresh):
   too (`lean_worktree`) unless the run was fixing an open pull request. A red build
   leaves its pull request open. Read the workspace log before changing anything.
 
-Runs take hours, so run it in the background.
+Runs take hours, so start one detached from your shell tool, never as its background task: the host
+stops a background task at its time limit (10 minutes at most) and the loop dies with it, leaving no
+stopped event and no mail.
+
+```bash
+setsid nohup python3 $GL/graph/lean.py --workspace <ws> --repo <repo> --spec <spec> > <ws>/run.log 2>&1 < /dev/null &
+```
+
+Check on it with the dashboard (the `dashboard` skill) or by looking for its process.
 
 ## After the run
 
