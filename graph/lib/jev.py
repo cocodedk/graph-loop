@@ -14,6 +14,7 @@ from __future__ import annotations
 import itertools
 import json
 import os
+import pathlib
 import urllib.request
 
 import models
@@ -22,6 +23,7 @@ from provider_words import closed_object
 URL = "https://openrouter.ai/api/alpha/decisions"
 JOIN = "; "   # how `review_read` joins a reviewer's findings, so how they split again
 TIMEOUT = 20
+EVIDENCE = 20000   # characters of each file Jev reads as evidence
 WHO = {"person": "Only the person who owns the project can settle it: a product choice, a "
                  "contradiction in the spec, a requirement the builder cannot meet here, or a "
                  "design to match that is not named.",
@@ -30,6 +32,14 @@ WHO = {"person": "Only the person who owns the project can settle it: a product 
        "irrelevant": "It changes nothing about what is built: already answered by the spec, "
                      "about the reviewer's own sandbox, or a matter of taste nobody asked about.",
        "unknown": "The question text does not show which."}
+
+
+def read(path) -> str:
+    """A file Jev reads as evidence, cut at EVIDENCE characters, or "" when there is none."""
+    try:
+        return pathlib.Path(path).read_text("utf-8", "replace")[:EVIDENCE]
+    except OSError:
+        return ""
 
 
 def post(body: bytes) -> str:
@@ -103,12 +113,13 @@ def sure(answer: dict, choice: str) -> bool:
             and answer["confidence"] >= block["confidence"])
 
 
-def sort_questions(ws, task: str, questions: str) -> dict[str, list[str]]:
+def sort_questions(ws, task: str, questions: str, evidence: dict[str, str]) -> dict[str, list[str]]:
     """The grill's questions sorted: "person" (asked), "builder" (handed to the builder) and
-    "irrelevant" (dropped). A question Jev is not sure about is the person's, as it was before Jev."""
+    "irrelevant" (dropped), judged against `evidence`, what the reviewer read (the spec, the project's
+    notes, its rules, its profile). A question Jev is not sure about is the person's, as before Jev."""
     asked = {f"q{i}": text for i, text in enumerate(part.strip() for part in questions.split(JOIN)) if text}
     answers = choose(ws, task, "grill", {"context": "Questions a reviewer asked about a spec before a "
-                     "builder implements it.", "questions": asked},
+                     "builder implements it.", "questions": asked, **evidence},
                      {qid: f"Who must settle question {qid}, if anyone?" for qid in asked}, WHO)
     out: dict[str, list[str]] = {"person": [], "builder": [], "irrelevant": []}
     for qid, text in asked.items():

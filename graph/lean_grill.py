@@ -24,7 +24,8 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str 
     is clear. `final` is the round limit: the person's questions are handed on too, and said so."""
     specs = "\n\n".join(f"## {pathlib.Path(path).name}\n\n{pathlib.Path(path).read_text('utf-8')}"
                         for path in spec_paths)
-    prompt = grill_prompt(profile_path, lessons(pathlib.Path(spec_paths[0]).parent), specs, earlier)
+    notes = lessons(pathlib.Path(spec_paths[0]).parent)
+    prompt = grill_prompt(profile_path, notes, specs, earlier)
 
     def paid(kind, account, cost, tokens, _text):
         ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens,
@@ -34,7 +35,9 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str 
     questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
     asked, handed, dropped = questions, "", ""
     if questions and out.verdict == "REJECT":
-        sorted_ = jev.sort_questions(ws, "grill", questions)
+        sorted_ = jev.sort_questions(ws, "grill", questions, {
+            "spec": specs, "notes": notes, "rules": jev.read(pathlib.Path(repo) / "CLAUDE.md"),
+            "profile": jev.read(pathlib.Path(repo) / profile_path)})
         dropped = jev.JOIN.join(sorted_["irrelevant"])
         if sorted_["person"]:   # a stop asks the builder's too, so none is lost
             asked, handed = jev.JOIN.join(sorted_["person"] + sorted_["builder"]), ""

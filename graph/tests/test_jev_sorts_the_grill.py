@@ -26,7 +26,7 @@ from test_keep import repo
 from test_lean import PROFILE_TEXT
 from workspace import Workspace
 
-EXPECTED_TESTS = 9
+EXPECTED_TESTS = 10
 OPTIONS = sorted(jev.WHO)
 
 
@@ -119,6 +119,21 @@ class Sort(unittest.TestCase):
             with self.subTest(reply=reply):
                 self.assertEqual(("Which name?", ""), self.grill("Which name?", reply))
         self.assertTrue(all(e["why"] for e in self.ws.events() if e["kind"] == "lean_jev"))
+
+    def test_jev_reads_the_spec_the_notes_the_rules_and_the_profile(self):
+        root = repo()
+        (pathlib.Path(root) / "CLAUDE.md").write_text("Never add a dependency.\n")
+        (pathlib.Path(root) / "profile.md").write_text("## suite_command\n    make test\n")
+        (self.spec.parent / "lessons.md").write_text("- Say which tests may change.\n")
+        with mock.patch.object(review, "codex", return_value=Outcome("ok", verdict="REJECT", text="Which name?")), \
+                mock.patch.object(jev, "post", lambda body: self.bodies.append(body) or answer(
+                    body, {"q0": share("person")})):
+            lean_run.grill(self.ws, root, [str(self.spec)], "profile.md")
+        state = json.loads(self.bodies[0])["state"]
+        self.assertIn("Add a log screen.", state["spec"])
+        self.assertIn("Say which tests may change.", state["notes"])
+        self.assertEqual(("Never add a dependency.\n", "## suite_command\n    make test\n"),
+                         (state["rules"], state["profile"]))
 
     def test_without_a_key_jev_is_not_called(self):
         with mock.patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}):
