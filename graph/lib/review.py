@@ -27,8 +27,7 @@ def codex(binary: str, prompt: str, *, cwd: str = "", effort: str = "",
           timeout: int = 1800, attempt=None, belt: list | None = None, job: str = "review") -> Outcome:
     """A review, from the first reviewer that answers.
 
-    `effort` is the rung `model_router.choose` picked for the task (see
-    docs/ROUTER.md); `max` is on no ladder — it cost twelve minutes a review
+    `effort` is the LEAN block's; `max` is on no ladder — it cost twelve minutes a review
     (the owner, 2026-08-30).
 
     `belt` is the order to try, the router's own pick first so the call that

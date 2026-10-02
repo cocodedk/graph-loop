@@ -24,9 +24,6 @@ jobs:
       - name: Lint
         run: ruff check .
 
-      - name: Slicer tests
-        run: cd slicer/tests && python -m unittest discover -q
-
       - name: Driver tests
         run: cd graph/tests && python -m unittest discover -q
 

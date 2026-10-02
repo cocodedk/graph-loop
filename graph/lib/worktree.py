@@ -26,14 +26,7 @@ from worktree_lock import (  # noqa: F401 — the door stays here
     LiveLock,
     stack_lock,
 )
-from worktree_refs import (  # noqa: F401
-    HeadMoved,
-    advance,
-    discard,
-    provision,
-    reuse_or_salvage,
-    save_and_go,
-)
+from worktree_refs import HeadMoved, advance, provision
 from worktree_scope import (  # noqa: F401 — the door stays here
     added_beside,
     changed_outside,

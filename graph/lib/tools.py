@@ -35,7 +35,6 @@ import pathlib
 import re
 
 import where
-from backlog_status import is_live
 from code_grant import (  # noqa: F401 — the door
     BASE_SHELL,
     NEVER_WILDCARD,
@@ -99,6 +98,11 @@ def helper_commands(task: dict) -> list[str]:
         return []
     good = [entry for entry in entries if ENTRY.match(entry) and entry.split()[0] in LIVE_VERBS and complete(entry)]
     return [f"{home} {entry}" + (" *" if " " not in entry else "") for entry in good]
+
+
+def is_live(task: dict) -> bool:
+    """Whether this card's gate performs the work it measures, on the one shared stack."""
+    return bool(task.get("gate_has_side_effects"))
 
 
 def builder_tools(task: dict, root: str = "") -> str:
