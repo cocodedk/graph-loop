@@ -41,10 +41,10 @@ class Grill(unittest.TestCase):
         self.assertEqual("", self.grill(Outcome("ok", verdict="ACCEPT")))
         self.assertEqual([], self.mails)
 
-    def test_the_grill_is_told_the_suite_has_network_and_docker(self):
+    def test_the_grill_is_told_the_suite_has_network_but_no_docker(self):
         self.grill(Outcome("ok", verdict="ACCEPT"))
         self.assertNotIn("no network. Refuse", self.prompt)    # the sandbox keeps the network
-        self.assertIn("with its network and Docker", self.prompt)
+        self.assertIn("with its network, an empty home and no Docker", self.prompt)   # what the gate box gives
         self.assertIn("your own read-only sandbox may be unable to run it", self.prompt)
 
     def test_the_grill_is_told_the_builders_grant_follows_the_suite(self):

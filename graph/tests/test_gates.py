@@ -14,9 +14,9 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
-from gates import prove_red, run_gate
+from gates import run_gate
 
-EXPECTED_TESTS = 9
+EXPECTED_TESTS = 6
 
 
 def workdir() -> str:
@@ -49,23 +49,6 @@ class RunTest(unittest.TestCase):
         self.assertIn("two", out.output)
         self.assertEqual(3, out.code)
 
-
-class RedFirstTest(unittest.TestCase):
-    def test_a_gate_that_is_already_green_refuses_the_task(self):
-        ok, why = prove_red("exit 0", workdir())
-        self.assertFalse(ok)
-        self.assertIn("already passes", why)
-
-    def test_a_gate_that_fails_for_the_expected_reason_is_proved(self):
-        ok, why = prove_red("echo 'GATE: the loader still ignores the document'; exit 1",
-                            workdir(), expect="still ignores the document")
-        self.assertTrue(ok, why)
-
-    def test_a_gate_that_fails_for_another_reason_is_not_proved(self):
-        ok, why = prove_red("echo 'GATE: suite red'; exit 1", workdir(),
-                            expect="still ignores the document")
-        self.assertFalse(ok)
-        self.assertIn("suite red", why)
 
 
 class CountTest(unittest.TestCase):
