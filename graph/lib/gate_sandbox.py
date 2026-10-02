@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -81,7 +82,9 @@ def argv(command: str, cwd: str, home: str, paths=None) -> list[str]:
     line = [BWRAP, "--die-with-parent", "--unshare-pid",
             "--ro-bind", "/", "/",
             "--proc", "/proc", "--dev", "/dev"]
-    for masked in MASKED:
+    # Each real path once: /var/run is a link to /run on most hosts, and a second mount through the link
+    # makes bubblewrap refuse to start, so the box never held on such a host.
+    for masked in dict.fromkeys(os.path.realpath(path) for path in MASKED):
         # Empty, not absent: a path that is simply missing changes what a gate
         # can see, and a path that is read-only is still a credential to read.
         if not pathlib.Path(masked).exists():
@@ -108,6 +111,8 @@ def argv(command: str, cwd: str, home: str, paths=None) -> list[str]:
 
 
 _WORKS: bool | None = None
+# The box holds when `/` is read-only AND the real home shows nothing: plain bash passes the first alone.
+PROBE = f"test -w / && exit 1; [ -z \"$(ls -A {shlex.quote(os.path.expanduser('~'))} 2>/dev/null)\" ] || exit 1; exit 0"
 
 
 def works() -> bool:
@@ -124,8 +129,7 @@ def works() -> bool:
         if BWRAP:
             try:   # a probe that hangs or cannot start is a box that does not work, never a raise in run_gate
                 probe = subprocess.run(
-                    argv("test -w / && exit 1; exit 0", tempfile.gettempdir(),
-                         tempfile.gettempdir()),
+                    argv(PROBE, tempfile.gettempdir(), tempfile.gettempdir()),
                     capture_output=True, text=True, timeout=30, check=False)
             except (subprocess.TimeoutExpired, OSError):
                 return _WORKS

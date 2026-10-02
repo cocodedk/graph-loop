@@ -13,7 +13,7 @@ import gate_sandbox
 import tmp_root  # noqa: F401
 from gate_script import gate_script_path
 
-EXPECTED_TESTS = 2
+EXPECTED_TESTS = 4
 
 
 class Facts(unittest.TestCase):
@@ -24,6 +24,24 @@ class Facts(unittest.TestCase):
         with mock.patch.object(gate_sandbox, "_WORKS", None), mock.patch.object(gate_sandbox, "BWRAP", "bwrap"), \
                 mock.patch.object(gate_sandbox.subprocess, "run", side_effect=subprocess.TimeoutExpired("bwrap", 30)):
             self.assertFalse(gate_sandbox.works())
+
+
+class Masks(unittest.TestCase):
+    def test_a_path_reached_through_a_link_is_masked_once(self):
+        # /var/run -> /run made bubblewrap mount the docker socket twice and refuse to start: no box at all
+        import tempfile
+        root = pathlib.Path(tempfile.mkdtemp())
+        (root / "run").mkdir()
+        (root / "var-run").symlink_to(root / "run")
+        with mock.patch.object(gate_sandbox, "MASKED", (str(root / "run"), str(root / "var-run"))), \
+                mock.patch.object(gate_sandbox, "BWRAP", "bwrap"):
+            line = gate_sandbox.argv("true", str(root), str(root))
+        self.assertEqual(1, sum(1 for i, word in enumerate(line) if word == "--tmpfs" and line[i + 1] == str(root / "run")))
+        self.assertNotIn(str(root / "var-run"), line)
+
+    def test_the_probe_asks_that_the_real_home_shows_nothing(self):
+        self.assertIn(os.path.expanduser("~"), gate_sandbox.PROBE)
+        self.assertIn("test -w / && exit 1", gate_sandbox.PROBE)
 
 
 class CountTest(unittest.TestCase):

@@ -60,9 +60,12 @@ def build(ws, task: dict, prompt: str, tree, resume: str = "",
 
 
 def masked(ws, command: str, cwd: str) -> tuple[bool, str]:
-    """A profile command (suite or build), in the gate box: its verdict and its tail."""
+    """A profile command (suite or build), in the gate box: its verdict and its tail. How it ended (ran,
+    timeout, crash) and whether the box held are logged, and a gate that never finished says so first."""
     result = gates.run_gate(command, cwd, **gate_paths.options(ws.root))
-    return result.passed, result.why
+    ws.event("lean_gate", command=command[:200], ended=result.kind, code=result.code, confined=result.confined)
+    said = "" if result.kind == "ran" else f"The command did not run to the end ({result.kind}).\n"
+    return result.passed, said + result.why
 
 
 def mail(ws, subject: str, body: str) -> None:
