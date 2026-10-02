@@ -27,7 +27,7 @@ class Grill(unittest.TestCase):
     def grill(self, answer):
         with mock.patch.object(review, "codex", return_value=answer) as call, \
                 mock.patch.object(alert_email, "send", lambda *a, **k: self.mails.append(k)):
-            questions = lean_run.grill(self.ws, repo(), [str(self.spec)], "profile.md")
+            questions, _ = lean_run.grill(self.ws, repo(), [str(self.spec)], "profile.md")
         self.assertIn("Make it blue, and make it red.", call.call_args.args[1])
         self.prompt = call.call_args.args[1]
         return questions
@@ -57,6 +57,11 @@ class Grill(unittest.TestCase):
         for asked in ("user interface", "be critical of every word", "the whole journey",
                       "every page and state", "empty, loading and error", "design reference"):
             self.assertIn(asked, self.prompt)
+
+    def test_the_grill_is_told_to_ask_the_crucial_questions_first(self):
+        self.grill(Outcome("ok", verdict="ACCEPT"))
+        self.assertIn("Ask only the crucial questions, the ones whose answer changes what is built, "
+                      "the most important first", self.prompt)
 
     def test_the_grill_reads_the_projects_lessons_beside_the_spec(self):
         (self.spec.parent / "lessons.md").write_text("- Say which earlier tests the builder may change.\n")

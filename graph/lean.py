@@ -175,8 +175,8 @@ def _go(ws, repo: str, path: str, profile: dict, spec: str) -> int:
     open_questions = ""
     if not revise and info.get("lean_status") != "stopped":
         count = lean_spec.rounds(info)
-        asked = lean_run.grill(ws, repo, [spec], path, earlier=str(info.get("lean_asked") or ""),
-                               final=count + 1 >= lean_spec.GRILL_ROUNDS)
+        asked, handed = lean_run.grill(ws, repo, [spec], path, earlier=str(info.get("lean_asked") or ""),
+                                       final=count + 1 >= lean_spec.GRILL_ROUNDS)
         if asked:                                  # kept, so nothing takes it for a spec that only waits
             real = lean_spec.refused(ws.events())  # a failure to answer is no round, and lets nothing through
             count += real
@@ -184,7 +184,7 @@ def _go(ws, repo: str, path: str, profile: dict, spec: str) -> int:
                              else asked[:lean_spec.ASKED_LIMIT] + lean_spec.CUT_NOTE)
             if not (real and count >= lean_spec.GRILL_ROUNDS):
                 return end(2, "questions, nothing was built")
-            open_questions = asked                 # the round limit: this run goes on with them
+        open_questions = asked or handed   # the builder settles these
     url = lean_run.run_feature(ws, repo, spec, profile, path, revise, str(info.get("lean_pr", "")),
                                open_questions=open_questions)
     if not url:

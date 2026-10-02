@@ -44,7 +44,7 @@ class Recorded(unittest.TestCase):
 
     def start(self):
         argv = ["--workspace", str(self.ws.root), "--repo", self.repo, "--spec", str(self.spec)]
-        with mock.patch.object(lean_run, "grill", return_value="Which colour?"):
+        with mock.patch.object(lean_run, "grill", return_value=("Which colour?", "")):
             return lean.main(argv)
 
     def test_a_start_writes_the_repos_absolute_folder_and_makes_the_missing_state_folder(self):

@@ -42,7 +42,7 @@ class Earlier(unittest.TestCase):
         return ["--workspace", str(self.ws.root), "--repo", self.repo, "--spec", str(self.spec)]
 
     def test_a_refusal_keeps_its_questions_in_the_spec(self):
-        with mock.patch.object(lean_run, "grill", return_value="Which colour?"):
+        with mock.patch.object(lean_run, "grill", return_value=("Which colour?", "")):
             self.assertEqual(2, lean.main(self.argv()))
         self.assertEqual("Which colour?", lean_spec.state(self.ws, str(self.spec))["lean_asked"])
 
@@ -51,14 +51,14 @@ class Earlier(unittest.TestCase):
             with self.subTest(size=size):
                 self.spec.write_text("Restyle the Log screen.\n")
                 questions = "".join(f"Question {n} is long?\n" for n in range(size // 20))[:size]
-                with mock.patch.object(lean_run, "grill", return_value=questions):
+                with mock.patch.object(lean_run, "grill", return_value=(questions, "")):
                     self.assertEqual(2, lean.main(self.argv()))
                 asked = lean_spec.state(self.ws, str(self.spec))["lean_asked"].rstrip("\n")
                 self.assertEqual(questions.rstrip("\n") if size == kept else questions[:kept] + lean_spec.CUT_NOTE, asked)
 
     def test_the_next_run_hands_them_to_the_grill(self):
         self.spec.write_text("---\nlean_status: questions\nlean_asked: Which colour?\n---\nRestyle.\n")
-        with mock.patch.object(lean_run, "grill", return_value="") as grill, \
+        with mock.patch.object(lean_run, "grill", return_value=("", "")) as grill, \
                 mock.patch.object(lean_run, "run_feature", return_value=""):
             lean.main(self.argv())
         self.assertEqual("Which colour?", grill.call_args.kwargs["earlier"])
@@ -76,7 +76,7 @@ class Earlier(unittest.TestCase):
 
 
     def test_only_a_first_rounds_prompt_asks_for_every_question_at_once(self):
-        asked = "Ask every question you have now, in this one answer"
+        asked = "Ask every crucial question you have now, in this one answer"
         self.assertIn(asked, lean_body.grill_prompt("profile.md", "", "spec"))
         self.assertNotIn(asked, lean_body.grill_prompt("profile.md", "", "spec", earlier="Which colour?"))
 

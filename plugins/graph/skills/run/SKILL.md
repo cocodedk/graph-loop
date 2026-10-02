@@ -106,6 +106,9 @@ delete its `<ws>/spec-<name>.json` so it starts afresh):
 - **Exit 2:** its questions have been emailed and nothing was built. Answer them in
   the specs, then run again. A feature with a user interface is questioned until its
   spec defines the whole journey, every page and state, and names a design to match.
+  With `OPENROUTER_API_KEY` exported where the loop starts, Jev sorts the questions first:
+  the builder's go on with the build (the mail says so) and the irrelevant are dropped; only
+  the person's stop the run. Without the key every question is the person's.
 - **Exit 3:** a branch on origin is unmerged, so nothing was built. The mail lists
   the branches. The one exception is the spec's own open pull request with unresolved
   review threads (CodeRabbit's or a person's). Then the run fixes those on the PR's

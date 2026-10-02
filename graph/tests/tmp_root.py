@@ -23,6 +23,7 @@ os.environ["GRAPH_BUILDERS"] = "claude-sonnet-5,claude-opus-5"
 
 # A developer's shell exporting GRAPH_ROUTER=jev must not leak into a test run.
 os.environ["GRAPH_ROUTER"] = "off"
+os.environ.pop("OPENROUTER_API_KEY", None)   # lib/jev.py makes no call without it: no test pays Jev
 
 ROOT = tempfile.mkdtemp(prefix="graph-tests-")
 tempfile.tempdir = ROOT

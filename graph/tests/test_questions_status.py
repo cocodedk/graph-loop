@@ -41,7 +41,7 @@ class Marked(unittest.TestCase):
 
     def test_a_grill_that_sends_questions_back_marks_the_spec(self):
         (self.ws.root / "contact").write_text("person@example.test\n")
-        with mock.patch.object(lean_run, "grill", return_value="Which colour?"), \
+        with mock.patch.object(lean_run, "grill", return_value=("Which colour?", "")), \
                 mock.patch.object(lean_run, "run_feature") as feature:
             self.assertEqual(2, lean.main(self.argv()))
         feature.assert_not_called()
@@ -50,7 +50,7 @@ class Marked(unittest.TestCase):
     def test_after_the_answers_the_spec_is_grilled_again(self):
         (self.ws.root / "contact").write_text("person@example.test\n")
         self.spec.write_text("---\nlean_status: questions\n---\nRestyle the Log screen.\n")
-        with mock.patch.object(lean_run, "grill", return_value="") as grill, \
+        with mock.patch.object(lean_run, "grill", return_value=("", "")) as grill, \
                 mock.patch.object(lean_run, "run_feature", return_value="") as feature:
             lean.main(self.argv())
         grill.assert_called_once()
