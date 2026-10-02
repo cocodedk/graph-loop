@@ -184,7 +184,7 @@ def _go(ws, repo: str, path: str, profile: dict, spec: str) -> int:
                              else asked[:lean_spec.ASKED_LIMIT] + lean_spec.CUT_NOTE)
             if not (real and count >= lean_spec.GRILL_ROUNDS):
                 return end(2, "questions, nothing was built")
-        open_questions = "; ".join(part for part in (asked, handed) if part)   # the builder settles these
+        open_questions = asked or handed   # the builder settles these
     url = lean_run.run_feature(ws, repo, spec, profile, path, revise, str(info.get("lean_pr", "")),
                                open_questions=open_questions)
     if not url:

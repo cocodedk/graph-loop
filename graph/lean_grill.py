@@ -17,8 +17,6 @@ from lean_body import grill_prompt
 from lean_judge import CODEX_BIN
 from lean_spec import lessons, slug
 
-JOIN = "; "
-
 
 def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str = "",
           final: bool = False) -> tuple[str, str]:
@@ -37,9 +35,11 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str 
     asked, handed, dropped = questions, "", ""
     if questions and out.verdict == "REJECT":
         sorted_ = jev.sort_questions(ws, "grill", questions)
-        mine = sorted_["person"] and sorted_["person"] + sorted_["builder"]   # a stop asks all: none is lost
-        asked, handed, dropped = (JOIN.join(part) for part in (mine, [] if mine else sorted_["builder"],
-                                                              sorted_["irrelevant"]))
+        dropped = jev.JOIN.join(sorted_["irrelevant"])
+        if sorted_["person"]:   # a stop asks the builder's too, so none is lost
+            asked, handed = jev.JOIN.join(sorted_["person"] + sorted_["builder"]), ""
+        else:
+            asked, handed = "", jev.JOIN.join(sorted_["builder"])
     ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=asked[:2000], handed=handed[:2000],
              dropped=dropped[:2000], specs=[slug(p) for p in spec_paths])
     note = ((f"\n\nHanded to the builder to decide: {handed}" if handed else "")

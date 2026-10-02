@@ -32,11 +32,12 @@ OPTIONS = sorted(jev.WHO)
 
 def answer(body: bytes, picks: dict[str, dict[str, float]], confidence: float = 0.9) -> str:
     """Jev's reply to `body`: every copy of question qN answers with picks[qN] as its probabilities."""
-    asked = json.loads(body)["questions"]
-    return json.dumps({"answers": {name: {"type": "choice", "choice": max(picks[name.rpartition("__")[0]],
-                                                                          key=picks[name.rpartition("__")[0]].get),
-                                          "probabilities": picks[name.rpartition("__")[0]], "confidence": confidence}
-                                   for name in asked}})
+    answers = {}
+    for name in json.loads(body)["questions"]:
+        pick = picks[name.rpartition("__")[0]]
+        answers[name] = {"type": "choice", "choice": max(pick, key=pick.get), "probabilities": pick,
+                         "confidence": confidence}
+    return json.dumps({"answers": answers})
 
 
 def share(top: str, value: float = 0.9) -> dict[str, float]:
