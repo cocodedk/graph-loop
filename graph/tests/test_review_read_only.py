@@ -29,7 +29,7 @@ class TheFallbackReviewerCannotWrite(unittest.TestCase):
 
         def fake(binary, prompt, **kwargs):
             seen.update(kwargs)
-            return providers.Outcome("ok", text="REVIEW: ACCEPT")
+            return providers.Outcome("ok", text='{"review":"ACCEPT","accept":true,"findings":[]}')
 
         with unittest.mock.patch.object(providers, "claude", fake):
             review._claude_review("read this", review.resources.Resource(
@@ -55,7 +55,7 @@ class TheFallbackReviewerHasOnlyReadingTools(unittest.TestCase):
     slicer's planner already calls claude with."""
 
     def test_the_call_carries_the_read_only_flags(self):
-        answer = result(result="REVIEW: ACCEPT")
+        answer = result(result='{"review":"ACCEPT","accept":true,"findings":[]}')
         with tempfile.TemporaryDirectory() as folder:
             written = pathlib.Path(folder) / "argv"
             binary = fake(f"cat > /dev/null; echo \"$@\" > {written}; echo '{answer}'")

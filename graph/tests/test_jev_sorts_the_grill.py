@@ -26,7 +26,7 @@ from test_keep import repo
 from test_lean import PROFILE_TEXT
 from workspace import Workspace
 
-EXPECTED_TESTS = 10
+EXPECTED_TESTS = 11
 OPTIONS = sorted(jev.WHO)
 
 
@@ -61,25 +61,27 @@ class Sort(unittest.TestCase):
         def post(body):
             self.bodies.append(body)
             return reply(body)
-        with mock.patch.object(review, "codex", return_value=Outcome("ok", verdict="REJECT", text=questions)), \
+        found = tuple(questions) if isinstance(questions, list) else (questions,)
+        with mock.patch.object(review, "codex", return_value=Outcome("ok", verdict="REJECT", text="; ".join(found),
+                                                                     findings=found)), \
                 mock.patch.object(jev, "post", post):
             return lean_run.grill(self.ws, repo(), [str(self.spec)], "profile.md")[:2]
 
     def test_every_question_is_asked_in_every_order_of_its_options(self):
-        self.grill("Which file? ; Which name?", lambda body: answer(body, {"q0": share("builder"), "q1": share("builder")}))
+        self.grill(["Which file?", "Which name?"], lambda body: answer(body, {"q0": share("builder"), "q1": share("builder")}))
         asked = json.loads(self.bodies[0])["questions"]
         self.assertEqual({f"q{n}__{i}" for n in (0, 1) for i in range(24)}, set(asked))
         self.assertEqual({tuple(order) for order in itertools.permutations(OPTIONS)},
                          {tuple(asked[f"q0__{i}"]["criteria"]) for i in range(24)})
 
     def test_builder_questions_are_handed_on_and_the_mail_says_building_goes_on(self):
-        asked, handed = self.grill("Which file?; Which name?",
+        asked, handed = self.grill(["Which file?", "Which name?"],
                                    lambda body: answer(body, {"q0": share("builder"), "q1": share("builder")}))
         self.assertEqual(("", "Which file?; Which name?"), (asked, handed))
         self.assertEqual("graph-loop is building with open questions", self.mails[0]["subject"].partition("] ")[2])
 
     def test_a_persons_question_stops_the_run_and_the_mail_lists_the_rest(self):
-        asked, handed = self.grill("Which design?; Which name?; Why the sandbox?", lambda body: answer(
+        asked, handed = self.grill(["Which design?", "Which name?", "Why the sandbox?"], lambda body: answer(
             body, {"q0": share("person"), "q1": share("builder"), "q2": share("irrelevant")}))
         self.assertEqual(("Which design?; Which name?", ""), (asked, handed))   # kept, so none is lost
         mail = self.mails[0]
@@ -136,6 +138,11 @@ class Sort(unittest.TestCase):
         self.assertIn("Say which tests may change.", state["notes"])
         self.assertEqual(("Never add a dependency.\n", "## suite_command\n    make test\n"),
                          (state["rules"], state["profile"]))
+
+    def test_a_finding_that_holds_a_semicolon_is_one_question(self):
+        self.grill(["Blue; or red?", "Which name?"], lambda body: answer(body, {"q0": share("person"),
+                                                                              "q1": share("person")}))
+        self.assertEqual({"q0": "Blue; or red?", "q1": "Which name?"}, json.loads(self.bodies[0])["state"]["questions"])
 
     def test_without_a_key_jev_is_not_called(self):
         with mock.patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}):

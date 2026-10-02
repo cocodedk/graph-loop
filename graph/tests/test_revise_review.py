@@ -30,7 +30,7 @@ ACCEPT = Outcome("ok", verdict="ACCEPT", text="")
 
 
 def refused(text: str) -> Outcome:
-    return Outcome("ok", verdict="REJECT", text=text)
+    return Outcome("ok", verdict="REJECT", text=text, findings=(text,))
 
 
 class Tree:
@@ -101,7 +101,7 @@ class Revised(Base):
         self.assertEqual(1, len(self.reviewed()))
 
     def test_an_accepted_round_pushes_and_its_event_carries_the_outcome(self):
-        self.revise(["block"], (Outcome("ok", verdict="ACCEPT", text="a small note"),))
+        self.revise(["block"], (Outcome("ok", verdict="ACCEPT", text="a small note", findings=("a small note",)),))
         event = self.reviewed()[-1]
         self.assertEqual(("rest-ring", 1, "ok", "ACCEPT", "a small note"),
                          (event["task"], event["round"], event["outcome"], event["verdict"], event["findings"]))

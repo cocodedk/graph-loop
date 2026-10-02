@@ -22,7 +22,7 @@ import models
 from provider_words import closed_object
 
 URL = "https://openrouter.ai/api/alpha/decisions"
-JOIN = "; "   # how `review_read` joins a reviewer's findings, so how they split again
+JOIN = "; "   # how a list of questions reads as one line, for people and prompts
 TIMEOUT = 20
 EVIDENCE = 20000   # characters of each file Jev reads as evidence
 WHO = {"person": "Only the person who owns the project can settle it, and the spec, the profile and the "
@@ -117,11 +117,11 @@ def sure(answer: dict, choice: str) -> bool:
             and answer["confidence"] >= block["confidence"])
 
 
-def sort_questions(ws, task: str, questions: str, evidence: dict[str, str]) -> dict[str, list[str]]:
+def sort_questions(ws, task: str, questions: list[str], evidence: dict[str, str]) -> dict[str, list[str]]:
     """The grill's questions sorted: "person" (asked), "builder" (handed to the builder) and
     "irrelevant" (dropped), judged against `evidence`, what the reviewer read (the spec, the project's
     notes, its rules, its profile). A question Jev is not sure about is the person's, as before Jev."""
-    asked = {f"q{i}": text for i, text in enumerate(part.strip() for part in questions.split(JOIN)) if text}
+    asked = {f"q{i}": text for i, text in enumerate(part.strip() for part in questions) if text}
     answers = choose(ws, task, "grill", {"context": "Questions a reviewer asked about a spec before a "
                      "builder implements it.", "questions": asked, **evidence},
                      {qid: f"Who must settle question {qid}, if anyone?" for qid in asked}, WHO)

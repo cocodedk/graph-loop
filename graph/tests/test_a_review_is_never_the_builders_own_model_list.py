@@ -21,7 +21,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import models
 import resources
 
-EXPECTED_TESTS = 7
+EXPECTED_TESTS = 5
 
 
 def claude_rungs() -> list[str]:
@@ -29,12 +29,9 @@ def claude_rungs() -> list[str]:
 
 
 class ReviewBeltTest(unittest.TestCase):
-    def test_the_claude_reviewers_are_their_own_list(self):
-        self.assertNotEqual(models.builders(), models.claude_reviewers())
-
     def test_no_claude_review_rung_leads_with_the_first_builder(self):
         """Leading with it is the failure: the first rung is what answers."""
-        self.assertNotEqual(models.builders()[0], claude_rungs()[0])
+        self.assertNotEqual(models.LEAN["builder"]["model"], claude_rungs()[0])
 
     def test_no_review_rung_is_the_model_that_builds_or_repairs(self):
         authors = {models.LEAN["builder"]["model"], models.LEAN["repair"]["model"]}
@@ -55,16 +52,6 @@ class ReviewBeltTest(unittest.TestCase):
                                       {"GRAPH_CLAUDE_REVIEWERS": "one, two"}):
             self.assertEqual(("one", "two"), models.claude_reviewers())
 
-    def test_planning_uses_strong_models_even_with_a_builder_override(self):
-        with unittest.mock.patch.dict(os.environ, {"GRAPH_BUILDERS": "fast-only"}), \
-                unittest.mock.patch("accounts.available", return_value=["first", "second"]):
-            self.assertEqual(
-                [("claude", account, model)
-                 for model in ("claude-opus-5-5", "claude-sonnet-5-5")
-                 for account in ("first", "second")],
-                [(r.agent, r.account, r.model) for r in resources.belt("plan")])
-            self.assertEqual(["fast-only", "fast-only"],
-                             [r.model for r in resources.belt("build")])
 
 
 class CountTest(unittest.TestCase):

@@ -6,8 +6,7 @@ fault (astra's provider trap, section C). Two callers share this one call now:
 the review decodes ACCEPT/REJECT from what it returns, the loop reads its
 own closed JSON shape, and neither grades the other's answer.
 
-`providers` imports the name back, so `from providers import codex_text` is the
-door, as it is for `codex`.
+It imports from `providers` and nothing imports back, so each module loads on its own.
 """
 
 from __future__ import annotations

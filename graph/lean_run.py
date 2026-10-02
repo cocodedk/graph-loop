@@ -23,7 +23,7 @@ import lean_git
 import lean_lint
 import lean_spec
 import providers
-import review
+import review  # noqa: F401 — tests reach the reviewer through lean_run.review
 import tools
 from gate_reports import failures
 from lean_body import builder_prompt, pr_body
@@ -34,14 +34,11 @@ from lean_grill import (
 from lean_judge import judge
 from lean_reason import cut
 from lean_spec import lessons, record, slug
-from providers import REVIEW_EFFORT  # noqa: F401 — tests read it here
 from worktree import Worktree  # noqa: F401 — tests patch lean_run.Worktree
 
 CLAUDE_BIN = os.environ.get("GRAPH_CLAUDE", "claude")
 REPAIRS = 2   # repair passes after the first build; a repair often surfaces one more finding
 MOST_REPAIRS = 4   # the ceiling, when each repair leaves fewer failing lines than the round before
-BUILD_EFFORT = lean_calls.block("builder")["effort"]   # the block's, at import; each call reads it again
-REPAIR_EFFORT = lean_calls.block("repair")["effort"]
 
 
 def build(ws, task: dict, prompt: str, tree, resume: str = "",
@@ -150,7 +147,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             limit += 1
         round_ += 1
     # Green, and accepted or refused for named findings (not a failed parse) after the last repair: published.
-    found = "" if verdict is None or review._read_review(verdict.text)[0] else verdict.text.strip()
+    found = "; ".join(verdict.findings) if verdict is not None else ""
     if not why or (verdict is not None and verdict.verdict == "REJECT" and found):
         try:
             title = f"feat({feature}): {feature}"

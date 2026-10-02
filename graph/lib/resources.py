@@ -11,15 +11,12 @@ reason there is more than one of each.
 
 Every job's belt is the product of what the job can use:
 
-    build    each builder model, on its agent and eligible accounts
-    plan     each planner model, strong first, on every Claude account
     review   every reviewer model, then claude on every account — a review is
-             read-only, so any agent that can read the repository can give one, so no account
-    decide   the review belt: a decision reads the repository and answers with
-             text, so whatever can review can decide
+             read-only, so any agent that can read the repository can give one
+    grill    the same, with the grill's own codex model
 
 Adding a resource is a line of data in `accounts.py` or `models.py`, or an
-environment variable: GRAPH_ACCOUNTS, GRAPH_BUILDERS, GRAPH_REVIEWERS.
+environment variable: GRAPH_ACCOUNTS, GRAPH_REVIEWERS, GRAPH_CLAUDE_REVIEWERS.
 """
 
 from __future__ import annotations
@@ -55,7 +52,7 @@ def belt(job: str) -> list[Resource]:
         # and one must be: when this account's codex offered a single model, a
         # capacity refusal left the loop with no reviewer and changes went in
         # unreviewed. The claude rungs have their OWN list: they read
-        # `models.builders()` until 2026-09-18, so on a machine without codex
+        # the builder list until 2026-09-18, so on a machine without codex
         # every change was reviewed by the model that wrote it.
         # No rung is a model that builds or repairs: a fallback must never reach the author's own model.
         authors = {models.LEAN[call]["model"] for call in ("builder", "repair")}
@@ -63,20 +60,7 @@ def belt(job: str) -> list[Resource]:
                 + [Resource("claude", account, model)
                    for account in accounts.available()
                    for model in models.claude_reviewers() if model not in authors])
-    if job == "decide":
-        # The same resources, for the same reason: a decision reads and writes
-        # nothing. It is its own job because what a planner is worth per call
-        # is not what a reviewer is worth, and because a decision must not go
-        # unmade while one model is at capacity.
-        return belt("review")
-    if job in ("build", "plan"):
-        candidates = models._PLANNERS if job == "plan" else models.builders()
-        return [Resource(models.builder_agent(model), account, model)
-                for model in candidates
-                if job == "build" or models.builder_agent(model) == "claude"
-                for account in ([None] if models.builder_agent(model) == "codex"
-                                else accounts.available())]
-    raise KeyError(f"no belt for {job!r}; the loop knows build, plan, review and decide")
+    raise KeyError(f"no belt for {job!r}; the loop knows review and grill")
 
 
 class Exhausted:

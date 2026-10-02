@@ -19,7 +19,8 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
-from providers import codex, codex_text
+from provider_codex import codex_text
+from review import codex
 from test_providers import fake
 
 EXPECTED_TESTS = 5

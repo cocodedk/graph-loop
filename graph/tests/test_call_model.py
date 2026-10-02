@@ -13,6 +13,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import loops_list
 import loops_step
+import models
 import project_view
 import providers
 import tmp_root  # noqa: F401
@@ -39,9 +40,9 @@ class Recorded(Rig):
         refused = providers.Outcome("ok", verdict="REJECT", text="a defect")
         self.run_it(self.builder(("ring.py", "grey\n"), ("ring.py", "amber\n")), suites=(True, True),
                     reviews=(refused, ACCEPT))
-        models = [(row["purpose"], row["model"]) for row in self.ws.events() if row["kind"] == "lean_call_started"]
-        self.assertEqual([("build", providers.MODEL), ("review", providers.REVIEW_MODEL), ("build", providers.MODEL),
-                          ("review", providers.REVIEW_MODEL)], models)
+        called = [(row["purpose"], row["model"]) for row in self.ws.events() if row["kind"] == "lean_call_started"]
+        build, review = models.LEAN["builder"]["model"], models.LEAN["review"]["model"]
+        self.assertEqual([("build", build), ("review", review), ("build", build), ("review", review)], called)
 
 
 class Read(unittest.TestCase):

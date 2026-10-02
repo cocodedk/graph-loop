@@ -14,7 +14,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
-from providers import codex
+from review import codex
 from test_providers import fake
 
 EXPECTED_TESTS = 6
@@ -25,10 +25,9 @@ ACCEPT = '{"review": "ACCEPT", "accept": true, "findings": []}'
 class ContradictionTest(unittest.TestCase):
     """Two verdicts that disagree are no verdict, whatever shape they arrive in."""
 
-    def test_a_json_accept_and_a_legacy_reject_disagree(self):
-        # The JSON line was read first and returned, so the `REVIEW:` line
-        # below it was never seen and the answer passed as an accept.
-        binary = fake(f"echo '{ACCEPT}'; echo 'REVIEW: REJECT'")
+    def test_an_accept_and_a_reject_disagree(self):
+        # The first answer was read and returned, so the one below it was never seen.
+        binary = fake(f"""echo '{ACCEPT}'; echo '{{"review":"REJECT","accept":false,"findings":["no"]}}'""")
         out = codex(binary, "review this")
         self.assertEqual("malformed", out.kind)
         self.assertIsNone(out.verdict)

@@ -12,18 +12,11 @@ shows the raw push this deny stops). The deny is a pattern on the builder's
 tool permissions, not a sandbox: a shell that addresses the repository by
 path is outside what a pattern can see, and a read-only mount of the
 repository for the builder is its own cartridge. A live task
-(`gate_has_side_effects`) gets three more fences, innermost first:
-1. the live guard (`live_guard.py`, a PreToolUse hook the provider installs
-   with `--settings`): a whitelist of this task's exact commands — the helper
-   by the main checkout's absolute path (never a worktree copy) followed by
-   each entry of the contract's `helper_verbs` (a verb and the arguments the
-   contract fixes, e.g. "free prd-app-04"; `newpkg`/`next` write the checkout
-   and can never be named), plus cat/ls/head/tail — with no shell control
-   character, so nothing chains, redirects or wraps;
-2. the allow rules (`--allowedTools`): the same commands, so they run without
+(`gate_has_side_effects`) gets two more fences:
+1. the allow rules (`--allowedTools`): only this task's helper commands, so they run without
    a prompt, plus Read/Grep/Glob and Edit on the task's own files (an Edit
    rule governs Write too);
-3. deny rules for the raw stack, a last fence against an inherited allow.
+2. deny rules for the raw stack, a last fence against an inherited allow.
 Arguments the contract cannot know in advance (a run id born in the task)
 are left open in the entry and bound by the gate's proof from durable state.
 """
@@ -31,10 +24,8 @@ are left open in the entry and bound by the gate's proof from durable state.
 from __future__ import annotations
 
 import os
-import pathlib
 import re
 
-import where
 from code_grant import (  # noqa: F401 — the door
     BASE_SHELL,
     NEVER_WILDCARD,
@@ -115,26 +106,7 @@ def builder_tools(task: dict, root: str = "") -> str:
     return ",".join(part for part in (READ, own, verbs, LIVE_SHELL) if part)
 
 
-def builder_guard(task: dict) -> str:
-    """The live guard's entries, one per line; empty for a code task."""
-    if not is_live(task):
-        return ""
-    return "\n".join(helper_commands(task) + [f"{plain} *" for plain in LIVE_PLAIN])
 
-
-def guard_files(task: dict, cwd: str) -> str:
-    """The files a live task's writers may touch, absolute in its worktree,
-    one per line; empty for a code task."""
-    if not is_live(task):
-        return ""
-    return "\n".join(str(pathlib.Path(cwd) / path) for path in (task.get("files") or []))
-
-
-def guard_settings() -> dict:
-    """The settings the provider installs for a live task: the hook, by the
-    main checkout's path."""
-    hook = f"python3 {where.loop()}/graph/lib/live_guard.py"
-    return {"hooks": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": hook}]}]}}
 
 
 def builder_denies(task: dict) -> str:

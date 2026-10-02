@@ -8,60 +8,23 @@ from __future__ import annotations
 
 import json
 
-import distress
-import review_scope
+from provider_words import closed_object
 from review_scope import (
     VERDICT,  # noqa: F401 — the shape's door stays beside its parser
 )
 
 
-def _read_review(text: str) -> tuple[str | None, str]:
-    """A review's verdict and its findings, from every answer in the reply.
+def _read_review(text: str) -> tuple[str | None, list[str]]:
+    """A review's verdict and its findings, as a list, from every answer in the reply.
 
-    Scoped diff answers are read whole first; the remaining parser below
-    handles the legacy contract-review format.
-
-    JSON is what the prompt asks for and what the log stores; the old
-    `REVIEW: ACCEPT` line is still read so a reviewer that answers the old way
-    is understood rather than discarded.
-
-    The reply is untrusted input, read as the closed shape the prompt asked
-    for (`prompts.py`): exactly `review`, `accept` and `findings`, nothing
-    else — `review` the literal word the prompt declared, not any casing of
-    it. `review` and `accept` naming different verdicts, `findings` holding
-    anything but a short list of strings, at most ten (the count
-    `prompts.py` promises the model), or a key added or missing, is not a
-    verdict to trust — it is malformed, the same as no verdict at all.
-
-    The old line is read the same way: one distinct verdict in the whole
-    answer, or none. It used to be read forwards, so `REVIEW: ACCEPT` followed
-    by `REVIEW: REJECT` was recorded as an accept — the reviewer contradicting
-    itself is not a verdict either.
-
-    Both formats are read together, once, because they used to be read in
-    turn: a JSON ACCEPT with `REVIEW: REJECT` under it returned the accept and
-    the second answer was never seen. Every answer in the reply says the same
-    one word or there is no verdict, and a JSON answer that is not the closed
-    shape is a broken answer, never a line to step over on the way to an
-    older one.
-
-    The scoped shape is read by `review_scope.read`, which takes the whole reply
-    and knows what prose around one answer means; the loop below is only ever
-    the legacy shape. Both refuse a reply holding two answers, agreeing or not,
-    because a reviewer that wrote two has not decided which contract it
-    answered.
+    The reply is untrusted input, read as the closed shape the prompt asked for (`review_scope.VERDICT`):
+    exactly `review`, `accept` and `findings`, nothing else. `review` and `accept` naming different
+    verdicts, `findings` holding anything but at most ten strings, or a key added, missing or given twice,
+    is malformed, the same as no verdict at all. Every answer in the reply must say the same one word, or
+    there is no verdict: a reviewer contradicting itself has not decided.
     """
-    text, said = distress.answer(text)
-    if said.state in ("BLOCKED", "PARTIAL"):
-        return "BLOCKED", said.raw
-    try:
-        whole = review_scope.read(text)
-    except ValueError:
-        pass
-    else:
-        return whole["review"], text        # the raw text: `validate` re-reads it
     said: set[str | None] = set()
-    findings = ""
+    findings: list[str] = []
     for line in [one.strip() for one in text.splitlines() if one.strip()]:
         if line.startswith("{"):
             answer = _json_verdict(line)
@@ -69,15 +32,12 @@ def _read_review(text: str) -> tuple[str | None, str]:
                 continue                  # an object, but not an answer at all
             said.add(answer[0])
             findings = answer[1] or findings
-        elif line.startswith("REVIEW:"):
-            said |= {one for one in line.split(":", 1)[1].upper().split()[:1]
-                     if one in ("ACCEPT", "REJECT")}
     if len(said) != 1 or None in said:
-        return None, text
-    return said.pop(), findings or text
+        return None, []
+    return said.pop(), findings
 
 
-def _json_verdict(line: str) -> tuple[str | None, str] | None:
+def _json_verdict(line: str) -> tuple[str | None, list[str]] | None:
     """One JSON answer's verdict and its findings.
 
     `None` for the whole answer when the line is no answer at all — an object
@@ -91,9 +51,9 @@ def _json_verdict(line: str) -> tuple[str | None, str] | None:
     key `review`: a filter on the raw text let an escaped key through unread.
     """
     try:
-        body = json.loads(line, object_pairs_hook=distress.closed_object)
+        body = json.loads(line, object_pairs_hook=closed_object)
     except ValueError:
-        return None, ""
+        return None, []
     if not isinstance(body, dict) or "review" not in body:
         return None
     word, accept, found = body.get("review"), body.get("accept"), body.get("findings")
@@ -104,8 +64,8 @@ def _json_verdict(line: str) -> tuple[str | None, str] | None:
             or not all(isinstance(one, str) for one in found)
             or accept != (word == "ACCEPT")
             or len(found) > 10):
-        return None, ""
+        return None, []
     named = [one for one in found if one.strip()]
     if word == "REJECT" and not named:   # the answer rule: a refusal names what is wrong
-        return None, ""
-    return word, "; ".join(named)
+        return None, []
+    return word, named

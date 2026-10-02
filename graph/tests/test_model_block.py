@@ -19,7 +19,7 @@ import tmp_root  # noqa: F401
 from providers import Outcome
 from test_lean_run import Rig
 
-EXPECTED_TESTS = 7
+EXPECTED_TESTS = 6
 REAL_BUILD = lean_run.build
 CHANGED = {"builder": {"model": "b-model", "effort": "b-effort"}, "repair": {"model": "r-model", "effort": "r-effort"},
            "grill": {"model": "g-model", "effort": "g-effort"}, "review": {"model": "v-model", "effort": "v-effort"}}
@@ -39,13 +39,6 @@ class TheBlock(unittest.TestCase):
             self.assertEqual((models.LEAN["review"]["model"],), models.reviewers())
             with mock.patch.dict(models.LEAN, CHANGED):
                 self.assertEqual(("v-model",), models.reviewers())
-
-    def test_the_providers_and_lean_run_take_their_values_from_it(self):
-        self.assertEqual((models.LEAN["builder"]["model"], models.LEAN["review"]["model"],
-                          models.LEAN["review"]["effort"]),
-                         (providers.MODEL, providers.REVIEW_MODEL, providers.REVIEW_EFFORT))
-        self.assertEqual((models.LEAN["builder"]["effort"], models.LEAN["repair"]["effort"]),
-                         (lean_run.BUILD_EFFORT, lean_run.REPAIR_EFFORT))
 
     def test_graph_reviewers_replaces_the_list_and_never_appends(self):
         with mock.patch.dict(os.environ, {"GRAPH_REVIEWERS": "first, second"}):
@@ -79,7 +72,7 @@ class TheCallsFollowIt(Rig):
     def transport(self, calls):
         def codex_text(_binary, _prompt, *, model, effort, **_kwargs):
             calls.append((model, effort))
-            return Outcome("ok", text="REVIEW: ACCEPT")
+            return Outcome("ok", text='{"review":"ACCEPT","accept":true,"findings":[]}')
         return mock.patch.object(review, "codex_text", codex_text)
 
     def test_the_review_is_called_with_the_blocks_values(self):

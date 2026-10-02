@@ -16,9 +16,10 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
-from providers import claude, codex
+from providers import claude
+from review import codex
 
-EXPECTED_TESTS = 14
+EXPECTED_TESTS = 13
 
 
 def fake(script: str) -> str:
@@ -111,18 +112,6 @@ class ClaudeTest(unittest.TestCase):
         # absent, not empty — an empty one points at a config with no login.
         self.assertEqual("[unset]", work)
 
-    def test_a_planner_call_has_no_tools_at_all(self):
-        binary = fake("cat > /dev/null; echo \"$@\" > $OUT; echo '" + result() + "'")
-        with tempfile.NamedTemporaryFile("r", delete=False) as handle:
-            os.environ["OUT"] = handle.name
-            claude(binary, "prompt", account="work", no_tools=True)
-            argv = pathlib.Path(handle.name).read_text()
-        self.assertIn("--tools", argv)
-        self.assertIn("--strict-mcp-config", argv)     # an inherited MCP server is not loaded
-        self.assertNotIn("--allowedTools", argv)
-        for family in ("Bash", "Edit", "Write", "Monitor", "WebFetch"):   # an inherited MCP tool too
-            self.assertIn(family, argv.split("--disallowedTools")[1])
-
     def test_the_effort_is_medium_and_the_model_is_sonnet_5_5(self):
         binary = fake("cat > /dev/null; echo \"$@\" > $OUT; echo '" + result() + "'")
         with tempfile.NamedTemporaryFile("r", delete=False) as handle:
@@ -140,7 +129,7 @@ class BannerTest(unittest.TestCase):
     def test_a_real_answer_beside_a_limit_banner_is_still_an_answer(self):
         # codex prints its usage banner on stderr — "your limit resets at ..." —
         # and reading that as a refusal threw away a finished review.
-        binary = fake("echo 'REVIEW: ACCEPT'; echo 'tokens used 8,316; limit resets 18:00' >&2")
+        binary = fake("echo '{\"review\":\"ACCEPT\",\"accept\":true,\"findings\":[]}'; echo 'tokens used 8,316; limit resets 18:00' >&2")
         out = codex(binary, "review this")
         self.assertEqual(("ok", "ACCEPT"), (out.kind, out.verdict))
 
