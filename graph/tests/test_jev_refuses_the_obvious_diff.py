@@ -20,7 +20,7 @@ from providers import Outcome
 from test_jev_sorts_the_grill import answer
 from workspace import Workspace
 
-EXPECTED_TESTS = 5
+EXPECTED_TESTS = 6
 ACCEPT = Outcome("ok", verdict="ACCEPT", text="")
 
 
@@ -52,7 +52,18 @@ class Refuse(unittest.TestCase):
                 self.assertEqual(("REJECT", lean_judge.FOUND[choice]), (verdict.verdict, verdict.text))
                 codex.assert_not_called()
         self.assertEqual(24, len(json.loads(self.bodies[0])["questions"]))
-        self.assertEqual({"spec": "the spec", "diff": "+def f(): pass\n"}, json.loads(self.bodies[0])["state"])
+        self.assertEqual({"spec": "the spec", "rules": "", "diff": "+def f(): pass\n"},
+                         json.loads(self.bodies[0])["state"])
+
+    def test_jev_reads_the_repositorys_rules_beside_the_diff(self):
+        cwd = tempfile.mkdtemp()
+        (pathlib.Path(cwd) / "CLAUDE.md").write_text("Tests live in tests/.\n")
+        with mock.patch.object(jev, "post", lambda body: self.bodies.append(body) or answer(
+                body, {"verdict": share("accept")})), \
+                mock.patch.object(lean_judge.review, "codex", return_value=ACCEPT), \
+                mock.patch.object(lean_judge.lean_calls, "started", return_value={"effort": "medium"}):
+            lean_judge.judge(self.ws, "rest-ring", "the spec", "+x\n", cwd)
+        self.assertEqual("Tests live in tests/.\n", json.loads(self.bodies[0])["state"]["rules"])
 
     def test_an_accept_is_codexs_to_give(self):
         verdict, codex = self.judge(lambda body: answer(body, {"verdict": share("accept")}))
