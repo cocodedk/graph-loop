@@ -70,7 +70,8 @@ Leave slow, flaky or paid tests (live model calls) out of the gate.
 ## 4. One spec per feature
 
 Write one markdown file per feature: its goal, its behaviour, its acceptance tests,
-and what is out of scope. Settle every decision the builder would otherwise guess.
+and what is out of scope. Settle the product behaviour and the acceptance criteria; let the builder choose
+the simplest implementation consistent with the existing code and rules.
 Add a `gate:` line to the spec's front matter naming the one fast command that proves the feature (a single test
 file, say): the builder then runs only that, and the loop still runs the full suite after the build and after
 every repair. Without it the builder runs the full suite too, minutes a run on a large one.

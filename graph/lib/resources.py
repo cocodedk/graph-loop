@@ -57,10 +57,12 @@ def belt(job: str) -> list[Resource]:
         # unreviewed. The claude rungs have their OWN list: they read
         # `models.builders()` until 2026-09-18, so on a machine without codex
         # every change was reviewed by the model that wrote it.
-        return ([Resource("codex", None, model) for model in models.reviewers(job)]
+        # No rung is a model that builds or repairs: a fallback must never reach the author's own model.
+        authors = {models.LEAN[call]["model"] for call in ("builder", "repair")}
+        return ([Resource("codex", None, model) for model in models.reviewers(job) if model not in authors]
                 + [Resource("claude", account, model)
                    for account in accounts.available()
-                   for model in models.claude_reviewers()])
+                   for model in models.claude_reviewers() if model not in authors])
     if job == "decide":
         # The same resources, for the same reason: a decision reads and writes
         # nothing. It is its own job because what a planner is worth per call
