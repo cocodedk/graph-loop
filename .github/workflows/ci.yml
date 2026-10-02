@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: ['**']
+    branches: [main]   # a PR branch runs once, under pull_request
 
 jobs:
   verify:
