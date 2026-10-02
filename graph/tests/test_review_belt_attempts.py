@@ -54,7 +54,7 @@ class StdinPromptTest(unittest.TestCase):
 
 class ClaudeSpendTest(unittest.TestCase):
     def test_a_normalized_claude_verdict_keeps_its_spend(self):
-        answered = Outcome("ok", text="REVIEW: ACCEPT", cost=0.25, tokens=999)
+        answered = Outcome("ok", text='{"review":"ACCEPT","accept":true,"findings":[]}', cost=0.25, tokens=999)
         resource = Resource(agent="claude", model="m", account="work")
         with unittest.mock.patch.object(review, "claude", create=True), \
              unittest.mock.patch("providers.claude", return_value=answered):

@@ -35,7 +35,7 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str 
     questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
     asked, handed, dropped = questions, "", ""
     if questions and out.verdict == "REJECT":
-        sorted_ = jev.sort_questions(ws, "grill", questions, {
+        sorted_ = jev.sort_questions(ws, "grill", list(out.findings) or [questions], {
             "spec": specs, "notes": notes, "rules": jev.read(pathlib.Path(repo) / "CLAUDE.md"),
             "profile": jev.read(pathlib.Path(repo) / profile_path)})
         dropped = jev.JOIN.join(sorted_["irrelevant"])

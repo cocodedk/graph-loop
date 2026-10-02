@@ -43,7 +43,7 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str, threads: str = "") -
     """`threads` is a revise round's review threads: the change must fix each one. A first build's diff
     that Jev surely refuses is refused without paying Codex."""
     if not threads and (found := refused(ws, feature, spec, diff, cwd)):
-        return providers.Outcome("ok", text=found, verdict="REJECT")
+        return providers.Outcome("ok", text=found, verdict="REJECT", findings=(found,))
     def ask(shown: str) -> str:
         return (f"You review one change to this repository, read-only. It should implement the "
                 f"spec below, with tests. Refuse only for: something the spec's 'Done when' or "

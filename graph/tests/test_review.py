@@ -14,7 +14,7 @@ import unittest.mock
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import models
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
-from providers import codex
+from review import codex
 from test_providers import fake, result
 
 EXPECTED_TESTS = 17
@@ -31,27 +31,27 @@ class ReviewShapeTest(unittest.TestCase):
         self.assertIn("the gate proves nothing", out.text)
         self.assertIn("two ideas", out.text)
 
-    def test_a_reviewer_that_answers_the_old_way_is_still_understood(self):
+    def test_the_retired_review_line_is_no_verdict(self):
+        # No prompt asks for `REVIEW: ACCEPT` any more; only the closed JSON shape is read.
         binary = fake("echo 'REVIEW: ACCEPT'; echo '1. fine'")
         out = codex(binary, "review this")
-        self.assertEqual("ACCEPT", out.verdict)
+        self.assertIsNone(out.verdict)
 
 
 class ReviewEffortTest(unittest.TestCase):
     def test_a_review_runs_at_the_rung_it_was_given_and_never_max(self):
-        import providers
         with tempfile.NamedTemporaryFile("r", delete=False) as handle:
             os.environ["OUT"] = handle.name
-            providers.codex(fake("echo \"$@\" > $OUT; echo 'REVIEW: ACCEPT'"), "p", effort="medium")
+            codex(fake("echo \"$@\" > $OUT; echo '{\"review\":\"ACCEPT\",\"accept\":true,\"findings\":[]}'"), "p", effort="medium")
             argv = pathlib.Path(handle.name).read_text()
         self.assertIn('model_reasoning_effort="medium"', argv)
         self.assertNotIn("max", argv)
-        self.assertEqual("medium", providers.REVIEW_EFFORT)   # the owner, 2026-10-01: reviews at medium (xhigh from 2026-09-26)
+        self.assertEqual("medium", models.LEAN["review"]["effort"])   # the owner, 2026-10-01: reviews at medium (xhigh from 2026-09-26)
 
 
 class CodexTest(unittest.TestCase):
     def test_the_reviewer_is_sol_at_the_default_effort(self):
-        binary = fake("echo \"$@\" > $OUT; echo 'REVIEW: ACCEPT'")
+        binary = fake("echo \"$@\" > $OUT; echo '{\"review\":\"ACCEPT\",\"accept\":true,\"findings\":[]}'")
         with tempfile.NamedTemporaryFile("r", delete=False) as handle:
             os.environ["OUT"] = handle.name
             out = codex(binary, "review this")
@@ -61,10 +61,11 @@ class CodexTest(unittest.TestCase):
         self.assertEqual("ACCEPT", out.verdict)
 
     def test_a_reject_carries_the_findings(self):
-        binary = fake("echo 'REVIEW: REJECT'; echo '1. fix this line'")
+        binary = fake("""echo '{"review":"REJECT","accept":false,"findings":["fix this line","and that one"]}'""")
         out = codex(binary, "review this")
         self.assertEqual("REJECT", out.verdict)
-        self.assertIn("fix this line", out.text)
+        self.assertEqual(("fix this line", "and that one"), out.findings)   # a list, never split from text
+        self.assertEqual("fix this line; and that one", out.text)
 
     def test_a_review_without_a_verdict_line_is_malformed(self):
         binary = fake("echo 'I think it is fine'")
@@ -124,10 +125,10 @@ class UntrustedVerdictTest(unittest.TestCase):
         self.assertEqual("malformed", out.kind)
         self.assertIsNone(out.verdict)
 
-    def test_two_legacy_verdicts_that_disagree_are_malformed(self):
-        # The old `REVIEW:` line was read forwards, so the FIRST word won and a
-        # reviewer that said ACCEPT and then REJECT was recorded as an accept.
-        binary = fake("echo 'REVIEW: ACCEPT'; echo 'REVIEW: REJECT'")
+    def test_two_verdicts_that_disagree_are_malformed(self):
+        # Read forwards, the FIRST word won and an ACCEPT then a REJECT was recorded as an accept.
+        binary = fake("""echo '{"review":"ACCEPT","accept":true,"findings":[]}'; """
+                      """echo '{"review":"REJECT","accept":false,"findings":["no"]}'""")
         out = codex(binary, "review this")
         self.assertEqual("malformed", out.kind)
         self.assertIsNone(out.verdict)
@@ -153,7 +154,7 @@ class ClaudeFallbackExitTest(unittest.TestCase):
 
     def test_a_fallback_reviewer_that_exited_badly_gave_no_verdict(self):
         import review  # here, not at the top: `providers` must start the pair
-        answer = result(result="REVIEW: ACCEPT")
+        answer = result(result='{"review":"ACCEPT","accept":true,"findings":[]}')
         binary = fake(f"cat > /dev/null; echo '{answer}'; exit 3")
         with unittest.mock.patch.dict(os.environ, {"GRAPH_CLAUDE": binary}):
             out = review._claude_review("judge this", review.resources.Resource(

@@ -18,7 +18,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 
 import tools
 
-EXPECTED_TESTS = 3
+EXPECTED_TESTS = 2
 TASK = {"id": "T1", "gate_has_side_effects": True,
         "helper_verbs": ["free prd-app-04", "journal"]}
 
@@ -33,13 +33,6 @@ class HelperTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"GRAPH_HELPER": ""}):
             self.assertEqual([], tools.helper_commands(TASK))
 
-    def test_the_live_guard_hook_is_the_loops_own_file_not_the_repositorys(self):
-        # The loop no longer lives inside what it builds: the hook it installs
-        # must be found where the loop is, whatever repository it is pointed at.
-        with mock.patch.dict(os.environ, {"GRAPH_REPO": "/srv/some/other/repo"}):
-            hook = tools.guard_settings()["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
-        self.assertNotIn("/srv/some/other/repo", hook)
-        self.assertTrue(pathlib.Path(hook.split(" ", 1)[1]).exists(), hook)
 
 
 class CountTest(unittest.TestCase):

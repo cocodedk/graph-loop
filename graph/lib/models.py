@@ -5,8 +5,8 @@ The same must be true of models: on 2026-08-31 the reviewer answered "Selected
 model is at capacity" three times, and because one model name was compiled into
 the call, those reviews came back empty and the changes went in unreviewed.
 
-One list per job, tried in order until one answers. GRAPH_BUILDERS,
-GRAPH_REVIEWERS and GRAPH_CLAUDE_REVIEWERS override them without touching this
+One list per job, tried in order until one answers. GRAPH_REVIEWERS and
+GRAPH_CLAUDE_REVIEWERS override them without touching this
 file — comma separated, and adding a model is a line of data.
 
 Names, not families: what matters is that a second one exists, and that the
@@ -31,11 +31,6 @@ LEAN = {
     "jev": {"model": "typesafe/jev-1.13", "probability": 0.8, "confidence": 0.75},
 }
 
-# The Claude builders first, Astra behind them (issue #67: the belt "may hold" codex
-# rungs; the owner: "bigger models can plan and weaker models can execute").
-_BUILDERS = ("claude-sonnet-5-5", "claude-opus-5-5", "gpt-6-astra")
-# Strong models shape the work; fast builders execute the resulting slices.
-_PLANNERS = ("claude-opus-5-5", "claude-sonnet-5-5")
 # Checked against the binary, not guessed: gpt-6-astra answered `codex exec
 # -m gpt-6-astra` on 2026-09-08 (the owner: the account's upgrade, high effort,
 # strong at reasoning) and was the default reviewer, gpt-5.6-sol behind it,
@@ -46,7 +41,7 @@ _PLANNERS = ("claude-opus-5-5", "claude-sonnet-5-5")
 # xhigh on 2026-09-26, when the owner raised the review to xhigh.
 # The codex reviewer list is the LEAN block's review model alone (see reviewers()).
 # What the claude rungs of the review belt use when no codex answers. Its own
-# list, and the STRONG model first: these rungs used to reuse `builders()`, so
+# list, and the STRONG model first: these rungs used to reuse the builder list, so
 # the moment the builder list was reordered to put the fast model first (the owner,
 # 2026-09-18) a machine without codex reviewed every change with the same model
 # that wrote it — which is the one thing a review is for (CLAUDE.md § Code: an
@@ -63,10 +58,6 @@ def _listed(variable: str, fallback: tuple[str, ...]) -> tuple[str, ...]:
     return named or fallback
 
 
-def builders() -> tuple[str, ...]:
-    return _listed("GRAPH_BUILDERS", _BUILDERS)
-
-
 def reviewers(call: str = "review") -> tuple[str, ...]:
     """The codex reviewers: the block's model for `call` ("review" or "grill"); GRAPH_REVIEWERS replaces it."""
     return _listed("GRAPH_REVIEWERS", (LEAN[call]["model"],))
@@ -76,7 +67,3 @@ def claude_reviewers() -> tuple[str, ...]:
     """The claude rungs of the review belt: never the builder list."""
     return _listed("GRAPH_CLAUDE_REVIEWERS", _CLAUDE_REVIEWERS)
 
-
-def builder_agent(model: str) -> str:
-    """GPT names use Codex; existing Claude names and aliases stay on Claude."""
-    return "codex" if model.startswith("gpt-") else "claude"

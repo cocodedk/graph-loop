@@ -4,19 +4,19 @@ Split out of `providers` at the 200-line cap; `providers` stays the front door.
 What a reply MEANS split out of here at the same cap and lives in
 `review_read`, which this module re-exports, so `review._read_review` still
 names the parser wherever it was already called.
-The reviewer is codex (gpt-6.1-sol, `models.reviewers()`). A review of a change runs at xhigh,
-`providers.REVIEW_EFFORT`; the slicer's plan review passes medium. Never `max`, which cost
-twelve minutes a review and found what high finds.
+The reviewer is codex (`models.reviewers()`), at the LEAN block's review effort unless the call
+passes its own. Never `max`, which cost twelve minutes a review and found what high finds.
 """
 
 from __future__ import annotations
 
 import os
 
+import models
 import resources
 import tools
 from provider_codex import codex_text
-from providers import REVIEW_EFFORT, Outcome, _classify_text
+from providers import Outcome, _classify_text
 from review_read import (  # noqa: F401 — this module is the front door
     VERDICT,
     _read_review,
@@ -77,7 +77,7 @@ def _claude_review(prompt: str, resource, effort: str, timeout: int, *, cwd: str
     """
     from providers import claude  # late: providers imports this module at its foot
     out = claude(os.environ.get("GRAPH_CLAUDE", "claude"), prompt, account=resource.account,
-                 model=resource.model, effort=effort or REVIEW_EFFORT,
+                 model=resource.model, effort=effort or models.LEAN["review"]["effort"],
                  allowed_tools=tools.READ, disallowed_tools=tools.READ_ONLY_DENIES,
                  read_only=True, timeout=timeout, cwd=cwd or None)
     if not out.ok:
@@ -93,7 +93,7 @@ def _one_review(binary: str, prompt: str, model: str, cwd: str, effort: str,
     The call itself is `provider_codex.codex_text`, which knows nothing about
     verdicts; only `_read_review` is the review's.
     """
-    out = codex_text(binary, prompt, model=model, effort=effort or REVIEW_EFFORT,
+    out = codex_text(binary, prompt, model=model, effort=effort or models.LEAN["review"]["effort"],
                      cwd=cwd, timeout=timeout)
     if not out.ok:
         # The reviewer's own exit already said the call did not finish, so
@@ -106,7 +106,7 @@ def _verdict_outcome(out: Outcome, *, reclassify_malformed: bool = False) -> Out
     """A reviewer's reply as an Outcome, carrying its cost either way. Only the
     codex path reads a malformed reply again for a refusal (`_classify_text`)."""
     verdict, findings = _read_review(out.text or "")
-    if verdict not in ("ACCEPT", "REJECT", "BLOCKED"):
+    if verdict not in ("ACCEPT", "REJECT"):
         if reclassify_malformed:
             # Only now do the words matter: a reviewer that answered is not a
             # reviewer that was refused, whatever its banner says about limits.
@@ -115,5 +115,5 @@ def _verdict_outcome(out: Outcome, *, reclassify_malformed: bool = False) -> Out
                            cost=out.cost, tokens=out.tokens)
         return Outcome("malformed", text=(out.text or "").strip()[:500], raw=out.raw,
                        cost=out.cost, tokens=out.tokens)
-    return Outcome("ok", text=findings or out.text, verdict=verdict, raw=out.raw,
-                   cost=out.cost, tokens=out.tokens)
+    return Outcome("ok", text="; ".join(findings) or out.text, verdict=verdict, raw=out.raw,
+                   cost=out.cost, tokens=out.tokens, findings=tuple(findings))

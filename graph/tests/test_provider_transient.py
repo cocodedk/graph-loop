@@ -11,7 +11,8 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 
-from providers import claude, codex_text
+from provider_codex import codex_text
+from providers import claude
 
 
 def answer(*, returncode=0, **fields):

@@ -10,15 +10,16 @@ from unittest import mock
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import lean_run
+import models
 import review
 import tmp_root  # noqa: F401
 from providers import Outcome
 from test_lean_run import ACCEPT, Rig
 
 EXPECTED_TESTS = 6
-BUILD = ("build", "rest-ring", lean_run.BUILD_EFFORT)
-REPAIR = ("build", "rest-ring", lean_run.REPAIR_EFFORT)
-REVIEW = ("review", "rest-ring", lean_run.REVIEW_EFFORT)
+BUILD = ("build", "rest-ring", models.LEAN["builder"]["effort"])
+REPAIR = ("build", "rest-ring", models.LEAN["repair"]["effort"])
+REVIEW = ("review", "rest-ring", models.LEAN["review"]["effort"])
 
 
 class CallStarted(Rig):
@@ -51,7 +52,7 @@ class CallStarted(Rig):
             return Outcome("ok", verdict="ACCEPT")
         with mock.patch.object(review, "codex", asked):
             lean_run.grill(self.ws, self.repo, [str(self.spec)], "profile.md")
-        self.assertEqual([("grill", [("grill", "grill", lean_run.REVIEW_EFFORT)])], self.seen)
+        self.assertEqual([("grill", [("grill", "grill", models.LEAN["review"]["effort"])])], self.seen)
 
     def test_the_build_and_the_review_are_announced_before_they_answer(self):
         self.run_it(self.watched(("ring.py", "amber\n")))

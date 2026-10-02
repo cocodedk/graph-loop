@@ -2,9 +2,8 @@
 
 Two providers: builders on `claude`, reviewers on `codex exec --model gpt-6.1-sol`; the lean
 models and efforts are the `LEAN` block in models.py. Each lean call reads its model and effort
-from that block when it is made; every review of a change runs at `REVIEW_EFFORT`.
-`MODEL`/`EFFORT`/`REVIEW_MODEL`/`REVIEW_EFFORT` below are what a caller with no
-route of its own gets — never `max`, which cost twelve minutes a review and
+from that block when it is made, never from a copy taken at import. `EFFORT` below is
+what a caller with no block of its own gets — never `max`, which cost twelve minutes a review and
 found what high finds (the owner, 2026-08-30).
 
 The `kind` an outcome carries decides what the loop may conclude. Only `ok`
@@ -17,9 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
-import os
 import subprocess
-import tempfile
 
 import accounts
 import models
@@ -38,12 +35,9 @@ from provider_words import (  # noqa: F401 — MARKS re-exported for callers tha
     budget_words,
     closed_object,
 )
-from tools import READ_ONLY_FLAGS, guard_settings
+from tools import READ_ONLY_FLAGS
 
-MODEL = models.LEAN["builder"]["model"]   # the lean calls' values: the LEAN block in models.py
 EFFORT = "medium"               # the default when no call block decides
-REVIEW_MODEL = models.LEAN["review"]["model"]
-REVIEW_EFFORT = models.LEAN["review"]["effort"]
 
 
 @dataclasses.dataclass
@@ -58,6 +52,7 @@ class Outcome:
     session: str = ""    # the call's own session id, so a rebuild round can resume it
     raw: str = ""
     confidence: float | None = None   # a decisions answer's own probability, not a boolean
+    findings: tuple[str, ...] = ()    # a review's findings, one per entry; `text` joins them for people
 
     @property
     def ok(self) -> bool:
@@ -95,8 +90,7 @@ PLAN_TIMEOUT = 900     # a planner answers with text: fifteen minutes, or a stal
 
 
 def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
-           disallowed_tools: str = "", guard: str = "", guard_files: str = "",
-           no_tools: bool = False, read_only: bool = False, effort: str = "", resume: str = "",
+           disallowed_tools: str = "", read_only: bool = False, effort: str = "", resume: str = "",
            timeout: int = BUILD_TIMEOUT, cwd: str | None = None,
            model: str = "", budget: float | None = None) -> Outcome:
     """One builder call, in the task's own directory.
@@ -107,12 +101,9 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
     """
     env, drop = accounts.environment(account)
     denies = [name for name in ("Agent", disallowed_tools) if name]
-    if no_tools:   # a planner answers with text: it edits nothing and touches no stack
-        # the families a planner must never have are denied by name as well.
-        denies.append("Bash,Edit,Write,MultiEdit,NotebookEdit,Monitor,Workflow,WebFetch,Task")
     argv = [binary, "--permission-mode", "dontAsk", "--strict-mcp-config",
             "-p", "--output-format", "json",
-            "--model", model or MODEL, "--effort", effort or EFFORT,
+            "--model", model or models.LEAN["builder"]["model"], "--effort", effort or EFFORT,
             "--disallowedTools", ",".join(denies)]
     if budget:   # a cap on this call's spend; the CLI checks it per turn
         argv += ["--max-budget-usd", f"{budget:g}"]
@@ -124,24 +115,12 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
         argv += ["--allowedTools", allowed_tools]
     if read_only:   # a reviewer reads and nothing else; the denies alone cannot
         argv += list(READ_ONLY_FLAGS)   # reach an inherited MCP server (tools.py)
-    if no_tools:
-        argv += ["--tools", ""]   # --strict-mcp-config above already keeps out an inherited MCP server
-    settings = None
-    if guard:   # a live task: the guard hook first, its prefixes in the environment
-        with tempfile.NamedTemporaryFile("w", suffix=".json", prefix="live-guard-", delete=False) as settings:
-            json.dump(guard_settings(), settings)
-        argv += ["--settings", settings.name]
-        env = {**env, "LIVE_ALLOWED_PREFIXES": guard, "LIVE_ALLOWED_FILES": guard_files,
-               "LIVE_WORKTREE": cwd or ""}
     try:
         done = _run(argv, prompt, env, timeout, cwd=cwd, drop=drop, idle=IDLE_LIMIT)
     except runner.Idle:
         return Outcome("crash", text=f"the call stalled twice: no output, no CPU and no child process for {IDLE_LIMIT}s each time")
     except subprocess.TimeoutExpired:
         return Outcome("crash", text="the call did not return inside its timeout")
-    finally:
-        if settings:
-            os.unlink(settings.name)
     blob = (done.stdout or "") + (done.stderr or "")
     try:
         body = json.loads(done.stdout)
@@ -171,6 +150,3 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
     return Outcome("ok", text=answered, session=str(body.get("session_id") or ""),
                    raw=blob, **{**_spent(body), "denials": len(denials)})
 
-
-from provider_codex import codex_text  # noqa: F401 — the transport's own door
-from review import codex  # noqa: F401 — the door stays here; review reads this module

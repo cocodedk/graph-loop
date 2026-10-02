@@ -11,6 +11,7 @@ from unittest import mock
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import lean_run
+import models
 import providers
 import review
 import tmp_root  # noqa: F401
@@ -52,7 +53,7 @@ class Wiring(unittest.TestCase):
     def test_a_repair_build_sends_and_logs_its_own_effort(self):
         with mock.patch.object(providers, "claude", return_value=Outcome("ok")) as call:
             lean_run.build(self.ws, {"id": "wiring", "gate": "true"}, "fix it", self.tree,
-                           resume="s1", effort=lean_run.REPAIR_EFFORT)
+                           resume="s1", effort=models.LEAN["repair"]["effort"])
         self.assertEqual(("medium", "s1"), (call.call_args.kwargs["effort"], call.call_args.kwargs["resume"]))
         paid = next(row for row in self.ws.events() if row["kind"] == "attempt")
         self.assertEqual("medium", paid["effort"])
@@ -91,7 +92,7 @@ class Wiring(unittest.TestCase):
         paid = [(row["purpose"], row.get("effort")) for row in self.ws.events() if row["kind"] == "attempt"]
         self.assertEqual([("grill", sent[0]), ("build", call.call_args.kwargs["effort"]),
                           ("review", sent[1])], paid)   # logged is what was sent
-        self.assertEqual([lean_run.REVIEW_EFFORT, providers.EFFORT, lean_run.REVIEW_EFFORT],
+        self.assertEqual([models.LEAN["review"]["effort"], providers.EFFORT, models.LEAN["review"]["effort"]],
                          [effort for _, effort in paid])
 
 

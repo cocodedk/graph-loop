@@ -18,7 +18,7 @@ from test_lean_run import Rig, show
 
 class Published(Rig):
     def test_a_green_feature_still_refused_after_the_last_repair_is_published(self):
-        refused = Outcome("ok", verdict="REJECT", text="the ring ignores dark mode")
+        refused = Outcome("ok", verdict="REJECT", text="the ring ignores dark mode", findings=("the ring ignores dark mode",))
         url = self.run_it(self.builder(("ring.py", "a\n"), ("ring.py", "b\n"), ("ring.py", "c\n")),
                           suites=(True, True, True), reviews=(refused, refused, refused))
         self.assertEqual("https://example.test/pull/1", url)
@@ -31,7 +31,7 @@ class Published(Rig):
 
     def test_a_refused_change_that_cannot_open_its_pull_request_keeps_the_findings(self):
         subprocess.run(("git", "-C", self.repo, "branch", "lean/rest-ring"), check=True)
-        refused = Outcome("ok", verdict="REJECT", text="the ring ignores dark mode")
+        refused = Outcome("ok", verdict="REJECT", text="the ring ignores dark mode", findings=("the ring ignores dark mode",))
         url = self.run_it(self.builder(("ring.py", "a\n"), ("ring.py", "b\n"), ("ring.py", "c\n")),
                           suites=(True, True, True), reviews=(refused, refused, refused))
         self.assertEqual("", url)
@@ -41,7 +41,7 @@ class Published(Rig):
         self.assertIn("the ring ignores dark mode", self.mails[0][1])
 
     def test_an_accepted_reviews_findings_reach_the_pull_request(self):
-        noted = Outcome("ok", verdict="ACCEPT", text="the ring has no dark-mode test")
+        noted = Outcome("ok", verdict="ACCEPT", text="the ring has no dark-mode test", findings=("the ring has no dark-mode test",))
         self.run_it(self.builder(("ring.py", "amber\n")), reviews=(noted,))
         self.assertIn("accepted it", self.bodies[0])
         self.assertIn("the ring has no dark-mode test", self.bodies[0])
@@ -53,7 +53,7 @@ class Published(Rig):
         self.assertNotIn("{", self.bodies[0])                          # never the bare answer line
 
     def test_a_finding_that_starts_with_a_brace_is_kept(self):
-        refused = Outcome("ok", verdict="REJECT", text="{} as input crashes the endpoint")
+        refused = Outcome("ok", verdict="REJECT", text="{} as input crashes the endpoint", findings=("{} as input crashes the endpoint",))
         self.run_it(self.builder(("ring.py", "a\n"), ("ring.py", "b\n"), ("ring.py", "c\n")),
                     suites=(True, True, True), reviews=(refused, refused, refused))
         self.assertIn("{} as input crashes the endpoint", self.bodies[0])
