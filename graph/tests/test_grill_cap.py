@@ -84,7 +84,7 @@ class Handed(unittest.TestCase):
         for words in ("left open", "Which colour?", "question, your choice and why", "```"):
             self.assertIn(words, prompt)
         body = lean_body.pr_body("a.md", "", "", "Which colour?", "Colour: blue, because the mock")
-        for words in ("Built on the builder's choices", "Which colour?", "Colour: blue, because the mock"):
+        for words in ("Built on the builder's choices", "Jev judged them the builder's to settle", "Which colour?", "Colour: blue, because the mock"):
             self.assertIn(words, body)
         self.assertNotIn("choices", lean_body.pr_body("a.md", "", ""))
 
