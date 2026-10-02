@@ -14,8 +14,9 @@ def pr_body(spec_path: str, why: str, found: str, open_questions: str = "", choi
     return (f"Built by graph-loop's lean loop from `{pathlib.Path(spec_path).name}`: the suite "
             f"is green, and an independent reviewer {said}."
             + (f"\n\nThe reviewer's findings:\n\n{found}" if found else "")
-            + (f"\n\n## Built on the builder's choices\n\nThe grill left these questions open after "
-               f"{lean_spec.GRILL_ROUNDS} rounds:\n\n```\n{open_questions}\n```\n\nThe builder decided "
+            + (f"\n\n## Built on the builder's choices\n\nThe grill left these questions to the builder: "
+               f"Jev judged them the builder's to settle, or {lean_spec.GRILL_ROUNDS} rounds left them "
+               f"open:\n\n```\n{open_questions}\n```\n\nThe builder decided "
                f"them; its list:\n\n{choices.strip()[:3000]}" if open_questions else ""))
 
 
