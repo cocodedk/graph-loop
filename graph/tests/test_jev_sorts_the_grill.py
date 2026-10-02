@@ -113,7 +113,9 @@ class Sort(unittest.TestCase):
             raise OSError("down")
         def huge(body):
             return answer(body, {"q0": share("irrelevant", 90)}, 90)
-        for reply in (broken, huge, lambda body: "{}", lambda body: json.dumps({"answers": {"q0__0": {}}})):
+        def heavy(body):   # each share in range, 1.7 in all
+            return answer(body, {"q0": {"person": 0.0, "builder": 0.9, "irrelevant": 0.8, "unknown": 0.0}})
+        for reply in (broken, huge, heavy, lambda body: "{}", lambda body: json.dumps({"answers": {"q0__0": {}}})):
             with self.subTest(reply=reply):
                 self.assertEqual(("Which name?", ""), self.grill("Which name?", reply))
         self.assertTrue(all(e["why"] for e in self.ws.events() if e["kind"] == "lean_jev"))
