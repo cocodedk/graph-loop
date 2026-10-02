@@ -42,7 +42,7 @@ from workspace import Workspace
 print(plain(branch_of(Workspace(where.campaign()))))')"
 # An empty answer is a broken helper, never a campaign: brief nobody on it.
 [ -n "$BRANCH" ] || { echo "$(date -Is) handoff-standin: cannot read this campaign's branch — no stand-in started"; exit 1; }
-CMD="env -u CLAUDE_CONFIG_DIR GRAPH_CAMPAIGN='$W' GRAPH_BRANCH='$BRANCH' claude --remote-control $NAME --session-id $SID --model claude-opus-5 --effort high"
+CMD="env -u CLAUDE_CONFIG_DIR GRAPH_CAMPAIGN='$W' GRAPH_BRANCH='$BRANCH' claude --remote-control $NAME --session-id $SID --model claude-opus-5-5 --effort high"
 
 if command -v tmux >/dev/null 2>&1; then
   BACKEND=tmux

@@ -31,9 +31,9 @@ LEAN = {
 
 # The Claude builders first, Astra behind them (issue #67: the belt "may hold" codex
 # rungs; the owner: "bigger models can plan and weaker models can execute").
-_BUILDERS = ("claude-sonnet-5", "claude-opus-5-5", "claude-opus-5", "gpt-6-astra")
+_BUILDERS = ("claude-sonnet-5-5", "claude-opus-5-5", "gpt-6-astra")
 # Strong models shape the work; fast builders execute the resulting slices.
-_PLANNERS = ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5")
+_PLANNERS = ("claude-opus-5-5", "claude-sonnet-5-5")
 # Checked against the binary, not guessed: gpt-6-astra answered `codex exec
 # -m gpt-6-astra` on 2026-09-08 (the owner: the account's upgrade, high effort,
 # strong at reasoning) and was the default reviewer, gpt-5.6-sol behind it,
@@ -51,8 +51,8 @@ _PLANNERS = ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5")
 # independent reviewer, never the builder). Found on the first real campaign
 # run, where a reviewer had to be stood in by hand to get one at all.
 # claude-opus-5-5 answered `claude --model claude-opus-5-5` on 2026-09-22 and leads
-# the strong models; opus 5 stays behind it so a refusal still walks somewhere.
-_CLAUDE_REVIEWERS = ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5")
+# the strong models; sonnet 5.5 stays behind it so a refusal still walks somewhere.
+_CLAUDE_REVIEWERS = ("claude-opus-5-5", "claude-sonnet-5-5")
 
 
 def _listed(variable: str, fallback: tuple[str, ...]) -> tuple[str, ...]:
