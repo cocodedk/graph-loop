@@ -107,6 +107,8 @@ class Sort(unittest.TestCase):
         self.assertEqual(("Which name?", ""), self.grill("Which name?", split))
         jevs = [e for e in self.ws.events() if e["kind"] == "lean_jev"]
         self.assertEqual({}, jevs[0]["answers"])   # a tie between builder and person is no decision
+        self.assertEqual(24, jevs[0]["asked"])     # what one call asked, and how long it took
+        self.assertIsInstance(jevs[0]["seconds"], float)
 
     def test_a_fault_or_a_strange_answer_changes_nothing(self):
         def broken(body):
