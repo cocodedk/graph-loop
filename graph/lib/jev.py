@@ -25,11 +25,12 @@ URL = "https://openrouter.ai/api/alpha/decisions"
 JOIN = "; "   # how `review_read` joins a reviewer's findings, so how they split again
 TIMEOUT = 20
 EVIDENCE = 20000   # characters of each file Jev reads as evidence
-WHO = {"person": "Only the person who owns the project can settle it: a product choice, a "
-                 "contradiction in the spec, a requirement the builder cannot meet here, or a "
-                 "design to match that is not named.",
+WHO = {"person": "Only the person who owns the project can settle it, and the spec, the profile and the "
+                 "standing rules leave it unresolved: a product choice, a contradiction in the spec, a "
+                 "requirement the builder cannot meet here, or a design to match that is not named.",
        "builder": "A builder can settle it sensibly from the spec, the code and the repository's "
-                  "rules, and state its choice; no product decision hangs on it.",
+                  "rules, favouring the existing components, and state its choice; no product decision "
+                  "hangs on it.",
        "irrelevant": "It changes nothing about what is built: already answered by the spec, "
                      "about the reviewer's own sandbox, or a matter of taste nobody asked about.",
        "unknown": "The question text does not show which."}

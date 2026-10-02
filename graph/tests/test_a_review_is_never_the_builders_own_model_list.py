@@ -21,7 +21,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import models
 import resources
 
-EXPECTED_TESTS = 5
+EXPECTED_TESTS = 7
 
 
 def claude_rungs() -> list[str]:
@@ -35,6 +35,20 @@ class ReviewBeltTest(unittest.TestCase):
     def test_no_claude_review_rung_leads_with_the_first_builder(self):
         """Leading with it is the failure: the first rung is what answers."""
         self.assertNotEqual(models.builders()[0], claude_rungs()[0])
+
+    def test_no_review_rung_is_the_model_that_builds_or_repairs(self):
+        authors = {models.LEAN["builder"]["model"], models.LEAN["repair"]["model"]}
+        with unittest.mock.patch("accounts.available", return_value=["first"]):
+            self.assertTrue(resources.belt("review"))
+            self.assertFalse(authors & {one.model for one in resources.belt("review")})
+
+    def test_a_reviewer_list_naming_the_builder_still_skips_it(self):
+        builder = models.LEAN["builder"]["model"]
+        with unittest.mock.patch.dict(os.environ, {"GRAPH_CLAUDE_REVIEWERS": f"{builder},claude-opus-5-5",
+                                                   "GRAPH_REVIEWERS": f"{builder},gpt-6.1-sol"}), \
+                unittest.mock.patch("accounts.available", return_value=["first"]):
+            self.assertEqual([("codex", "gpt-6.1-sol"), ("claude", "claude-opus-5-5")],
+                             [(one.agent, one.model) for one in resources.belt("review")])
 
     def test_the_list_is_a_line_of_data(self):
         with unittest.mock.patch.dict(os.environ,
