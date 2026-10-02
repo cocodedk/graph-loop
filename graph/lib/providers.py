@@ -1,10 +1,8 @@
 """Calling a model, and reading the answer honestly.
 
 Two providers: builders on `claude`, reviewers on `codex exec --model gpt-6.1-sol`; the lean
-models and efforts are the `LEAN` block in models.py. Which model and effort an actual call
-uses is `model_router.choose`'s pick now (docs/ROUTER.md): a build at medium, raised to high
-only from a recorded failed medium build on the same contract, and every review of a change
-at `REVIEW_EFFORT` (the slicer's plan review passes medium).
+models and efforts are the `LEAN` block in models.py. Each lean call reads its model and effort
+from that block when it is made; every review of a change runs at `REVIEW_EFFORT`.
 `MODEL`/`EFFORT`/`REVIEW_MODEL`/`REVIEW_EFFORT` below are what a caller with no
 route of its own gets — never `max`, which cost twelve minutes a review and
 found what high finds (the owner, 2026-08-30).

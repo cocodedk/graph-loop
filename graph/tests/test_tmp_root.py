@@ -20,7 +20,7 @@ class FocusedRunTest(unittest.TestCase):
     def test_a_focused_run_of_one_module_leaves_its_tmp_empty(self):
         with tempfile.TemporaryDirectory() as scratch:
             done = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", str(HERE),
-                                   "-p", "test_backlog.py"], cwd=str(HERE.parent),
+                                   "-p", "test_lean_run.py"], cwd=str(HERE.parent),
                                   env={"PATH": "/usr/bin:/bin", "TMPDIR": scratch, "HOME": scratch},
                                   capture_output=True, text=True, check=False)
             self.assertEqual(0, done.returncode, done.stderr[-800:])

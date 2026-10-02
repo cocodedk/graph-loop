@@ -2,17 +2,17 @@
 
 ## What this repository is
 
-A driver that works a backlog of atomic tasks to done, and the writing that
-explains how to build one. Two models that never trust each other: a reviewer
-refuses any task whose gate could pass without the work, a builder does one task
-in a private worktree, a gate command's exit code is the verdict, a fresh
-reviewer reads the finished diff, and only then is the work committed.
+A loop that builds one spec at a time, and the writing that explains it. Two
+models that never trust each other: a reviewer reads the spec before anything is
+built and asks what only a person can answer, a builder does the work in a
+private worktree, the project's own suite is the gate, a fresh reviewer reads
+the finished diff, and only then is a pull request opened. `main` never moves.
 
-The runtime is here. `graph/` is the driver, `slicer/` is the plan phase that
-writes the cards, `docs/` is the writing and `plugins/graph/` holds the two
-skills, `graph` for slicing work into cards and `run` for the lean loop.
-A card is one Obsidian note in a vault inside the repository being built; the
-note is the card, and the loop writes only its front matter.
+The runtime is here. `graph/` is the lean loop (`lean.py`) with its dashboard
+(`loops.py`), `docs/` is the writing and `plugins/graph/` holds the two skills,
+`run` for the loop and `dashboard` for watching it. The campaign driver and the
+slicer that preceded the lean loop were removed on 2026-10-02 (`docs/rfc/lean-loop.md`
+records why).
 
 The loop lives outside what it builds, so four things are
 configuration and nothing else names a particular project: `GRAPH_REPO` (the

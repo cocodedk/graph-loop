@@ -108,27 +108,3 @@ def answer(text: str) -> tuple[str, Result]:
     said = read_result(last)
     return ("\n".join(lines[:-1]) if _from_json(last) else text), said
 
-
-def park(book, space, task_id: str, why: str) -> None:
-    """A complaint belongs to a person, never to automatic recovery."""
-    book.set_status(task_id, "blocked_by_agent", refused_why=why,
-                    blocked_by_human=True, held_by="needs_person")
-    if space is not None:
-        space.event("needs_a_person", task=task_id, why=why)
-        space.alert(task_id, why)
-
-
-def stop(loop, task: dict, tree, said: Result):
-    """Use the builder's guarded parking path for every review as well."""
-    from loop_judge_retry import moved_first
-    from loop_types import TaskOutcome
-    if said.state not in ("BLOCKED", "PARTIAL"):
-        return None
-    why = said.why or tail(said.raw)
-    with loop.backlog.only_writer():
-        ended = moved_first(loop, task, tree, "said")
-        if ended is not None:
-            return ended
-        park(loop.backlog, loop.space, task["id"], why)
-    tree.keep(f"the agent stopped and said why: {why[:200]}")
-    return TaskOutcome("blocked", why, tree.path)

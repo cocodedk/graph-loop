@@ -25,9 +25,6 @@ from __future__ import annotations
 
 import subprocess
 
-from backlog_status import REBUILD_ROUNDS
-from contract import moved_under  # its home; `prompts` only re-exports it
-from loop_types import TaskOutcome
 from worktree_provision import (
     provision,  # noqa: F401 — `worktree` reaches it through here
 )
@@ -107,92 +104,3 @@ def advance(repo: str, path: str, found: str, target: str) -> str | None:
         raise HeadMoved(found, why="the kept edits conflict with what landed on the base since")
     raise RuntimeError(f"git checkout --detach {target}: {moved.stderr.strip()}")
 
-
-def reuse_or_salvage(loop, task_id: str, tree, previous: str) -> tuple[bool, str, str]:
-    """Attach the round to its kept tree; when that tree can no longer be read
-    as the base plus edits, its edits are paid work: written down as a diff,
-    pointed at from the card, and only then is the tree removed — a death
-    between the two would otherwise lose the pointer with the tree. Answers
-    (in place, why not, where the edits are)."""
-    try:
-        tree.reuse(previous)
-        return True, "", ""
-    except HeadMoved as fault:
-        saved = loop.space.artifact(task_id, "lost-edits", tree.diff(binary=True))
-        earlier = list(loop.backlog.task(task_id).get("lost_edits") or [])   # a second conflict adds, never replaces
-        loop.backlog.note(task_id, lost_edits=earlier + [saved], rebuild_from=None)
-        tree.remove()
-        return False, fault.said, saved
-
-
-def save_and_go(loop, task_id: str, tree) -> str:
-    """Write down what a tree whose HEAD MOVED holds, point the card at it, and
-    only then remove the tree. Answers "" once it is gone, and why not when it
-    stays. The one door for both sites that delete such a tree — the builder's
-    own move (`discard`, below) and a gate's (`loop_judge_retry`) — because
-    each of them used to delete it unread and an hour of paid edits went with
-    the directory (astra's round-4 finding 6).
-
-    Against the RECORDED base, not HEAD: HEAD is exactly what cannot be trusted
-    here, and edits the builder put inside its own commit leave nothing in a
-    diff against it.
-
-    A save that FAILS keeps the tree — it is the only copy of that work, and
-    what authorises a deletion is the save succeeding, never the fault that
-    ordered it. The card says which tree (`edits_unsaved`, which `sweep_trees`
-    honours); no keep-note is written beside it, because whatever stopped the
-    diff — a full disk is how this campaign met it — stops that too.
-
-    A card sliced away while the round ran is no longer there to point; the
-    diff is on the platter under `calls/<task>/` either way.
-    """
-    try:
-        saved = loop.space.artifact(task_id, "lost-edits",
-                                    tree.diff(binary=True, against=tree.commit))
-    except (OSError, RuntimeError) as fault:
-        why = f"the paid edits in {tree.path} could not be saved: {fault!r}"[:300]
-        loop.space.alert(task_id, why)
-        if loop.backlog.task(task_id) is not None:
-            loop.backlog.note(task_id, edits_unsaved=why)
-        return why
-    current = loop.backlog.task(task_id)
-    if current is not None:   # a second loss adds to the list, never replaces it
-        loop.backlog.note(task_id, lost_edits=list(current.get("lost_edits") or []) + [saved])
-    tree.remove()
-    return ""
-
-
-def discard(loop, task: dict, tree, fault: HeadMoved) -> TaskOutcome:
-    """Resolve a HeadMoved fault. Unlike every other harness fault, this tree
-    is never REUSED — it cannot be read as edits on the base. The round is
-    charged the same as any harness fault, but `rebuild_from` stays unset, so
-    the next round cuts a fresh tree from the campaign base, never this
-    foreign tip. What the tree HOLDS is still paid work: saved and pointed at
-    from the card before it goes, and the tree kept where it is when that save
-    fails (`save_and_go`).
-    """
-    task_id = task["id"]
-    unsaved = save_and_go(loop, task_id, tree)
-    why = (f"{fault.said}; its HEAD left the base, so the worktree was "
-           + (f"kept where it is — {unsaved}" if unsaved else "saved and discarded"))
-    with loop.backlog.only_writer():     # guard and write in one hold
-        # The builder call took an hour, and a drop, a hold or a rewrite decided
-        # in it is newer than this fault: `todo` over a drop puts the card back
-        # in the queue to be built again (astra round 4, finding 2). The salvage
-        # above is not that kind of write — it is the loop's own pointer at paid
-        # work, and skipping it would lose what this guard exists to protect.
-        moved = moved_under(loop.backlog.task(task_id), task)
-        if moved:
-            loop.space.event("card_moved", task=task_id, step="discard", why=moved)
-            return TaskOutcome("held", moved, tree.path)
-        rounds = int(task.get("rebuild_round") or 0) + 1
-        if rounds < REBUILD_ROUNDS:
-            loop.space.event("rebuild_queued", task=task_id, round=rounds, why=why)
-            loop.backlog.set_status(task_id, "todo", rebuild_round=rounds, rebuild_from=None,
-                                    rejections=list(task.get("rejections") or []) + [fault.note],
-                                    refused_why=None)
-            return TaskOutcome("harness", why, tree.path)
-        loop.space.event("rejected", task=task_id, why=why)
-        loop.backlog.set_status(task_id, "rejected", rebuild_round=rounds, rebuild_from=None,
-                                refused_why=why)
-        return TaskOutcome("rejected", why, tree.path)

@@ -10,7 +10,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2] / "plugins" / "graph"
 class Skills(unittest.TestCase):
     def test_each_skill_names_the_issues_page_the_command_and_all_four_grades(self):
         skills = sorted((ROOT / "skills").glob("*/SKILL.md"))
-        self.assertEqual(["dashboard", "graph", "run"], [path.parent.name for path in skills])
+        self.assertEqual(["dashboard", "run"], [path.parent.name for path in skills])
         for path in skills:
             text = path.read_text("utf-8")
             with self.subTest(skill=path.parent.name):
@@ -21,7 +21,7 @@ class Skills(unittest.TestCase):
 
     def test_the_plugin_version_moved_with_the_skills(self):
         version = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text("utf-8"))["version"]
-        self.assertEqual("0.4.9", version)
+        self.assertEqual("0.5.0", version)
 
     def test_the_run_skill_asks_for_the_projects_account_during_setup(self):
         text = (ROOT / "skills" / "run" / "SKILL.md").read_text("utf-8")

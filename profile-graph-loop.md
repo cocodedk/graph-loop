@@ -4,9 +4,9 @@ The lean loop reads the first indented line under each heading below.
 
 ## suite_command
 
-    bash scripts/scrub-check.sh && (cd slicer/tests && python3 -m unittest discover -q) && (cd graph/tests && python3 -m unittest discover -q)
+    bash scripts/scrub-check.sh && (cd graph/tests && python3 -m unittest discover -q)
 
-The scrub check, then the slicer's tests, then the driver's: the same three CI runs, minus the linter,
+The scrub check, then the loop's tests: the same CI runs, minus the linter,
 which `## lint_command` below runs before it.
 
 ## lint_command

@@ -1,16 +1,16 @@
 # graph-loop
 
-A method for breaking a large body of work into tasks an agent loop can run unattended, and
-the design of a loop that runs them.
+A loop that builds one feature at a time from a written spec, unattended, and opens a pull
+request for a person to merge.
 
-**What this repository contains:** the loop itself — `graph/`, the driver, and `slicer/`,
-the plan phase that writes the cards — plus the method as a Claude Code skill, the design,
-and the diary of building and running it.
+**What this repository contains:** the lean loop (`graph/lean.py`), its dashboard
+(`graph/loops.py`), the two Claude Code skills that set it up and watch it, and the writing
+that explains what it cost to learn.
 
-**What running it requires:** a machine with `python3`, `git`,
-`bash` and `ps`, and command-line access to **two different model providers** — one that
-builds and one that reviews. That is not incidental. The whole design rests on the reviewer
-having blind spots the builder does not, so a single-provider setup is a different tool.
+**What running it requires:** a machine with `python3`, `git`, `bash` and `ps`, and
+command-line access to **two different model providers**: one that builds (`claude`) and one
+that reviews (`codex`). That is not incidental. The whole design rests on the reviewer having
+blind spots the builder does not, so a single-provider setup is a different tool.
 
 ## Website
 
@@ -19,68 +19,41 @@ having blind spots the builder does not, so a single-provider setup is a differe
 
 ## The idea
 
-Two models that never trust each other. A reviewer refuses any task whose gate could pass
-without the work being done. A builder does one task in a private worktree. A gate — a
-command whose exit code is the verdict — decides. A fresh reviewer reads the finished diff.
-Only then is the work committed. Graph-Loop must repair its own bugs.
+Two models that never trust each other. Before anything is built, a reviewer reads the spec
+and asks the questions only a person can answer. A builder does the work in a private
+worktree off `main`. The project's own suite is the gate. A fresh reviewer reads the finished
+diff. Only then is the branch pushed and a pull request opened; `main` never moves, and the
+next spec waits until the person has merged the last one.
 
-The backlog is a vault of Obsidian notes inside the repository being built. One note is one
-card: what a person reads is byte for byte what the loop reads, `Needs` and `Uses` are
-`[[wikilinks]]`, so the graph view is the dependency graph, and the loop writes only the
-front matter. Planning and building are separate commands that never overlap.
+One spec per run, one run at a time. A red suite or a refused review goes back to the same
+builder with the failure text, twice; after that the person is emailed why and the work is
+kept where it stopped. Everything said, heard and measured is appended to one event log, and
+the dashboard reads that log.
 
-Everything said, heard and measured is appended to a log, and a watchdog reads that log to
-catch the loop going through the motions. A plan never gives work to a person: the loop builds
-everything it plans, a person accepts at the end, and what only a person can supply is asked before
-planning starts.
+This loop replaced an earlier campaign driver that cut work into cards and reviewed each card
+before building it. [docs/rfc/lean-loop.md](docs/rfc/lean-loop.md) records what that cost and
+why it was replaced; the driver was removed on 2026-10-02.
 
-The counter-intuitive part, and the reason it is worth the money: **reviews are 70 to 99
-percent of the clock.** One campaign refused nine tasks in a row and built nothing, for
-$0.00, and that was the system working. The backlog was the defect. The lever on speed is
-better task contracts, not faster builders.
-
-## Install the skill
+## Install the skills
 
 ```
 /plugin marketplace add cocodedk/graph-loop
 /plugin install graph@graph-loop
 ```
 
-The skill fires when you are slicing work into tasks for an unattended run, judging whether
-a task is ready to hand to a builder, or working out why a backlog stalls. It is useful on
-its own — the method does not need the driver.
-
-## Read
-
-- **[docs/DESIGN.md](docs/DESIGN.md)** — the parts, the task contract, the order of one
-  task and why each step is where it is. Enough to build the loop yourself.
-- **[docs/STATUS.md](docs/STATUS.md)** — where this repository is, what is deliberately missing, and where to pick it up.
-- **[docs/DIARY.md](docs/DIARY.md)** — what each rule cost. Every incident is real; none of
-  them points at anything real. The numbers are untouched, because they are what makes a
-  rule believable.
-
-If you only read one thing, read the diary. The rules are short and sound arbitrary until
-you see what buying them cost.
+`run` sets the loop up on a project and starts it; `dashboard` shows what is built, building
+or waiting.
 
 ## Run it
 
 ```
-export GRAPH_REPO=/path/to/the/repository/being/built
-export GRAPH_CAMPAIGN=$GRAPH_REPO/scratchpad/campaign
-
-python3 graph/graph-goal.py contact "<email-address>"  # first, before grilling; proves delivery
-python3 graph/graph-goal.py init --goal "..." --backlog "$GRAPH_REPO/vault" \
-                                 --branch campaign/one --source spec/brief.md
-python3 graph/graph-goal.py approve       # you have read the goal and the sources
-python3 graph/graph-goal.py plan          # write every card, reviewed; build nothing
-python3 graph/graph-goal.py run           # build the cards; write none
+python3 graph/graph-goal.py --workspace <ws> contact "<email-address>"   # proves the loop can reach you
+python3 graph/lean.py --workspace <ws> --repo <repo> --spec docs/lean/01-first.md
 ```
 
-A campaign runs for days, so the thing that actually runs it is `graph/supervisor.sh`, not
-the driver: start it and return, then read state from the campaign's log. Never hold a
-session open waiting for a campaign to end.
-
-See **[docs/STATUS.md](docs/STATUS.md)** for what is proven and what is not.
+The run takes hours; start it in the background and read the mail. Exit 0 is a pull request
+ready for review, 1 a stop with the reason mailed, 2 questions before building, 3 a branch
+waiting to be merged. The `run` skill has the whole setup.
 
 ## Author
 
