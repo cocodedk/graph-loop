@@ -24,6 +24,11 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   esac
   branch="${remote_ref#refs/heads/}"
 
+  if [ "$branch" = "main" ] && [ "$local_sha" != "$ZERO" ]; then
+    echo "pre-push: blocked push to main: main moves only by a merged pull request" >&2
+    exit 1
+  fi
+
   if [ "$local_sha" = "$ZERO" ]; then
     echo "pre-push: blocked deletion of protected branch '$branch'" >&2
     echo "          bypass: git push --no-verify" >&2
