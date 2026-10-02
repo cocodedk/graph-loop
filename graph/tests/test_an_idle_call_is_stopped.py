@@ -45,7 +45,8 @@ class Idle(unittest.TestCase):
         self.assertEqual(0, done.returncode)
 
     def test_a_call_with_a_child_running_is_left_alone(self):
-        done = runner.run(["sh", "-c", "sleep 2; sleep 2; echo done"], timeout=60, idle=1)
+        # one child across the first look (IDLE_POLL): a gap between two children raced it on a slow runner
+        done = runner.run(["sh", "-c", "sleep 7; echo done"], timeout=60, idle=1)
         self.assertEqual("done\n", done.stdout)
 
 
