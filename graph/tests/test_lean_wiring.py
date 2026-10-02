@@ -74,6 +74,16 @@ class Wiring(unittest.TestCase):
         passed, tail = lean_run.masked(self.ws, "echo the ring is grey; exit 1", self.tree.path)
         self.assertFalse(passed)
         self.assertIn("the ring is grey", tail)
+        gate = next(row for row in self.ws.events() if row["kind"] == "lean_gate")
+        self.assertEqual(("ran", 1), (gate["ended"], gate["code"]))
+        self.assertIn("confined", gate)
+
+    def test_a_gate_that_never_finished_says_so_first(self):
+        with mock.patch.object(lean_run.gates, "run_gate", return_value=lean_run.gates.GateResult(
+                124, "partial output", kind="timeout")):
+            passed, tail = lean_run.masked(self.ws, "sleep 9", self.tree.path)
+        self.assertFalse(passed)
+        self.assertTrue(tail.startswith("The command did not run to the end (timeout).\n"), tail)
 
     def test_every_call_logs_the_effort_it_ran_at(self):
         sent = []

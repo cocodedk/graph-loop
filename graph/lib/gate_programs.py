@@ -125,8 +125,10 @@ def _commanded(text: str) -> list[str]:
     """The program of every command in one layer of text, as it was spelled."""
     found: list[str] = []
     for line in _lines(text):
+        lexer = shlex.shlex(line, posix=True, punctuation_chars=True)   # `a&&b` is three words, as the shell reads it
+        lexer.whitespace_split = True
         try:
-            words = shlex.split(line, comments=True)
+            words = list(lexer)
         except ValueError:          # an unbalanced quote: no reading to be had
             continue
         starting = True

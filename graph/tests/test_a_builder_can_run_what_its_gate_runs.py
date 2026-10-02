@@ -22,7 +22,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import tools
 from gate_programs import programs
 
-EXPECTED_TESTS = 16
+EXPECTED_TESTS = 17
 JAVA = {"gate": "set -e -o pipefail\njavac -d out src/*.java && java -cp out Tests",
         "files": ["src/Extract.java"]}
 
@@ -31,6 +31,10 @@ class GateProgramsTest(unittest.TestCase):
     def test_a_header_does_not_swallow_the_line_below_it(self):
         """`set -e -o pipefail` is how nearly every gate here opens."""
         self.assertEqual(["javac", "java"], programs(JAVA["gate"]))
+
+    def test_a_separator_without_spaces_still_starts_a_command(self):
+        self.assertEqual(["python3", "ruff"], programs("python3 test.py&&ruff check ."))
+        self.assertEqual(["a", "b", "c"], programs("a;b|c"))
 
     def test_an_assignment_prefix_is_not_the_program(self):
         self.assertEqual(["mvn"], programs("MAVEN_OPTS=-Xmx1g mvn -q test"))
