@@ -63,7 +63,7 @@ class Sort(unittest.TestCase):
             return reply(body)
         with mock.patch.object(review, "codex", return_value=Outcome("ok", verdict="REJECT", text=questions)), \
                 mock.patch.object(jev, "post", post):
-            return lean_run.grill(self.ws, repo(), [str(self.spec)], "profile.md")
+            return lean_run.grill(self.ws, repo(), [str(self.spec)], "profile.md")[:2]
 
     def test_every_question_is_asked_in_every_order_of_its_options(self):
         self.grill("Which file? ; Which name?", lambda body: answer(body, {"q0": share("builder"), "q1": share("builder")}))
@@ -161,12 +161,12 @@ class Run(unittest.TestCase):
             return lean.main(argv), built
 
     def test_only_builder_questions_go_on_to_the_build_with_them(self):
-        code, built = self.run_it(("", "Which name?"))
+        code, built = self.run_it(("", "Which name?", False))
         self.assertEqual(1, code)   # the faked build stops; what matters is that it was reached
         self.assertEqual("Which name?", built.call_args.kwargs["open_questions"])
 
     def test_a_persons_question_builds_nothing(self):
-        code, built = self.run_it(("Which design?", "Which name?"))
+        code, built = self.run_it(("Which design?", "", True))
         self.assertEqual(2, code)
         built.assert_not_called()
 

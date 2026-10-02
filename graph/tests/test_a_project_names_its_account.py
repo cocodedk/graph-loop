@@ -38,7 +38,7 @@ class ProjectAccount(unittest.TestCase):
         self.mails, self.spent = [], []
         for patched in (mock.patch.dict(os.environ, {"GRAPH_ACCOUNTS": "work,personal=/tmp/second"}),
                         mock.patch.object(lean_git, "unmerged", return_value=[]),
-                        mock.patch.object(lean_run, "grill", return_value=("", "")),
+                        mock.patch.object(lean_run, "grill", return_value=("", "", False)),
                         mock.patch.object(lean_run, "run_feature", self.feature),
                         mock.patch.object(alert_email, "send", self.send)):
             patched.start()

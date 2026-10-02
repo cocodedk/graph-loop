@@ -175,11 +175,10 @@ def _go(ws, repo: str, path: str, profile: dict, spec: str) -> int:
     open_questions = ""
     if not revise and info.get("lean_status") != "stopped":
         count = lean_spec.rounds(info)
-        asked, handed = lean_run.grill(ws, repo, [spec], path, earlier=str(info.get("lean_asked") or ""),
+        asked, handed, real = lean_run.grill(ws, repo, [spec], path, earlier=str(info.get("lean_asked") or ""),
                                        final=count + 1 >= lean_spec.GRILL_ROUNDS)
         if asked:                                  # kept, so nothing takes it for a spec that only waits
-            real = lean_spec.refused(ws.events())  # a failure to answer is no round, and lets nothing through
-            count += real
+            count += real                          # a failure to answer is no round, and lets nothing through
             lean_spec.record(ws, spec, lean_status="questions", lean_rounds=count, lean_asked=asked if len(asked) <= lean_spec.ASKED_LIMIT
                              else asked[:lean_spec.ASKED_LIMIT] + lean_spec.CUT_NOTE)
             if not (real and count >= lean_spec.GRILL_ROUNDS):

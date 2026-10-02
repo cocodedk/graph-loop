@@ -47,7 +47,7 @@ class Entry(unittest.TestCase):
         self.spec.write_text("Restyle the Log screen.\n")
         self.mails = []
         for name, fake in ((lean_run, "grill"), (lean_git, "unmerged")):
-            patched = mock.patch.object(name, fake, return_value=[] if fake == "unmerged" else ("", ""))
+            patched = mock.patch.object(name, fake, return_value=[] if fake == "unmerged" else ("", "", False))
             patched.start()
             self.addCleanup(patched.stop)
 
@@ -174,7 +174,7 @@ class Entry(unittest.TestCase):
     def test_a_spec_is_grilled_once_not_again_when_it_carries_on(self):
         (self.ws.root / "contact").write_text("person@example.test\n")
         self.spec.write_text("---\nlean_status: stopped\n---\nRestyle the Log screen.\n")
-        with mock.patch.object(lean_run, "grill", return_value=("Which colour?", "")) as grill, \
+        with mock.patch.object(lean_run, "grill", return_value=("Which colour?", "", False)) as grill, \
                 mock.patch.object(lean_run, "run_feature", return_value="") as feature:
             self.assertEqual(1, lean.main(self.argv()))
         grill.assert_not_called()
@@ -183,14 +183,14 @@ class Entry(unittest.TestCase):
     def test_a_status_the_loop_never_writes_is_still_grilled(self):
         (self.ws.root / "contact").write_text("person@example.test\n")
         self.spec.write_text("---\nlean_status: ready\n---\nRestyle the Log screen.\n")
-        with mock.patch.object(lean_run, "grill", return_value=("Which colour?", "")), \
+        with mock.patch.object(lean_run, "grill", return_value=("Which colour?", "", False)), \
                 mock.patch.object(lean_run, "run_feature") as feature:
             self.assertEqual(2, lean.main(self.argv()))
         feature.assert_not_called()
 
     def test_questions_stop_the_run_before_any_build(self):
         (self.ws.root / "contact").write_text("person@example.test\n")
-        with mock.patch.object(lean_run, "grill", return_value=("Which colour?", "")), \
+        with mock.patch.object(lean_run, "grill", return_value=("Which colour?", "", False)), \
                 mock.patch.object(lean_run, "run_feature") as feature:
             self.assertEqual(2, lean.main(self.argv()))
         feature.assert_not_called()
