@@ -42,9 +42,10 @@ MOST_REPAIRS = 4   # the ceiling, when each repair leaves fewer failing lines th
 
 
 def build(ws, task: dict, prompt: str, tree, resume: str = "",
-          effort: str = providers.EFFORT) -> providers.Outcome:
-    """One builder call in the worktree, at `effort`, with the builder tool set for this suite."""
-    feature = task["id"]
+          effort: str = "") -> providers.Outcome:
+    """One builder call in the worktree, at `effort` (the LEAN block's builder effort when none is given),
+    with the builder tool set for this suite."""
+    feature, effort = task["id"], effort or lean_calls.block("builder")["effort"]
     for account in accounts.available():   # a limit moves the call on; a project that names its account has one
         out = providers.claude(CLAUDE_BIN, prompt, account=account, cwd=tree.path, resume=resume,
                                effort=effort, model=task.get("model", ""), allowed_tools=tools.builder_tools(task),

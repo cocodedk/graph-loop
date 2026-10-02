@@ -8,6 +8,7 @@ from unittest import mock
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 import lean_run
+import models
 import tmp_root  # noqa: F401
 
 
@@ -20,7 +21,7 @@ class LeanReviewEffortTest(unittest.TestCase):
             return "outcome"
         with mock.patch.object(lean_run.review, "codex", codex):
             lean_run.judge(mock.Mock(), "feature", "spec", "diff", "/tmp")
-        self.assertEqual("medium", calls[0]["effort"])
+        self.assertEqual(models.LEAN["review"]["effort"], calls[0]["effort"])
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ ERROR = "Error: the model is not available to this account"
 
 
 def call(script):
-    return codex_text(fake(script), "question", model="m", effort="medium", cwd="", timeout=30)
+    return codex_text(fake(script), "question", model="m", effort="e-test", cwd="", timeout=30)
 
 
 class CrashText(unittest.TestCase):

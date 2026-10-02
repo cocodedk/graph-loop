@@ -33,7 +33,7 @@ class TheFallbackReviewerCannotWrite(unittest.TestCase):
 
         with unittest.mock.patch.object(providers, "claude", fake):
             review._claude_review("read this", review.resources.Resource(
-                "claude", None, "claude-opus-5"), "high", 60)
+                "claude", None, "any-claude"), "any-effort", 60)
         return seen
 
     def test_everything_that_writes_or_runs_is_denied_by_name(self):
@@ -61,7 +61,7 @@ class TheFallbackReviewerHasOnlyReadingTools(unittest.TestCase):
             binary = fake(f"cat > /dev/null; echo \"$@\" > {written}; echo '{answer}'")
             with unittest.mock.patch.dict(os.environ, {"GRAPH_CLAUDE": binary}):
                 out = review._claude_review("read this", review.resources.Resource(
-                    "claude", "work", "claude-opus-5"), "high", 60)
+                    "claude", "work", "any-claude"), "any-effort", 60)
             argv = written.read_text()
         self.assertEqual("ACCEPT", out.verdict)
         self.assertIn(f"--tools {tools.READ} --strict-mcp-config", argv)

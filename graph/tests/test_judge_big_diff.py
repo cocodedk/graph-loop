@@ -31,7 +31,7 @@ def sized(name: str, characters: int) -> str:
 
 def asked(spec: str, diff: str, threads: str = "") -> tuple[str, mock.Mock]:
     with mock.patch.object(lean_judge.review, "codex", return_value=ACCEPT) as call, \
-            mock.patch.object(lean_judge.lean_calls, "started", return_value={"effort": "medium"}):
+            mock.patch.object(lean_judge.lean_calls, "started", return_value={"effort": "e-test"}):
         lean_judge.judge(mock.Mock(), "rest-ring", spec, diff, "/nowhere", threads=threads)
     return call.call_args.args[1], call
 

@@ -1,5 +1,7 @@
-"""No line of code outside the block in `lib/models.py` names a lean model or effort, and the model the
-owner replaced on 2026-09-30 is named only where a dated comment records what was decided then."""
+"""No line of code outside `lib/models.py` names a model or an effort it configures, tests included: the
+owner changes a model in that file alone and no test breaks. The model the owner replaced on 2026-09-30 is
+named only where a dated comment records what was decided then. The names are read from `models`, so this
+file names none either."""
 
 import ast
 import pathlib
@@ -9,16 +11,18 @@ import sys
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
+import models
 import tmp_root  # noqa: F401
 
 EXPECTED_TESTS = 2
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 BLOCK = "graph/lib/models.py"
-LEAN_MODELS = ("gpt-6.1-sol", "claude-sonnet-5-5")
-LEAN_EFFORTS = ("high", "xhigh")
+MODELS = {entry["model"] for entry in models.LEAN.values()} | set(models.claude_reviewers())
+EFFORTS = {entry["effort"] for entry in models.LEAN.values() if "effort" in entry} | {"low", "medium", "high", "xhigh"}
 LEAN_FILES = ("graph/lean_run.py", "graph/lean_calls.py", "graph/lib/providers.py", "graph/lib/review.py",
               "graph/lib/resources.py")
 REPLACED = "gpt-6" + "-sol"   # spelled in two pieces, so this file does not name it
+THIS = "graph/tests/test_model_block_words.py"   # names the effort words to look for, and nothing else
 DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
@@ -51,14 +55,13 @@ def dated_comment(lines: list[str], at: int) -> bool:
 
 
 class NoLiterals(unittest.TestCase):
-    def test_no_code_outside_the_block_names_a_lean_model_or_effort(self):
+    def test_no_code_outside_the_block_names_a_configured_model_or_effort(self):
         hits = []
         for name in tracked():
-            if name.endswith(".py") and name != BLOCK and "tests" not in pathlib.PurePath(name).parts:
-                hits += [f"{name}:{line}" for line, text in literals(name)
-                         if any(model in text for model in LEAN_MODELS)]
-        for name in LEAN_FILES:
-            hits += [f"{name}:{line}" for line, text in literals(name) if text in LEAN_EFFORTS]
+            if name.endswith(".py") and name != BLOCK and (ROOT / name).is_file():
+                hits += [f"{name}:{line}" for line, text in literals(name) if any(model in text for model in MODELS)]
+            if name in LEAN_FILES or (name.startswith("graph/tests/") and name.endswith(".py") and name != THIS):
+                hits += [f"{name}:{line}" for line, text in literals(name) if text in EFFORTS]
         self.assertEqual([], hits)
 
     def test_the_replaced_model_is_named_only_in_a_dated_comment_or_the_spec(self):

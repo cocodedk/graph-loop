@@ -45,7 +45,7 @@ class StdinPromptTest(unittest.TestCase):
                 stderr="")
         # the call itself lives in `provider_codex` now; the review only reads it
         with unittest.mock.patch("provider_codex._run", side_effect=run):
-            out = review._one_review("codex", big, "m1", "", "medium", 60)
+            out = review._one_review("codex", big, "m1", "", "e-test", 60)
         self.assertEqual("ACCEPT", out.verdict)
         self.assertEqual(big, seen["stdin"])
         self.assertEqual("-", seen["argv"][-1])
@@ -58,7 +58,7 @@ class ClaudeSpendTest(unittest.TestCase):
         resource = Resource(agent="claude", model="m", account="work")
         with unittest.mock.patch.object(review, "claude", create=True), \
              unittest.mock.patch("providers.claude", return_value=answered):
-            out = review._claude_review("judge", resource, "medium", 60)
+            out = review._claude_review("judge", resource, "e-test", 60)
         self.assertEqual(("ok", "ACCEPT", 0.25, 999),
                          (out.kind, out.verdict, out.cost, out.tokens))
 

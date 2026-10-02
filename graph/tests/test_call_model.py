@@ -47,9 +47,9 @@ class Recorded(Rig):
 
 class Read(unittest.TestCase):
     def test_the_model_and_effort_of_the_running_call_or_the_effort_alone_or_nothing(self):
-        self.assertEqual("sonnet-5-5 high", loops_step.using(workspace(call(model="claude-sonnet-5-5", effort="high"))))
-        self.assertEqual("gpt-6.1-sol xhigh", loops_step.using(workspace(call(model="gpt-6.1-sol", effort="xhigh"))))
-        self.assertEqual("high", loops_step.using(workspace(call(effort="high"))))                   # an older event
+        self.assertEqual("brand-1 e-hi", loops_step.using(workspace(call(model="claude-brand-1", effort="e-hi"))))
+        self.assertEqual("other-2 e-x", loops_step.using(workspace(call(model="other-2", effort="e-x"))))
+        self.assertEqual("e-hi", loops_step.using(workspace(call(effort="e-hi"))))                   # an older event
         self.assertEqual("", loops_step.using(workspace({"kind": "lean_suite", "at": "2026-09-28T19:39:00Z"})))
         self.assertEqual("", loops_step.using(workspace()))
         self.assertEqual("", loops_step.using(None))
@@ -57,17 +57,17 @@ class Read(unittest.TestCase):
 
 class Shown(unittest.TestCase):
     def test_the_list_and_the_project_line_show_it_and_are_unchanged_without_it(self):
-        with_model = workspace(call(model="claude-sonnet-5-5", effort="high"))
+        with_model = workspace(call(model="claude-brand-1", effort="e-hi"))
         without = workspace({"kind": "lean_suite", "at": "2026-09-28T19:39:00Z"})
         ps = "".join(f"{pid} 100 python3 graph/lean.py --workspace {w} --repo /work/p{pid} --spec docs/lean/0{pid}-a.md\n"
                      for pid, w in ((1, with_model), (2, without)))
         lines = loops_list.report(HEAD + ps, lambda pid: "/work", NOW).splitlines()
-        self.assertIn("sonnet-5-5 high", lines[0])
-        self.assertNotIn("sonnet", lines[1])
+        self.assertIn("brand-1 e-hi", lines[0])
+        self.assertNotIn("brand", lines[1])
         self.assertTrue(lines[0].endswith("loop up 1m40s"))
         loop = Loop(1, 100, "p1", "01-a", with_model)
         report = project_view.report(tempfile.mkdtemp(), [loop], NOW, None)
-        self.assertIn("loop: 01-a building 1m00s  sonnet-5-5 high", report)
+        self.assertIn("loop: 01-a building 1m00s  brand-1 e-hi", report)
 
 
 class CountTest(unittest.TestCase):

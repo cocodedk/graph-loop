@@ -17,6 +17,7 @@ import alert_email
 import lean_git
 import lean_run
 import lean_spec
+import models
 import tmp_root  # noqa: F401
 from providers import Outcome
 from test_keep import repo, sha
@@ -156,10 +157,10 @@ class Repair(Rig):
         stopped = next(row for row in self.ws.events() if row["kind"] == "lean_stopped")
         self.assertEqual("grey2\n", (pathlib.Path(stopped["tree"]) / "ring.py").read_text())
 
-    def test_the_first_build_runs_at_high_and_each_repair_at_medium(self):
+    def test_the_first_build_runs_at_the_builders_effort_and_each_repair_at_the_repairs(self):
         self.run_it(self.builder(("ring.py", "grey\n"), ("ring.py", "grey1\n"), ("ring.py", "amber\n")),
                     suites=(False, False, True))
-        self.assertEqual(["high", "medium", "medium"], self.efforts)
+        self.assertEqual([models.LEAN["builder"]["effort"], models.LEAN["repair"]["effort"], models.LEAN["repair"]["effort"]], self.efforts)
 
     def test_a_second_refusal_gets_the_second_repair(self):
         refused = Outcome("ok", verdict="REJECT", text="a new finding")

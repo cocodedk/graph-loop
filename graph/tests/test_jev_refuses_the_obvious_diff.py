@@ -42,7 +42,7 @@ class Refuse(unittest.TestCase):
             return reply(body)
         with mock.patch.object(jev, "post", post), \
                 mock.patch.object(lean_judge.review, "codex", return_value=ACCEPT) as codex, \
-                mock.patch.object(lean_judge.lean_calls, "started", return_value={"effort": "medium"}):
+                mock.patch.object(lean_judge.lean_calls, "started", return_value={"effort": "e-test"}):
             return lean_judge.judge(self.ws, "rest-ring", "the spec", diff, "/nowhere", threads=threads), codex
 
     def test_a_sure_refusal_is_the_rounds_reject_and_codex_is_not_paid(self):
@@ -61,7 +61,7 @@ class Refuse(unittest.TestCase):
         with mock.patch.object(jev, "post", lambda body: self.bodies.append(body) or answer(
                 body, {"verdict": share("accept")})), \
                 mock.patch.object(lean_judge.review, "codex", return_value=ACCEPT), \
-                mock.patch.object(lean_judge.lean_calls, "started", return_value={"effort": "medium"}):
+                mock.patch.object(lean_judge.lean_calls, "started", return_value={"effort": "e-test"}):
             lean_judge.judge(self.ws, "rest-ring", "the spec", "+x\n", cwd)
         self.assertEqual("Tests live in tests/.\n", json.loads(self.bodies[0])["state"]["rules"])
 

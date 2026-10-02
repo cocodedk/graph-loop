@@ -68,7 +68,7 @@ class TransientAnswerTest(unittest.TestCase):
             with self.subTest(code=code):
                 done = subprocess.CompletedProcess([], code, "HTTP 503 Service Unavailable", "")
                 with patch("provider_codex._run", return_value=done):
-                    out = codex_text("unused", "prompt", model="test", effort="medium")
+                    out = codex_text("unused", "prompt", model="test", effort="e-test")
                 self.assertEqual(kind, out.kind)
 
 

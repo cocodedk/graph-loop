@@ -1,10 +1,9 @@
 """Calling a model, and reading the answer honestly.
 
-Two providers: builders on `claude`, reviewers on `codex exec --model gpt-6.1-sol`; the lean
-models and efforts are the `LEAN` block in models.py. Each lean call reads its model and effort
-from that block when it is made, never from a copy taken at import. `EFFORT` below is
-what a caller with no block of its own gets — never `max`, which cost twelve minutes a review and
-found what high finds (the owner, 2026-08-30).
+Two providers: builders on `claude`, reviewers on `codex exec`; the lean models and efforts are the
+`LEAN` block in models.py. Each call reads its model and effort from that block when it is made, never
+from a copy taken at import; a call that names neither gets the builder's. Never `max`, which cost
+twelve minutes a review and found what high finds (the owner, 2026-08-30).
 
 The `kind` an outcome carries decides what the loop may conclude. Only `ok`
 consumes an attempt: a usage limit, a denied tool call, a login failure and
@@ -36,8 +35,6 @@ from provider_words import (  # noqa: F401 — MARKS re-exported for callers tha
     closed_object,
 )
 from tools import READ_ONLY_FLAGS
-
-EFFORT = "medium"               # the default when no call block decides
 
 
 @dataclasses.dataclass
@@ -103,7 +100,7 @@ def claude(binary: str, prompt: str, *, account: str, allowed_tools: str = "",
     denies = [name for name in ("Agent", disallowed_tools) if name]
     argv = [binary, "--permission-mode", "dontAsk", "--strict-mcp-config",
             "-p", "--output-format", "json",
-            "--model", model or models.LEAN["builder"]["model"], "--effort", effort or EFFORT,
+            "--model", model or models.LEAN["builder"]["model"], "--effort", effort or models.LEAN["builder"]["effort"],
             "--disallowedTools", ",".join(denies)]
     if budget:   # a cap on this call's spend; the CLI checks it per turn
         argv += ["--max-budget-usd", f"{budget:g}"]

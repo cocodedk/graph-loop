@@ -15,6 +15,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
+import models
 import tmp_root  # noqa: F401 — every temp file of this process under one root, gone at exit
 from providers import claude
 from review import codex
@@ -112,15 +113,14 @@ class ClaudeTest(unittest.TestCase):
         # absent, not empty — an empty one points at a config with no login.
         self.assertEqual("[unset]", work)
 
-    def test_the_effort_is_medium_and_the_model_is_sonnet_5_5(self):
+    def test_a_call_with_no_block_gets_the_builders_model_and_effort(self):
         binary = fake("cat > /dev/null; echo \"$@\" > $OUT; echo '" + result() + "'")
         with tempfile.NamedTemporaryFile("r", delete=False) as handle:
             os.environ["OUT"] = handle.name
             claude(binary, "prompt", account="work")
             argv = pathlib.Path(handle.name).read_text()
-        self.assertIn("--model claude-sonnet-5-5", argv)
-        self.assertIn("--effort medium", argv)
-        self.assertNotIn("xhigh", argv)
+        self.assertIn(f"--model {models.LEAN['builder']['model']}", argv)
+        self.assertIn(f"--effort {models.LEAN['builder']['effort']}", argv)
         self.assertNotIn("max", argv)
 
 
