@@ -27,12 +27,11 @@ CHANGED = {"builder": {"model": "b-model", "effort": "b-effort"}, "repair": {"mo
 
 class TheBlock(unittest.TestCase):
     def test_it_holds_the_four_calls_and_jev(self):
-        self.assertEqual({"builder": {"model": "claude-sonnet-5-5", "effort": "high"},
-                          "repair": {"model": "claude-sonnet-5-5", "effort": "medium"},
-                          "grill": {"model": "gpt-6.1-sol", "effort": "medium"},
-                          "review": {"model": "gpt-6.1-sol", "effort": "medium"},
-                          "jev": {"model": "typesafe/jev-1.13", "probability": 0.8, "confidence": 0.75}},
-                         models.LEAN)
+        # The shape, never the values: the owner changes a model or an effort in models.py alone.
+        self.assertEqual({"builder", "repair", "grill", "review", "jev"}, set(models.LEAN))
+        for call in ("builder", "repair", "grill", "review"):
+            self.assertEqual({"model", "effort"}, set(models.LEAN[call]))
+        self.assertEqual({"model", "probability", "confidence"}, set(models.LEAN["jev"]))
 
     def test_the_codex_reviewers_start_with_the_review_model(self):
         with mock.patch.dict(os.environ, {"GRAPH_REVIEWERS": ""}):

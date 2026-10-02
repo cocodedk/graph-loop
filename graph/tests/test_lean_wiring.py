@@ -41,22 +41,22 @@ class Wiring(unittest.TestCase):
         paid = next(row for row in self.ws.events() if row["kind"] == "attempt")
         self.assertEqual(("wiring", "build", 0.5), (paid["task"], paid["purpose"], paid["cost"]))
 
-    def test_the_builder_runs_on_sonnet_5_5(self):
+    def test_the_builder_runs_on_the_blocks_model(self):
         body = json.dumps({"result": "done", "session_id": "s1", "total_cost_usd": 0.1,
                            "usage": {"input_tokens": 1, "output_tokens": 1}, "permission_denials": []})
         done = subprocess.CompletedProcess([], 0, body, "")
         with mock.patch.object(providers, "_run", return_value=done) as run:
             lean_run.build(self.ws, {"id": "wiring", "gate": "./run-tests --all"}, "build it", self.tree)
         argv = run.call_args.args[0]
-        self.assertEqual("claude-sonnet-5-5", argv[argv.index("--model") + 1])
+        self.assertEqual(models.LEAN["builder"]["model"], argv[argv.index("--model") + 1])
 
     def test_a_repair_build_sends_and_logs_its_own_effort(self):
         with mock.patch.object(providers, "claude", return_value=Outcome("ok")) as call:
             lean_run.build(self.ws, {"id": "wiring", "gate": "true"}, "fix it", self.tree,
                            resume="s1", effort=models.LEAN["repair"]["effort"])
-        self.assertEqual(("medium", "s1"), (call.call_args.kwargs["effort"], call.call_args.kwargs["resume"]))
+        self.assertEqual((models.LEAN["repair"]["effort"], "s1"), (call.call_args.kwargs["effort"], call.call_args.kwargs["resume"]))
         paid = next(row for row in self.ws.events() if row["kind"] == "attempt")
-        self.assertEqual("medium", paid["effort"])
+        self.assertEqual(models.LEAN["repair"]["effort"], paid["effort"])
 
     def test_the_reviewer_reads_the_tree_and_is_asked_for_the_closed_verdict(self):
         with mock.patch.object(review, "codex", return_value=Outcome("ok", verdict="ACCEPT")) as call:
@@ -92,7 +92,7 @@ class Wiring(unittest.TestCase):
         paid = [(row["purpose"], row.get("effort")) for row in self.ws.events() if row["kind"] == "attempt"]
         self.assertEqual([("grill", sent[0]), ("build", call.call_args.kwargs["effort"]),
                           ("review", sent[1])], paid)   # logged is what was sent
-        self.assertEqual([models.LEAN["review"]["effort"], providers.EFFORT, models.LEAN["review"]["effort"]],
+        self.assertEqual([models.LEAN["review"]["effort"], models.LEAN["builder"]["effort"], models.LEAN["review"]["effort"]],
                          [effort for _, effort in paid])
 
 

@@ -65,8 +65,8 @@ class ExhaustionFollowsTheCredential(unittest.TestCase):
         import resources
         with unittest.mock.patch.dict(os.environ, {"GRAPH_ACCOUNTS": "one=/cfg/same,two=/cfg/same"}):
             belt = resources.belt("review")
-            first = next(r for r in belt if r.account == "one" and r.model == "claude-opus-5-5")
-            second = next(r for r in belt if r.account == "two" and r.model == "claude-opus-5-5")
+            first = next(r for r in belt if r.account == "one" and r.agent == "claude")
+            second = next(r for r in belt if r.account == "two" and r.model == first.model)
             spent = resources.Exhausted()
             spent.note(first, "limit")
             self.assertTrue(spent.skip(second), "the same credential was asked again")

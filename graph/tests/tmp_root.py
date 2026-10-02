@@ -19,7 +19,6 @@ import tempfile
 os.environ["GRAPH_ACCOUNTS"] = "work,second=/cfg/second"
 # Legacy fake-provider campaigns exercise Claude accounts; mixed belts have
 # their own explicit catalog in test_codex_builders.py.
-os.environ["GRAPH_BUILDERS"] = "claude-sonnet-5,claude-opus-5"
 
 # A developer's shell exporting GRAPH_ROUTER=jev must not leak into a test run.
 os.environ["GRAPH_ROUTER"] = "off"

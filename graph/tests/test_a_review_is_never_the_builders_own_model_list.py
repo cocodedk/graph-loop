@@ -41,10 +41,10 @@ class ReviewBeltTest(unittest.TestCase):
 
     def test_a_reviewer_list_naming_the_builder_still_skips_it(self):
         builder = models.LEAN["builder"]["model"]
-        with unittest.mock.patch.dict(os.environ, {"GRAPH_CLAUDE_REVIEWERS": f"{builder},claude-opus-5-5",
-                                                   "GRAPH_REVIEWERS": f"{builder},gpt-6.1-sol"}), \
+        with unittest.mock.patch.dict(os.environ, {"GRAPH_CLAUDE_REVIEWERS": f"{builder},claude-other",
+                                                   "GRAPH_REVIEWERS": f"{builder},codex-other"}), \
                 unittest.mock.patch("accounts.available", return_value=["first"]):
-            self.assertEqual([("codex", "gpt-6.1-sol"), ("claude", "claude-opus-5-5")],
+            self.assertEqual([("codex", "codex-other"), ("claude", "claude-other")],
                              [(one.agent, one.model) for one in resources.belt("review")])
 
     def test_the_list_is_a_line_of_data(self):
