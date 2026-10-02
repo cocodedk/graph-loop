@@ -25,7 +25,7 @@ import lean_spec
 import providers
 import review
 import tools
-from gate_reports import failing
+from gate_reports import failures
 from lean_body import builder_prompt, pr_body
 from lean_budget import CARD_BUDGET
 from lean_grill import (
@@ -132,7 +132,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             why = f"{lean_budget.stopped_words(spent)}\n\n{why}"
             break
         ws.event("lean_repair", task=feature, why=cut(why))
-        failed = failing(why)
+        failed = failures(why)
         before = tree.diff(binary=True, against=tree.commit)
         use = lean_calls.started(ws, "repair", feature)
         resumed = bool(built.session)
@@ -145,7 +145,7 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
             why = f"The repair changed nothing. Read what the builder said, then change the code or the spec:\n{built.text[:1500]}\n\n{why}"
             break
         why, verdict = check(ws, feature, spec, tree, built, suite, round_, revise)
-        if why and failing(why) < failed and limit < 2 + MOST_REPAIRS:   # fewer failing lines: one more repair
+        if why and failures(why) < failed and limit < 2 + MOST_REPAIRS:   # fewer failures: one more repair
             limit += 1
         round_ += 1
     # Green, and accepted or refused for named findings (not a failed parse) after the last repair: published.

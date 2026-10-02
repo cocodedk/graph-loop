@@ -12,6 +12,8 @@ HEADING = "\n\nJUnit failures:\n"
 LIMIT = 2000
 CASES = 20
 FAILING = re.compile(r"FAIL|ERROR:|AssertionError|[✗×✖]")   # what a test runner prints for a failed case
+# A runner's summary: "2 failed, 1 error" (pytest, jest, gradle, cargo) or unittest's "failures=2, errors=1".
+SUMMARY = re.compile(r"(\d+) (?:failed|errors?)\b|\b(?:failures|errors)=(\d+)")
 
 
 def excerpt(text: str, *, tail: bool = True) -> str:
@@ -29,6 +31,14 @@ def excerpt(text: str, *, tail: bool = True) -> str:
 def failing(text: str) -> int:
     """How many lines of a gate's output a test runner marks as a failed case."""
     return sum(1 for line in text.splitlines() if FAILING.search(line))
+
+
+def failures(text: str) -> tuple[int, int]:
+    """(the failed cases the runner's last summary line counts, or 0 without one; the failing lines), to
+    compare in order: fewer failed tests is progress, and so is the same count with fewer failing lines."""
+    summaries = [line for line in text.splitlines() if SUMMARY.search(line)]
+    counted = sum(int(a or b) for a, b in SUMMARY.findall(summaries[-1])) if summaries else 0
+    return counted, failing(text)
 
 
 def junit_failures(cwd: str, started: int) -> str:
