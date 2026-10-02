@@ -40,7 +40,7 @@ class AlertsMixin:
         path = self.root / "contact"
         channel = path.read_text("utf-8").strip() if path.exists() else ""
         if not channel:
-            raise SystemExit('no proven channel — run `graph-goal.py contact "<email-address>"` first')
+            raise SystemExit('no proven channel — run `graph-goal.py --workspace <ws> contact "<email-address>"` first')
         return channel
 
     def notify_person(self, row: dict) -> None:
