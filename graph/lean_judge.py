@@ -4,6 +4,7 @@ review threads it answers."""
 from __future__ import annotations
 
 import os
+import pathlib
 
 import jev
 import lean_calls
@@ -24,12 +25,13 @@ FOUND = {"no_tests": "The diff adds or changes behaviour that no test in it cove
          "wrong_spec": "The diff does not implement this spec (Jev)."}
 
 
-def refused(ws, feature: str, spec: str, diff: str) -> str:
+def refused(ws, feature: str, spec: str, diff: str, cwd: str) -> str:
     """Jev's finding when it is sure the diff has no tests or is for another spec, else "". It may only
     refuse: measured, it cannot tell a correct diff from a subtly wrong one, so an accept is Codex's."""
     if len(diff) > JEV_LIMIT:
         return ""
-    said = jev.choose(ws, feature, "review", {"spec": spec, "diff": diff},
+    rules = jev.read(pathlib.Path(cwd) / "CLAUDE.md")   # the reviewer's own evidence; never the lessons
+    said = jev.choose(ws, feature, "review", {"spec": spec, "rules": rules, "diff": diff},
                       {"verdict": "Does this diff implement the spec, with tests?"}, CHECK).get("verdict")
     return next((found for choice, found in FOUND.items() if said and jev.sure(said, choice)), "")
 
@@ -37,7 +39,7 @@ def refused(ws, feature: str, spec: str, diff: str) -> str:
 def judge(ws, feature: str, spec: str, diff: str, cwd: str, threads: str = "") -> providers.Outcome:
     """`threads` is a revise round's review threads: the change must fix each one. A first build's diff
     that Jev surely refuses is refused without paying Codex."""
-    if not threads and (found := refused(ws, feature, spec, diff)):
+    if not threads and (found := refused(ws, feature, spec, diff, cwd)):
         return providers.Outcome("ok", text=found, verdict="REJECT")
     def ask(shown: str) -> str:
         return (f"You review one change to this repository, read-only. It should implement the "
