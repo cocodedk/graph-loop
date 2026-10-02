@@ -41,7 +41,7 @@ class OneRun(unittest.TestCase):
         spec = self.folder / f"{name}.md"
         spec.write_text("Restyle the Log screen.\n")
         with mock.patch.object(lean_git, "unmerged", return_value=[]), \
-                mock.patch.object(lean_run, "grill", return_value=""), \
+                mock.patch.object(lean_run, "grill", return_value=("", "")), \
                 mock.patch.object(lean_run, "run_feature", return_value="") as feature, \
                 mock.patch.object(alert_email, "send", lambda *a, **k: None):
             code = lean.main(["--workspace", str(self.ws.root), "--repo", self.repo, "--spec", str(spec)])

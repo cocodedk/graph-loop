@@ -26,9 +26,12 @@ import providers
 import review
 import tools
 from gate_reports import failing
-from lean_body import builder_prompt, grill_prompt, pr_body
+from lean_body import builder_prompt, pr_body
 from lean_budget import CARD_BUDGET
-from lean_judge import CODEX_BIN, judge
+from lean_grill import (
+    grill,  # noqa: F401 — the front door: lean.py and the tests call lean_run.grill
+)
+from lean_judge import judge
 from lean_reason import cut
 from lean_spec import lessons, record, slug
 from providers import REVIEW_EFFORT  # noqa: F401 — tests read it here
@@ -62,30 +65,6 @@ def masked(ws, command: str, cwd: str) -> tuple[bool, str]:
     """A profile command (suite or build), in the gate box: its verdict and its tail."""
     result = gates.run_gate(command, cwd, **gate_paths.options(ws.root))
     return result.passed, result.why
-
-
-def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str = "", final: bool = False) -> str:
-    """Before anything is built: the questions only a person can answer, or ""."""
-    specs = "\n\n".join(f"## {pathlib.Path(path).name}\n\n{pathlib.Path(path).read_text('utf-8')}"
-                        for path in spec_paths)
-    prompt = grill_prompt(profile_path, lessons(pathlib.Path(spec_paths[0]).parent), specs, earlier)
-
-    def paid(kind, account, cost, tokens, _text):
-        ws.attempt("grill", account=account, kind=kind, cost=cost, tokens=tokens,
-                   effort=use["effort"], purpose="grill")
-    use = lean_calls.started(ws, "grill", "grill")
-    out = review.codex(CODEX_BIN, prompt, cwd=repo, effort=use["effort"], attempt=paid, job="grill")
-    questions = "" if out.verdict == "ACCEPT" else (out.text or f"the grill did not answer ({out.kind})")
-    ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=questions[:2000], specs=[slug(p) for p in spec_paths])
-    if questions and final and out.verdict == "REJECT":   # the round limit: the run goes on
-        mail(ws, "graph-loop is building with open questions", f"{questions}\n\nThe round limit is reached: "
-             "building goes on with these unresolved. The builder decides each, and its choices go in the pull "
-             "request description. No answer is needed to continue.")
-    elif questions:
-        subject = ("graph-loop has questions before building" if out.verdict
-                   else "graph-loop could not read the specs before building")
-        mail(ws, subject, f"{questions}\n\nAnswer them in the specs, then run again. Nothing was built.")
-    return questions
 
 
 def mail(ws, subject: str, body: str) -> None:

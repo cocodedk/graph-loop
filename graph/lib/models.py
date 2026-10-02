@@ -27,6 +27,8 @@ LEAN = {
     "repair": {"model": "claude-sonnet-5-5", "effort": "medium"},  # each repair round
     "grill": {"model": "gpt-6.1-sol", "effort": "medium"},
     "review": {"model": "gpt-6.1-sol", "effort": "medium"},
+    # Jev sorts the grill's questions (lib/jev.py): a choice counts only above both thresholds.
+    "jev": {"model": "typesafe/jev-1.13", "probability": 0.8, "confidence": 0.75},
 }
 
 # The Claude builders first, Astra behind them (issue #67: the belt "may hold" codex
