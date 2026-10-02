@@ -300,7 +300,7 @@ export GRAPH_BACKLOG=$GRAPH_REPO/backlog.yaml
 export GRAPH_BRANCH=campaign/that-work
 
 export GRAPH_ACCOUNTS="work,second=/cfg/second,spare=/cfg/spare"
-export GRAPH_BUILDERS="claude-opus-5,claude-sonnet-5"
+export GRAPH_BUILDERS="claude-opus-5-5,claude-sonnet-5-5"
 export GRAPH_REVIEWERS="gpt-6-astra,gpt-5.6-sol"
 ```
 

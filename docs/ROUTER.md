@@ -52,7 +52,7 @@ offline mode, and the router gates explicitly enable their mocked transport,
 so running either repository suite never contacts the decision service.
 
 The build list is `models.builders()`: the Claude builders first
-(`claude-sonnet-5`, then the Opus models) and `gpt-6-astra` last, unless
+(`claude-sonnet-5-5`, then `claude-opus-5-5`) and `gpt-6-astra` last, unless
 `GRAPH_BUILDERS` names others. `gpt-*` builders use Codex once per model, and
 other names use Claude on its configured accounts. Codex builds
 use `workspace-write` rooted at the card worktree, with no extra writable

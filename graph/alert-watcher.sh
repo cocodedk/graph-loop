@@ -122,7 +122,7 @@ Send it this message with SendMessage, verbatim:
 $BODY
 ---
 If and only if no session named exactly $name exists, print exactly NO-$name." \
-    | env "${config_dir[@]}" GRAPH_MESSENGER=1 timeout 300 claude -p --model claude-opus-5 --effort low \
+    | env "${config_dir[@]}" GRAPH_MESSENGER=1 timeout 300 claude -p --model claude-opus-5-5 --effort low \
         --output-format stream-json --verbose \
         --tools "ListAgents,SendMessage" \
         --permission-mode default --allowedTools "ListAgents,SendMessage" \

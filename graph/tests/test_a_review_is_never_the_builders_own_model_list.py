@@ -46,7 +46,7 @@ class ReviewBeltTest(unittest.TestCase):
                 unittest.mock.patch("accounts.available", return_value=["first", "second"]):
             self.assertEqual(
                 [("claude", account, model)
-                 for model in ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5")
+                 for model in ("claude-opus-5-5", "claude-sonnet-5-5")
                  for account in ("first", "second")],
                 [(r.agent, r.account, r.model) for r in resources.belt("plan")])
             self.assertEqual(["fast-only", "fast-only"],
