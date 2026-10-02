@@ -122,9 +122,12 @@ def works() -> bool:
     if _WORKS is None:
         _WORKS = False
         if BWRAP:
-            probe = subprocess.run(
-                argv("test -w / && exit 1; exit 0", tempfile.gettempdir(),
-                     tempfile.gettempdir()),
-                capture_output=True, text=True, timeout=30, check=False)
+            try:   # a probe that hangs or cannot start is a box that does not work, never a raise in run_gate
+                probe = subprocess.run(
+                    argv("test -w / && exit 1; exit 0", tempfile.gettempdir(),
+                         tempfile.gettempdir()),
+                    capture_output=True, text=True, timeout=30, check=False)
+            except (subprocess.TimeoutExpired, OSError):
+                return _WORKS
             _WORKS = probe.returncode == 0
     return _WORKS

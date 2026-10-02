@@ -83,7 +83,7 @@ class Check(Rig):
         self.assertEqual(("", ACCEPT), (why, verdict))
         judge.assert_called_once()
         why, verdict, judge = self.check(SUITE, suite=False)
-        self.assertEqual((f"Fix the red suite. Run {SUITE}, then fix the failure shown below:\nE501 line too long", None), (why, verdict))
+        self.assertEqual(("Fix the red suite: the failure is shown below. Check your fix with the failing test or this card's gate; the loop runs the full suite after you.\nE501 line too long", None), (why, verdict))
         judge.assert_not_called()
         self.assertEqual([SUITE] * 2, self.ran)
         self.assertEqual([], self.lint_events())
@@ -108,10 +108,10 @@ class Check(Rig):
         (event,) = self.lint_events()
         self.assertEqual((False, "E501 line too long"), (event["passed"], event["tail"]))
 
-    def test_the_output_in_the_reason_and_the_event_is_its_last_2000_characters(self):
+    def test_the_reason_keeps_the_gates_excerpt_whole_and_the_event_its_last_2000_characters(self):
         long = "head" + "x" * 1996 + "tail"
         why, _, _ = self.check(lean_lint.Commands(SUITE, LINT), lint=False, output=long)
-        self.assertEqual(f"Fix the red lint. Run {LINT}, then fix the findings shown below:\n" + long[-2000:], why)
+        self.assertEqual(f"Fix the red lint. Run {LINT}, then fix the findings shown below:\n" + long, why)   # never cut twice
         self.assertEqual(long[-2000:], self.lint_events()[0]["tail"])
         why, _, _ = self.check(lean_lint.Commands(SUITE, LINT), lint=False, output="short")
         self.assertTrue(why.endswith(":\nshort"))

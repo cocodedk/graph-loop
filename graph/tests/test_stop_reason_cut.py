@@ -17,7 +17,7 @@ from lean_reason import cut
 from test_lean_run import PROFILE, Rig
 
 EXPECTED_TESTS = 5
-HEAD = "Fix the red suite. Run run-the-suite, then fix the failure shown below:\n"
+HEAD = "Fix the red suite: the failure is shown below. Check your fix with the failing test or this card's gate; the loop runs the full suite after you.\n"
 
 
 class Cut(unittest.TestCase):

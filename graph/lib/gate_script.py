@@ -16,6 +16,7 @@ builder that edits this script has edited its own scratch note.
 
 from __future__ import annotations
 
+import os
 import pathlib
 import tempfile
 
@@ -23,12 +24,11 @@ GATE_DIR = "graph-gates"
 
 
 def gate_script_path(task: dict) -> str:
-    """Where this card's gate script lives: one file per card, outside every
-    worktree, overwritten each round. The id is the card's own, which the
-    slicer already holds to a safe name; a stray `/` in one would otherwise
-    write into a directory of its own choosing."""
+    """Where this card's gate script lives: one file per card and per loop process, outside every
+    worktree, overwritten each round. The process id keeps two loops building the same feature name in
+    two projects apart; a stray `/` in an id would otherwise write into a directory of its own choosing."""
     return str(pathlib.Path(tempfile.gettempdir()) / GATE_DIR
-               / f"{str(task.get('id') or 'card').replace('/', '-')}.sh")
+               / f"{os.getpid()}-{str(task.get('id') or 'card').replace('/', '-')}.sh")
 
 
 def write_gate_script(task: dict) -> str:

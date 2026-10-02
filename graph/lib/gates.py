@@ -1,12 +1,5 @@
-"""Running a gate, and proving it red before anyone builds against it.
-
-Two rules, both bought with failures: a gate's verdict is its exit code, never
-text something happened to match (`gate.sh | grep GATE && git commit` once
-committed a red gate), and a gate that has never failed is not a gate — so a task
-starts only after its gate refuses for the reason the task exists to fix,
-unless there is nothing to build: a no-files, non-live card's gate is never
-proved red, only run once, after the contract review, deciding done or
-failed on its own.
+"""Running a gate. Its verdict is its exit code, never text something happened to match
+(`gate.sh | grep GATE && git commit` once committed a red gate).
 """
 
 from __future__ import annotations
@@ -20,7 +13,6 @@ import time
 import gate_sandbox
 import runner
 from gate_reports import excerpt, junit_failures
-from provider_words import environment_hint
 
 DEFAULT_TIMEOUT = 3600
 
@@ -41,7 +33,6 @@ class GateResult:
         return excerpt(self.output)
 
 
-GREEN_ALREADY = "the gate already passes, so it proves nothing"   # the one wording red_first matches exactly
 
 def run_gate(command: str, cwd: str, timeout: int = DEFAULT_TIMEOUT,
              confine: bool = True, paths=None) -> GateResult:
@@ -82,25 +73,3 @@ def run_gate(command: str, cwd: str, timeout: int = DEFAULT_TIMEOUT,
     if not result.passed:
         result.output += junit_failures(cwd, started)
     return result
-
-
-def prove_red(command: str, cwd: str, expect: str = "",
-              timeout: int = DEFAULT_TIMEOUT, confine: bool = True, paths=None) -> tuple[bool, str]:
-    """Refuse the task unless its gate fails now, for the stated reason.
-
-    Returns (proved, why). `expect` is a phrase the refusal must contain — the
-    guard against a gate that is red for somebody else's reason, which is how two
-    packages burned four attempts on rows they were not allowed to touch.
-    """
-    result = run_gate(command, cwd, timeout, confine=confine,
-                      **({"paths": paths} if paths else {}))
-    if result.passed:
-        return False, GREEN_ALREADY
-    if environment_hint(result.output, command):
-        return False, result.output  # classify before a long footer can hide the toolchain error
-    if result.kind != "ran":
-        return False, f"the gate could not run ({result.kind}): {result.why}"
-    if expect and expect not in result.output:
-        return False, ("the gate is red for another reason; expected "
-                       f"{expect!r} in:\n{result.why}")
-    return True, result.why

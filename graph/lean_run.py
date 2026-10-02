@@ -88,7 +88,8 @@ def check(ws, feature: str, spec: str, tree, built, command: str, round_: int,
     passed, tail = masked(ws, command, tree.path)
     ws.event("lean_suite", task=feature, round=round_, passed=passed, tail=tail[-2000:])
     if not passed:
-        return f"Fix the red suite. Run {command}, then fix the failure shown below:\n{tail}", None
+        return (f"Fix the red suite: the failure is shown below. Check your fix with the failing test or this "
+                f"card's gate; the loop runs the full suite after you.\n{tail}"), None
     verdict = judge(ws, feature, spec, diff, tree.path, **({"threads": threads} if threads else {}))
     ws.event("lean_review", task=feature, round=round_, outcome=verdict.kind,
              verdict=verdict.verdict, findings=verdict.text[:1000])
