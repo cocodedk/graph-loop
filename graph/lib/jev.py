@@ -15,6 +15,7 @@ import itertools
 import json
 import os
 import pathlib
+import time
 import urllib.request
 
 import models
@@ -60,12 +61,14 @@ def choose(ws, task: str, purpose: str, state: dict, asks: dict[str, str], crite
                                  "instructions.", "criteria": {key: criteria[key] for key in order}}
                  for qid, ask in asks.items() for i, order in enumerate(itertools.permutations(sorted(criteria)))}
     body = json.dumps({"model": block["model"], "state": state, "questions": questions}, ensure_ascii=False).encode()
+    started = time.monotonic()
     try:
         answers = _average(_read(post(body), set(questions), set(criteria)), set(asks))
         why = "" if answers else "jev answered in a shape this loop does not read"
     except Exception as error:   # noqa: BLE001 — every fault is "no decision", never a dead run
         answers, why = {}, f"jev did not answer: {type(error).__name__}"
-    ws.event("lean_jev", task=task, purpose=purpose, model=block["model"], answers=answers, why=why)
+    ws.event("lean_jev", task=task, purpose=purpose, model=block["model"], answers=answers, why=why,
+             asked=len(questions), seconds=round(time.monotonic() - started, 2))
     return answers
 
 
