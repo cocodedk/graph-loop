@@ -17,7 +17,7 @@ from workspace_claims import _now
 
 STOP = "stop.flag"
 RESTART = "restart.flag"
-RESTART_EXIT = 75   # the driver's exit for a requested restart; supervisor.sh restarts it, counting it toward its failure backoff only when the run lasted under 30 seconds
+RESTART_EXIT = 75   # the exit for a requested restart
 
 
 class FlagsMixin:
@@ -60,7 +60,7 @@ class FlagsMixin:
         """
         here = pathlib.Path(__file__).parent
         loaded = [path for path in here.glob("*.py") if not path.name.startswith("view")]
-        loaded += [here.parent / "graph-goal.py", here.parent / "graph_commands.py"]
+        loaded += list(here.parent.glob("*.py"))
         stamp = hashlib.sha256()
         for path in sorted(loaded):
             if path.exists():

@@ -41,7 +41,7 @@ from provider_words import (  # noqa: F401 — MARKS re-exported for callers tha
 from tools import READ_ONLY_FLAGS, guard_settings
 
 MODEL = models.LEAN["builder"]["model"]   # the lean calls' values: the LEAN block in models.py
-EFFORT = "medium"               # the default when no task decides (model_router.py does)
+EFFORT = "medium"               # the default when no call block decides
 REVIEW_MODEL = models.LEAN["review"]["model"]
 REVIEW_EFFORT = models.LEAN["review"]["effort"]
 

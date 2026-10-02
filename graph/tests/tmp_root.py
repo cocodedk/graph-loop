@@ -21,12 +21,7 @@ os.environ["GRAPH_ACCOUNTS"] = "work,second=/cfg/second"
 # their own explicit catalog in test_codex_builders.py.
 os.environ["GRAPH_BUILDERS"] = "claude-sonnet-5,claude-opus-5"
 
-# The card router (lib/model_router.py, docs/ROUTER.md) asks a live decision
-# service by default. A fake-provider test never routes for real, so this
-# process stays on the router's own offline fallback unless a router gate
-# explicitly enables its mocked transport (router_probe.CATALOG) — a
-# developer's shell exporting GRAPH_ROUTER=jev must not leak into a test run
-# and spend a real decision call.
+# A developer's shell exporting GRAPH_ROUTER=jev must not leak into a test run.
 os.environ["GRAPH_ROUTER"] = "off"
 
 ROOT = tempfile.mkdtemp(prefix="graph-tests-")

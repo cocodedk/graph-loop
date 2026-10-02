@@ -2,7 +2,7 @@
 
 The loop also emails alerts through the campaign's proven contact channel.
 `ALERTS.shown` is a candidate: what a render displayed, waiting on
-`watch.sh --read` to confirm it. `ALERTS.read` is the commitment.
+a read to confirm it. `ALERTS.read` is the commitment.
 
 An alert is a message, never a handoff: nothing the loop does waits for that
 commitment. When a decision is applied it RESOLVES the exact alerts about the

@@ -22,9 +22,7 @@ class LockMixin:
     def only_driver(self) -> None:
         """One driver per campaign, whoever started it.
 
-        `supervisor.sh` takes `supervisor.lock` so two supervisors never double
-        up, but a driver started by hand took nothing: two drivers on one
-        campaign write over each other's claims. The descriptor is held open,
+        Two drivers on one campaign write over each other's claims. The descriptor is held open,
         never closed, exactly as the supervisor holds its own (`exec 9>`): a
         flock lasts as long as its descriptor, and the kernel closes this one
         when the driver's process ends.

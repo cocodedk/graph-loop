@@ -32,7 +32,8 @@ the dashboard reads that log.
 
 This loop replaced an earlier campaign driver that cut work into cards and reviewed each card
 before building it. [docs/rfc/lean-loop.md](docs/rfc/lean-loop.md) records what that cost and
-why it was replaced; the driver was removed on 2026-10-02.
+why it was replaced; the driver was removed on 2026-10-02. [docs/DIARY.md](docs/DIARY.md) is
+what each rule cost, with the numbers.
 
 ## Install the skills
 

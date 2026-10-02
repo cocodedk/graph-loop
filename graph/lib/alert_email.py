@@ -1,4 +1,4 @@
-"""Mechanical last-resort email for alert-watcher.sh: no model, no retries.
+"""Mechanical email: no model, no retries.
 
 Credentials live in `smtp.env` beside this file (never committed):
     SMTP_HOST= SMTP_PORT= SMTP_USER= SMTP_PASS= SMTP_FROM= SMTP_TO=
