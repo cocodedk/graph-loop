@@ -11,17 +11,20 @@ import lean_calls
 import lean_shorten
 import providers
 import review
-from review_scope import VERDICT
+from review_scope import NOTED_VERDICT
 
 CODEX_BIN = os.environ.get("GRAPH_CODEX", "codex")
 PROMPT_LIMIT = 900000  # characters; Codex refuses 1048576 and needs room for its own framing
 THREADS_LIMIT = 6000   # characters of the threads' text the reviewer reads
 JEV_LIMIT = 50000      # characters of diff Jev reads; a longer diff goes straight to Codex
-CHECK = {"accept": "The diff implements the spec, and tests cover the behaviour it adds.",
-         "no_tests": "The diff adds or changes behaviour that no test in the diff covers.",
+CHECK = {"accept": "The diff implements the spec, and tests cover what it changes: its own, or the existing "
+                   "tests it leaves in place for a change that keeps behaviour.",
+         "no_tests": "The diff adds new behaviour (a new feature, input, output or rule) and neither adds nor "
+                     "changes any test for it.",
          "wrong_spec": "The diff does not implement this spec: it does something else.",
-         "unknown": "The diff and the spec do not show which."}
-FOUND = {"no_tests": "The diff adds or changes behaviour that no test in it covers (Jev).",
+         "unknown": "The evidence cannot show which: for example, tests outside the diff may already cover "
+                    "the change."}
+FOUND = {"no_tests": "The diff adds new behaviour and no test for it (Jev).",
          "wrong_spec": "The diff does not implement this spec (Jev)."}
 
 
@@ -47,14 +50,14 @@ def judge(ws, feature: str, spec: str, diff: str, cwd: str, threads: str = "") -
                 f"acceptance tests name that does not hold, any defect you can name (wrong for some "
                 f"real input or use), a security hole, behaviour added without tests, or a file the spec "
                 f"does not call for that nothing uses (name it). Accept, listing findings, only for "
-                f"style, a stated limit or a suggestion. In this review an ACCEPT may carry findings, "
-                f"whatever the answer rule below says.\n\n"
+                f"style, a stated limit or a suggestion, and among those name any existing function the "
+                f"change should reuse instead of its own, and why; such a finding never refuses.\n\n"
                 f"## Spec\n\n{spec}\n\n" + (
                     f"## The diff this round made\n\n{shown}\n\n"
                     f"## The review threads this round answers\n\n{threads[:THREADS_LIMIT]}\n\n"
                     f"This round answers those threads on an open pull request. The change must fix each "
-                    f"one: a thread whose defect is still unfixed in the diff is a reason to refuse.\n\n{VERDICT}"
-                    if threads else f"## The diff against main\n\n{shown}\n\n{VERDICT}"))
+                    f"one: a thread whose defect is still unfixed in the diff is a reason to refuse.\n\n{NOTED_VERDICT}"
+                    if threads else f"## The diff against main\n\n{shown}\n\n{NOTED_VERDICT}"))
 
     prompt = ask(diff)
     if len(prompt) > PROMPT_LIMIT:

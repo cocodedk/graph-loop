@@ -18,7 +18,7 @@ import lean_run
 import lean_spec
 import tmp_root  # noqa: F401
 from providers import Outcome
-from review_scope import VERDICT
+from review_scope import NOTED_VERDICT
 from workspace import Workspace
 
 EXPECTED_TESTS = 7
@@ -144,9 +144,10 @@ class Prompt(Base):
             "tests. Refuse only for: something the spec's 'Done when' or acceptance tests name that does not "
             "hold, any defect you can name (wrong for some real input or use), a security hole, behaviour "
             "added without tests, or a file the spec does not call for that nothing uses (name it). Accept, "
-            "listing findings, only for style, a stated limit or a suggestion. In this review an ACCEPT may "
-            "carry findings, whatever the answer rule below says.\n\n"
-            f"## Spec\n\nthe spec\n\n## The diff against main\n\n+a line\n\n{VERDICT}", self.asked())
+            "listing findings, only for style, a stated limit or a suggestion, and among those name any "
+            "existing function the change should reuse instead of its own, and why; such a finding never "
+            "refuses.\n\n"
+            f"## Spec\n\nthe spec\n\n## The diff against main\n\n+a line\n\n{NOTED_VERDICT}", self.asked())
 
     def test_threads_are_cut_to_6000_characters_and_a_shorter_text_is_whole(self):
         self.assertIn("a" * 6000 + "\n\n", self.asked(threads="a" * 6000 + "zzqq"))

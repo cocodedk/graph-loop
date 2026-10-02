@@ -29,7 +29,9 @@ def builder_prompt(spec: str, script: str, profile_path: str, lessons: str, own_
            f"the loop runs that after you finish and hands you any failure" if own_gate
            else f"Run the suite with `bash {script}` and leave it green")
     return (f"Implement what this spec asks, including its tests. Follow the repository's "
-            f"CLAUDE.md and the profile at {profile_path}. {run}. And never start or wait on a "
+            f"CLAUDE.md and the profile at {profile_path}. Choose the smallest coherent solution: reuse "
+            f"existing code and shared functions, prefer the standard library or platform, and add an "
+            f"abstraction only when the spec needs it. {run}. And never start or wait on a "
             f"background job: every wait is a paid turn. Do not commit: the loop commits."
             + (f" The loop also runs `{lint}` before the suite and needs it green: run it yourself when "
                f"your permissions allow." if lint else "")
@@ -61,7 +63,9 @@ def grill_prompt(profile_path: str, lessons: str, specs: str, earlier: str = "")
               f"the whole journey, from where the feature starts through every page and state the "
               f"user meets (empty, loading and error included) and what the user sees and can do at "
               f"each, to where it ends, and names a design reference (a mock, a sketch or an existing "
-              f"screen) to match. Ask about anything vague, contradictory or likely to confuse a user. "
+              f"screen) to match. Existing screens, components and the repository's standing rules may supply "
+              f"those details: what they settle is no question. Ask about anything vague, contradictory or "
+              f"likely to confuse a user. "
               f"Each finding is one question to the person. Ask only the crucial questions, the ones whose "
               f"answer changes what is built, the most important first; what the builder can settle "
               f"itself is no question: accept.{once}{lessons}{again}\n\n{specs}\n\n{VERDICT}")

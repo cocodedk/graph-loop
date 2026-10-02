@@ -137,7 +137,8 @@ def run_feature(ws, repo: str, spec_path: str, profile: dict, profile_path: str,
         use = lean_calls.started(ws, "repair", feature)
         resumed = bool(built.session)
         built = build(ws, {**task, "model": use["model"]}, f"{prompt}\n\n## Your last attempt failed\n\n{why}\n\n"
-                      "Fix that, and keep the suite green." + (" Keep your list of choices complete." if open_questions
+                      "Read the affected callers and fix the cause in the function that owns it, once, "
+                      "and keep the suite green." + (" Keep your list of choices complete." if open_questions
                                                                 else ""), tree, resume=built.session,
                       effort=use["effort"])
         spent = lean_budget.after(ws, task, built, spent, resumed)

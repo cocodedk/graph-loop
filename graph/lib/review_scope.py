@@ -13,12 +13,13 @@ REQUIREMENTS = {"goal", "done_when", "gate", "note", "safety", "simplicity"}
 # a reviewer that obeyed those words and wrote findings as OBJECTS had a
 # correct REJECT thrown away as malformed (2026-09-18). A prompt and a parser
 # that state the shape separately will drift; these two cannot.
-VERDICT = (
-    'Answer with exactly one JSON object on one line and no other text: '
-    '{"review":"ACCEPT|REJECT","accept":true,"findings":["what is wrong, in one sentence"]}. '
-    'Exactly those three keys. `findings` lists every finding, at most ten plain strings, never objects. '
-    'ACCEPT requires accept=true and no findings; REJECT requires accept=false and at '
-    'least one finding.')
+SHAPE = ('Answer with exactly one JSON object on one line and no other text: '
+         '{"review":"ACCEPT|REJECT","accept":true,"findings":["what is wrong, in one sentence"]}. '
+         'Exactly those three keys. `findings` lists every finding, at most ten plain strings, never objects. ')
+VERDICT = SHAPE + 'ACCEPT requires accept=true and no findings; REJECT requires accept=false and at least one finding.'
+# The lean reviewer's own rule: an ACCEPT may list findings that block nothing, said once, not overridden.
+NOTED_VERDICT = (SHAPE + 'ACCEPT requires accept=true and may list findings that block nothing; REJECT requires '
+                 'accept=false and at least one finding.')
 
 
 INSTRUCTION = """Review only this change against its accepted contract. Read direct callers or
