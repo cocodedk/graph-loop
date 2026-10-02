@@ -80,13 +80,13 @@ class Sort(unittest.TestCase):
     def test_a_persons_question_stops_the_run_and_the_mail_lists_the_rest(self):
         asked, handed = self.grill("Which design?; Which name?; Why the sandbox?", lambda body: answer(
             body, {"q0": share("person"), "q1": share("builder"), "q2": share("irrelevant")}))
-        self.assertEqual(("Which design?", "Which name?"), (asked, handed))
+        self.assertEqual(("Which design?; Which name?", ""), (asked, handed))   # kept, so none is lost
         mail = self.mails[0]
         self.assertEqual("graph-loop has questions before building", mail["subject"].partition("] ")[2])
-        self.assertIn("Handed to the builder to decide: Which name?", mail["body"])
+        self.assertNotIn("Handed to the builder", mail["body"])
         self.assertIn("Dropped as irrelevant: Why the sandbox?", mail["body"])
         grilled = next(e for e in self.ws.events() if e["kind"] == "lean_grilled")
-        self.assertEqual(("Which design?", "Which name?", "Why the sandbox?"),
+        self.assertEqual(("Which design?; Which name?", "", "Why the sandbox?"),
                          (grilled["questions"], grilled["handed"], grilled["dropped"]))
 
     def test_an_unsure_answer_leaves_the_question_the_persons(self):
@@ -110,7 +110,9 @@ class Sort(unittest.TestCase):
     def test_a_fault_or_a_strange_answer_changes_nothing(self):
         def broken(body):
             raise OSError("down")
-        for reply in (broken, lambda body: "{}", lambda body: json.dumps({"answers": {"q0__0": {}}})):
+        def huge(body):
+            return answer(body, {"q0": share("irrelevant", 90)}, 90)
+        for reply in (broken, huge, lambda body: "{}", lambda body: json.dumps({"answers": {"q0__0": {}}})):
             with self.subTest(reply=reply):
                 self.assertEqual(("Which name?", ""), self.grill("Which name?", reply))
         self.assertTrue(all(e["why"] for e in self.ws.events() if e["kind"] == "lean_jev"))

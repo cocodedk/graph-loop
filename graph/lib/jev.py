@@ -70,8 +70,8 @@ def _read(body: str, expected: set[str], options: set[str]) -> dict[str, dict]:
     for qid, said in answers.items():
         chosen, shares, sure = said.get("choice"), said.get("probabilities"), said.get("confidence")
         if (said.get("type") != "choice" or chosen not in options or not isinstance(shares, dict)
-                or set(shares) != options or type(sure) not in (int, float)
-                or any(type(share) not in (int, float) for share in shares.values())):
+                or set(shares) != options or type(sure) not in (int, float) or not 0 <= sure <= 1
+                or any(type(share) not in (int, float) or not 0 <= share <= 1 for share in shares.values())):
             return {}
         read[qid] = {"choice": chosen, "probabilities": shares, "confidence": sure}
     return read

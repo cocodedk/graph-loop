@@ -1,7 +1,8 @@
 """The grill: a reviewer reads the spec before anything is built, and Jev sorts what it asked.
 
-The reviewer's questions go three ways (`jev.sort_questions`): the person's are mailed and stop the
-run, the builder's go on with the build as its open questions, and the irrelevant are dropped. Without
+The reviewer's questions go three ways (`jev.sort_questions`): the irrelevant are dropped, and when
+none is the person's the builder's go on with the build as its open questions; otherwise every one left
+is mailed to the person and the run stops. Without
 Jev, or when Jev is unsure, every question is the person's, as before.
 """
 
@@ -36,7 +37,9 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str 
     asked, handed, dropped = questions, "", ""
     if questions and out.verdict == "REJECT":
         sorted_ = jev.sort_questions(ws, "grill", questions)
-        asked, handed, dropped = (JOIN.join(sorted_[who]) for who in ("person", "builder", "irrelevant"))
+        mine = sorted_["person"] and sorted_["person"] + sorted_["builder"]   # a stop asks all: none is lost
+        asked, handed, dropped = (JOIN.join(part) for part in (mine, [] if mine else sorted_["builder"],
+                                                              sorted_["irrelevant"]))
     ws.event("lean_grilled", verdict=out.verdict, outcome=out.kind, questions=asked[:2000], handed=handed[:2000],
              dropped=dropped[:2000], specs=[slug(p) for p in spec_paths])
     note = ((f"\n\nHanded to the builder to decide: {handed}" if handed else "")
