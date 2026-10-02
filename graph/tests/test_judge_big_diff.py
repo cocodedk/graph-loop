@@ -13,7 +13,7 @@ import lean_judge
 import lean_shorten
 import tmp_root  # noqa: F401
 from providers import Outcome
-from review_scope import VERDICT
+from review_scope import NOTED_VERDICT
 
 EXPECTED_TESTS = 10
 ACCEPT = Outcome("ok", verdict="ACCEPT", text="")
@@ -41,7 +41,7 @@ class Fits(unittest.TestCase):
         diff = sized("a.txt", 400000) + sized("b.txt", 400000)
         prompt = asked("the spec", diff)[0]
         self.assertTrue(len(prompt) <= LIMIT)
-        self.assertIn(f"## Spec\n\nthe spec\n\n## The diff against main\n\n{diff}\n\n{VERDICT}", prompt)
+        self.assertIn(f"## Spec\n\nthe spec\n\n## The diff against main\n\n{diff}\n\n{NOTED_VERDICT}", prompt)
         self.assertNotIn("Changed files", prompt)
 
     def test_a_revise_rounds_prompt_that_fits_carries_the_diff_whole(self):

@@ -65,7 +65,9 @@ class Wiring(unittest.TestCase):
         self.assertIn("+a line", prompt)
         self.assertIn('"review":"ACCEPT|REJECT"', prompt)
         self.assertIn("any defect you can name", prompt)   # a named defect is refused; notes are for small things
-        self.assertIn("Accept, listing findings, only for style, a stated limit or a suggestion.", prompt)
+        self.assertIn("Accept, listing findings, only for style, a stated limit or a suggestion", prompt)
+        self.assertIn("ACCEPT requires accept=true and may list findings that block nothing", prompt)
+        self.assertNotIn("no findings", prompt)   # one answer rule, never one that overrides another
 
     def test_the_suite_runs_for_real_and_a_red_one_says_why(self):
         passed, tail = lean_run.masked(self.ws, "echo the ring is grey; exit 1", self.tree.path)

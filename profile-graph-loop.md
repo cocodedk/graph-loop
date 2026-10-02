@@ -6,15 +6,13 @@ The lean loop reads the first indented line under each heading below.
 
     bash scripts/scrub-check.sh && (cd graph/tests && python3 -m unittest discover -q)
 
-The scrub check, then the loop's tests: the same CI runs, minus the linter,
-which `## lint_command` below runs before it.
+The scrub check, then the loop's tests; the linter is `## lint_command` below, run before it.
 
 ## lint_command
 
     uvx ruff@0.16.8 check .
 
-The linter CI runs on the pull request (pinned 0.16.8), run by the loop before the suite: a red
-lint is handed to the builder as a repair round, so lint errors no longer reach CI.
+Pinned at 0.16.8, run by the loop before the suite: a red lint is handed to the builder as a repair round.
 
 ## build_command
 
