@@ -19,9 +19,9 @@ from lean_spec import lessons, slug
 
 
 def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str = "",
-          final: bool = False) -> tuple[str, str]:
-    """(the questions only a person can answer, the ones handed to the builder); both "" when the spec
-    is clear. `final` is the round limit: the person's questions are handed on too, and said so."""
+          final: bool = False) -> tuple[str, str, bool]:
+    """(the questions only a person can answer, the ones handed to the builder, whether the grill truly
+    refused rather than failed to answer); "" and "" when the spec is clear. `final` is the round limit: the person's questions are handed on too, and said so."""
     specs = "\n\n".join(f"## {pathlib.Path(path).name}\n\n{pathlib.Path(path).read_text('utf-8')}"
                         for path in spec_paths)
     notes = lessons(pathlib.Path(spec_paths[0]).parent)
@@ -59,4 +59,4 @@ def grill(ws, repo: str, spec_paths: list[str], profile_path: str, earlier: str 
         ws.mail_person("graph-loop is building with open questions", f"Every question the grill asked is the "
                        f"builder's to settle or changes nothing, so building goes on.{note}\n\nThe builder's "
                        "choices go in the pull request description. No answer is needed to continue.")
-    return asked, handed
+    return asked, handed, out.verdict == "REJECT"

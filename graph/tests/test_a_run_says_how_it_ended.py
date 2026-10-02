@@ -28,7 +28,7 @@ URL = "https://example.test/pull/7"
 
 
 class Ending(unittest.TestCase):
-    def go(self, *, unmerged=(), grill=("", ""), feature=URL, ready=True, fetch=None):
+    def go(self, *, unmerged=(), grill=("", "", False), feature=URL, ready=True, fetch=None):
         folder = repo()
         (pathlib.Path(folder) / "profile-test.md").write_text(PROFILE_TEXT)
         (pathlib.Path(folder) / "CLAUDE.md").write_text("See [profile-test.md](profile-test.md).\n")
@@ -56,7 +56,7 @@ class Ending(unittest.TestCase):
         self.assertEqual((1, "lean: exit 1, stopped, see the mail and events.jsonl"), self.go(feature=""))
 
     def test_questions_for_the_person(self):
-        self.assertEqual((2, "lean: exit 2, questions, nothing was built"), self.go(grill=("Which colour?", "")))
+        self.assertEqual((2, "lean: exit 2, questions, nothing was built"), self.go(grill=("Which colour?", "", False)))
 
     def test_unmerged_branches(self):
         self.assertEqual((3, "lean: exit 3, waiting on unmerged branches, nothing was built"),

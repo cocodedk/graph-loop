@@ -119,8 +119,3 @@ def rounds(info: dict) -> int:
     count = info.get("lean_rounds")
     return count if isinstance(count, int) and not isinstance(count, bool) and count > 0 else 0
 
-
-def refused(events: list[dict]) -> bool:
-    """Whether the grill's last answer was a real refusal (a REJECT verdict), not a failure to answer."""
-    grilled = [row for row in events if row.get("kind") == "lean_grilled"]
-    return bool(grilled) and grilled[-1].get("verdict") == "REJECT"

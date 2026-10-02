@@ -27,13 +27,14 @@ class Grill(unittest.TestCase):
     def grill(self, answer):
         with mock.patch.object(review, "codex", return_value=answer) as call, \
                 mock.patch.object(alert_email, "send", lambda *a, **k: self.mails.append(k)):
-            questions, _ = lean_run.grill(self.ws, repo(), [str(self.spec)], "profile.md")
+            questions, _, self.refused = lean_run.grill(self.ws, repo(), [str(self.spec)], "profile.md")
         self.assertIn("Make it blue, and make it red.", call.call_args.args[1])
         self.prompt = call.call_args.args[1]
         return questions
 
     def test_questions_are_emailed_and_returned(self):
         self.assertEqual("Blue or red?", self.grill(Outcome("ok", verdict="REJECT", text="Blue or red?")))
+        self.assertTrue(self.refused)
         self.assertEqual("graph-loop has questions before building", self.mails[0]["subject"].partition("] ")[2])
 
     def test_clear_specs_ask_nothing(self):
@@ -86,6 +87,7 @@ class Grill(unittest.TestCase):
 
     def test_a_grill_that_did_not_answer_stops_too(self):
         self.assertIn("did not answer", self.grill(Outcome("malformed")))
+        self.assertFalse(self.refused)   # no answer is no round
         self.assertEqual("graph-loop could not read the specs before building", self.mails[0]["subject"].partition("] ")[2])
 
 
